@@ -2,8 +2,10 @@ using SchumakerSpline
 using Optim
 using JLD2
 
-#print("Loading functions for calculating profit and income                \r")
+include("print_sameline.jl")
+print_sameline("Loading functions for calculating profit and income")
 include("profit.jl")
+
 
 function utility(consumption, crra)
     if consumption > 0.0
@@ -78,15 +80,15 @@ end
 
 function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes, beta, p_alpha, P_zeta, P_u, stat_P_u, P_alpha, number_u_nodes, crra)
 
-    #println("V $(value[:,end,end,end,end])")
-    print("Initialise aprime_indices and aprime_nodes                \r")#\n")#
+    #println_sameline("V $(value[:,end,end,end,end])")
+    print_sameline("Initialise aprime_indices and aprime_nodes")
     # guess values and indices aprime
     aprime_nodes = Array{Float64}(undef,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
     Threads.@threads for (u_i,(zeta_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes))))
         aprime_nodes[:,u_i,zeta_i,alpha_m_i,alpha_w_i] .= 0.66.*income[:,u_i,zeta_i,alpha_m_i,alpha_w_i]#a_nodes
     end
 
-    print("Initialise value function                \r")#\n")#
+    print_sameline("Initialise value function")
     # guess the initial value for value_function
     #value = utility.(earnings, crra)./(1.0-beta)
     value = utility.(income.-aprime_nodes, crra)./(1.0-beta)
@@ -101,10 +103,10 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
         @load "$(path)val_aprime_$(number_a_nodes)_$(number_u_nodes)_$(number_zeta_nodes)_$(number_alpha_m_nodes)_$(number_alpha_w_nodes).jld2" local_value local_aprime_nodes
         value = copy(local_value)
         aprime_nodes = copy(local_aprime_nodes)
-        print("Initialise value function from file                \r")
+        print_sameline("Initialise value function from file")
     catch e
         value_from_file_flag = false
-        print("Initialise value function from scratch                \r")
+        print_sameline("Initialise value function from scratch")
     end
 
     val_Delta   = 0.05  # update parameter for value function iteration
@@ -113,7 +115,7 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
     val_iters   = 0
     aprime_len = Inf
     if text_output
-        print("Start of the main VFI loop                                      \r")
+        print_sameline("Start of the main VFI loop")
     end
 
     new_value = copy(value)
@@ -163,9 +165,9 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
 
         # loop for finding new_value and new_aprime_indices
         Threads.@threads for (u_i,(zeta_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes))))
-            #print("$(u_i),$(zeta_i),$(alpha_m_i),$(alpha_w_i)\r")
+            #print_sameline("$(u_i),$(zeta_i),$(alpha_m_i),$(alpha_w_i)\r")
             new_value[:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[:,u_i,zeta_i,alpha_m_i,alpha_w_i] = new_val_and_a1(value[:,u_i,zeta_i,alpha_m_i,alpha_w_i],aprime_nodes[:,u_i,zeta_i,alpha_m_i,alpha_w_i], income[:,u_i,zeta_i,alpha_m_i,alpha_w_i], value_tran_rhs[:,alpha_m_i,alpha_w_i],expectation_value_death_rhs, u_i,alpha_m_i,alpha_w_i ,a_min,a_max,a_nodes, aprime_len,val_len, number_a_nodes, beta, p_alpha, P_u, number_u_nodes, crra)
-            #println(new_aprime_nodes[:,u_i,zeta_i,alpha_m_i,alpha_w_i])
+            #println_sameline(new_aprime_nodes[:,u_i,zeta_i,alpha_m_i,alpha_w_i])
             #throw(error)
         end
 
@@ -181,7 +183,7 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
         aprime_len = maximum(abs,new_aprime_nodes-aprime_nodes)/maximum(abs,new_aprime_nodes)
         aprime_sumlen = sum(abs,new_aprime_nodes-aprime_nodes)/maximum(abs,new_aprime_nodes)
 
-        print("VF#$(val_iters) - err: $(round(val_len;digits=12)) b_l:$(round(b_lowerbar;digits=4)) b_u:$(round(b_upperbar;digits=4)), sum_err:$(round(val_sumlen;digits=9)), a_err:$(round(aprime_len;digits=4)), a_sumerr:$(round(aprime_sumlen;digits=4)) \r")#\n")#
+        print_sameline("VF#$(val_iters) - err: $(round(val_len;digits=12)) b_l:$(round(b_lowerbar;digits=4)) b_u:$(round(b_upperbar;digits=4)), sum_err:$(round(val_sumlen;digits=9)), a_err:$(round(aprime_len;digits=4)), a_sumerr:$(round(aprime_sumlen;digits=4))")
 
         if old_val_len > val_len && stable
             if b_lowerbar > -10000000+1#=-Inf=# && b_upperbar < 10000000-1#=Inf=# #&& b_lowerbar < 0.0 && b_upperbar > 0.0
@@ -211,14 +213,14 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
             p1 = plot(#=a_nodes,=#[value[:,u,zeta,alpha_m,alpha_w] for u in 1:number_u_nodes for zeta in 1:number_zeta_nodes for alpha_m in 1:number_alpha_m_nodes for alpha_w in 1:number_alpha_w_nodes], label=labels, legend=:outertopleft)
             p2 = plot(#=a_nodes,=#[aprime_nodes[:,u,zeta,alpha_m,alpha_w] for u in 1:number_u_nodes for zeta in 1:number_zeta_nodes for alpha_m in 1:number_alpha_m_nodes for alpha_w in 1:number_alpha_w_nodes], label=labels, legend=false)
             display(plot(p1,p2, title = "VF and a' - $(val_iters)"))
-            #println(aprime_nodes[:,1,1,1,1])
+            #println_sameline(aprime_nodes[:,1,1,1,1])
         end
 
 
     end
 
     if text_output
-        print("Calculation was finished on iteration - $(val_iters) with error: $(val_len)                \r")
+        print_sameline("Calculation was finished on iteration - $(val_iters) with error: $(val_len)")
     end
     if isnan(val_len)# || val_iters >= val_maxiters
         throw(error("Policy function is NaN"))
@@ -272,7 +274,7 @@ function find_stationary_distribution_pdf(a1_nodes,a_min,a_max,a_nodes, distr_to
     distr = zeros(number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
 
     # initialise stationary distribution
-    print("Initialise stationary distribution                \r")#\n")#
+    print_sameline("Initialise stationary distribution")
     Threads.@threads for (zeta_i,(alpha_m_i,alpha_w_i)) in collect(Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))
         distr[floor(Int,number_asset_grid/5),:,zeta_i,alpha_m_i,alpha_w_i] = stat_P_u.*(P_zeta[zeta_i]*P_alpha[alpha_m_i,alpha_w_i])
     end
@@ -285,7 +287,7 @@ function find_stationary_distribution_pdf(a1_nodes,a_min,a_max,a_nodes, distr_to
     distr_len     = Inf
     distr_iters   = 0
     if text_output
-        print("Start of the main stationary distribution iteration loop                                      \r")
+        print_sameline("Start of the main stationary distribution iteration loop")
     end
 
     distr_a1_z0 = copy(distr)
@@ -307,7 +309,7 @@ function find_stationary_distribution_pdf(a1_nodes,a_min,a_max,a_nodes, distr_to
                 end
             end
         end
-        #println(distr_a1_z0[:,1,1,1,1])
+        #println_sameline(distr_a1_z0[:,1,1,1,1])
         #display(sum(distr_a1_z0))
         #throw(error)
 
@@ -319,16 +321,16 @@ function find_stationary_distribution_pdf(a1_nodes,a_min,a_max,a_nodes, distr_to
             # so add over all levels of zeta
             # and then draw new u_prime and new zeta_prime
             temp_distr_sum_zeta = sum(distr_a1_z0[:,:,:,alpha_m_i,alpha_w_i],dims=3)[:,:,1]
-            #println(temp_distr_sum_zeta[:,1])
+            #println_sameline(temp_distr_sum_zeta[:,1])
             #throw(error)
             temp_distr_sum_zeta = temp_distr_sum_zeta*P_u
-            #println(temp_distr_sum_zeta[:,1])
+            #println_sameline(temp_distr_sum_zeta[:,1])
             #throw(error)
             for zeta_prime_i in 1:number_zeta_nodes
                 new_distr[:,:,zeta_prime_i,alpha_m_i,alpha_w_i] = ((1-p_alpha)*P_zeta[zeta_prime_i]).*temp_distr_sum_zeta
             end
         end
-        #println(new_distr[:,1,1,1,1])
+        #println_sameline(new_distr[:,1,1,1,1])
         #throw(error)
 
         # second calculate transition
@@ -347,7 +349,7 @@ function find_stationary_distribution_pdf(a1_nodes,a_min,a_max,a_nodes, distr_to
 
         new_distr .+= new_distr2
 
-        #println(new_distr[:,1,1,1,1])
+        #println_sameline(new_distr[:,1,1,1,1])
         #throw(error)
 
         #new_distr .= new_distr./sum(new_distr)
@@ -359,7 +361,7 @@ function find_stationary_distribution_pdf(a1_nodes,a_min,a_max,a_nodes, distr_to
         newK_supply = sum(distr.*policy)
         K_s_error = abs(newK_supply-oldK_supply)
 
-        print("Distr#$(distr_iters) - err: $(distr_len) - sumdistr: $(round(sum(distr);digits=2)), K_s:$(round(newK_supply;digits=6)), K_s_err:$(K_s_error)               \r")#\n")#
+        print_sameline("Distr#$(distr_iters) - err: $(distr_len) - sumdistr: $(round(sum(distr);digits=2)), K_s:$(round(newK_supply;digits=6)), K_s_err:$(K_s_error)")
 
         distr_len = K_s_error
 
@@ -376,7 +378,7 @@ function find_stationary_distribution_pdf(a1_nodes,a_min,a_max,a_nodes, distr_to
         end
     end
     if text_output
-        print("Calculation was finished on iteration - $(distr_iters) with error: $(distr_len)                \r")
+        print_sameline("Calculation was finished on iteration - $(distr_iters) with error: $(distr_len)")
     end
 
     if fig_output
@@ -402,7 +404,7 @@ function find_stationary_distribution_pdf(a1_nodes,a_min,a_max,a_nodes, distr_to
     end
 
     if text_output
-        print("Calculation of aggregate quantities for capital and labour                                      \r")
+        print_sameline("Calculation of aggregate quantities for capital and labour")
     end
 
     return distr, number_asset_grid, asset_grid, policy, a1_indices, lottery_prob_1, lottery_prob_2
@@ -422,14 +424,14 @@ function find_aggregate_capital_labour_demand_supply(number_asset_grid,asset_gri
     Labor_excess = sum(density_distr.*labour_excess)/sum(density_distr.*(labour_d.+labour_s))
 
     if text_output
-        println()
-        println("\nCurrent capital demand excess: $(Capital_excess)")
-        println("Current aggregate capital demand: $(K_demand)")
-        println("Current aggregate capital supply: $(K_supply)")
+        println_sameline()
+        println_sameline("\nCurrent capital demand excess: $(Capital_excess)")
+        println_sameline("Current aggregate capital demand: $(K_demand)")
+        println_sameline("Current aggregate capital supply: $(K_supply)")
 
-        println("\nCurrent labour demand excess: $(Labor_excess)")
-        println("Current aggregate labour demand: $(L_demand)")
-        println("Current aggregate labour supply: $(L_supply)")
+        println_sameline("\nCurrent labour demand excess: $(Labor_excess)")
+        println_sameline("Current aggregate labour demand: $(L_demand)")
+        println_sameline("Current aggregate labour supply: $(L_supply)")
     end
 
     return K_demand, K_supply, L_demand, L_supply, Capital_excess, Labor_excess
@@ -1094,7 +1096,7 @@ function quick_calculate_results(number_asset_grid,asset_grid,policy, a1_indices
         consumption_quintile_emp_mobility_matrices = zeros(TT, number_of_quintiles,number_of_quintiles+1)
 
         for tt = 1:TT
-            print("Mobility - $(tt)/$(TT)   \r")
+            print_sameline("Mobility - $(tt)/$(TT)")
 
             temp_density_distr = copy(density_distr_pr)
             density_distr_pr .*= 0.0
@@ -1144,7 +1146,7 @@ function quick_calculate_results(number_asset_grid,asset_grid,policy, a1_indices
             Threads.@threads for (u_i,(zeta_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes))))
                 for a_i in 1:number_asset_grid
                     j_1 = a1_indices[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
-                    #println([j_1,a_i,u_i,zeta_i,alpha_m_i,alpha_w_i])
+                    #println_sameline([j_1,a_i,u_i,zeta_i,alpha_m_i,alpha_w_i])
                     density_distr_w_pr[j_1,u_i,zeta_i,alpha_m_i,alpha_w_i] += temp_density_distr_w[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]*lottery_prob_1[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
                     density_distr_se_pr[j_1,u_i,zeta_i,alpha_m_i,alpha_w_i] += temp_density_distr_se[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]*lottery_prob_1[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
                     density_distr_emp_pr[j_1,u_i,zeta_i,alpha_m_i,alpha_w_i] += temp_density_distr_emp[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]*lottery_prob_1[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
@@ -1492,43 +1494,43 @@ function quick_calculate_results(number_asset_grid,asset_grid,policy, a1_indices
         end
 
         if text_output
-            println("Occupation mobility matrix after $(TT) periods")
+            println_sameline("Occupation mobility matrix after $(TT) periods")
             display(occ_mobility_matrices[TT,:,:])
 
-            println("Asset quintile mobility matrix after $(TT) periods")
+            println_sameline("Asset quintile mobility matrix after $(TT) periods")
             display(asset_quintile_mobility_matrices[TT,:,:])
-            println("Asset quintile for workers mobility matrix after $(TT) periods")
+            println_sameline("Asset quintile for workers mobility matrix after $(TT) periods")
             display(asset_quintile_w_mobility_matrices[TT,:,:])
-            println("Asset quintile for sole proprietors mobility matrix after $(TT) periods")
+            println_sameline("Asset quintile for sole proprietors mobility matrix after $(TT) periods")
             display(asset_quintile_se_mobility_matrices[TT,:,:])
-            println("Asset quintile for employers mobility matrix after $(TT) periods")
+            println_sameline("Asset quintile for employers mobility matrix after $(TT) periods")
             display(asset_quintile_emp_mobility_matrices[TT,:,:])
 
-            println("Earnings quintile mobility matrix after $(TT) periods")
+            println_sameline("Earnings quintile mobility matrix after $(TT) periods")
             display(earnings_quintile_mobility_matrices[TT,:,:])
-            println("Earnings quintile for workers mobility matrix after $(TT) periods")
+            println_sameline("Earnings quintile for workers mobility matrix after $(TT) periods")
             display(earnings_quintile_w_mobility_matrices[TT,:,:])
-            println("Earnings quintile for sole proprietors mobility matrix after $(TT) periods")
+            println_sameline("Earnings quintile for sole proprietors mobility matrix after $(TT) periods")
             display(earnings_quintile_se_mobility_matrices[TT,:,:])
-            println("Earnings quintile for employers mobility matrix after $(TT) periods")
+            println_sameline("Earnings quintile for employers mobility matrix after $(TT) periods")
             display(earnings_quintile_emp_mobility_matrices[TT,:,:])
 
-            println("Income quintile mobility matrix after $(TT) periods")
+            println_sameline("Income quintile mobility matrix after $(TT) periods")
             display(income_quintile_mobility_matrices[TT,:,:])
-            println("Income quintile for workers mobility matrix after $(TT) periods")
+            println_sameline("Income quintile for workers mobility matrix after $(TT) periods")
             display(income_quintile_w_mobility_matrices[TT,:,:])
-            println("Income quintile for sole proprietors mobility matrix after $(TT) periods")
+            println_sameline("Income quintile for sole proprietors mobility matrix after $(TT) periods")
             display(income_quintile_se_mobility_matrices[TT,:,:])
-            println("Income quintile for employers mobility matrix after $(TT) periods")
+            println_sameline("Income quintile for employers mobility matrix after $(TT) periods")
             display(income_quintile_emp_mobility_matrices[TT,:,:])
 
-            println("Consumption quintile mobility matrix after $(TT) periods")
+            println_sameline("Consumption quintile mobility matrix after $(TT) periods")
             display(consumption_quintile_mobility_matrices[TT,:,:])
-            println("Consumption quintile for workers mobility matrix after $(TT) periods")
+            println_sameline("Consumption quintile for workers mobility matrix after $(TT) periods")
             display(consumption_quintile_w_mobility_matrices[TT,:,:])
-            println("Consumption quintile for sole proprietors mobility matrix after $(TT) periods")
+            println_sameline("Consumption quintile for sole proprietors mobility matrix after $(TT) periods")
             display(consumption_quintile_se_mobility_matrices[TT,:,:])
-            println("Consumption quintile for employers mobility matrix after $(TT) periods")
+            println_sameline("Consumption quintile for employers mobility matrix after $(TT) periods")
             display(consumption_quintile_emp_mobility_matrices[TT,:,:])
         end
 
@@ -1656,34 +1658,34 @@ function quick_calculate_results(number_asset_grid,asset_grid,policy, a1_indices
     end
 
     if text_output
-        println()
-        println("\nCapital-to-output: $(capital_to_output)")
-        println("Credit-to-output: $(credit_to_output)")
+        println_sameline()
+        println_sameline("\nCapital-to-output: $(capital_to_output)")
+        println_sameline("Credit-to-output: $(credit_to_output)")
 
-        println("Share of workers: $(share_of_workers)")
-        println("Share of self-employed: $(share_of_self_employed)")
-        println("Share of employers: $(share_of_employers)")
+        println_sameline("Share of workers: $(share_of_workers)")
+        println_sameline("Share of self-employed: $(share_of_self_employed)")
+        println_sameline("Share of employers: $(share_of_employers)")
 
-        println("Variance of log-consumption: $(var_log_c)")
+        println_sameline("Variance of log-consumption: $(var_log_c)")
 
-        println("Occupational transition probabilities:")
+        println_sameline("Occupational transition probabilities:")
         display(occ_trans_matrix)
 
-        println("Variance of log-earnings: $(var_log_income)")
+        println_sameline("Variance of log-earnings: $(var_log_income)")
 
-        println("Gini for worker's income: $(gini_y_w)")
-        println("Gini for entrepreneurial's income: $(gini_y_ent)")
+        println_sameline("Gini for worker's income: $(gini_y_w)")
+        println_sameline("Gini for entrepreneurial's income: $(gini_y_ent)")
         if calc_add_results
-            println("\n------Additional results---------")
-            println("Aggregate cost of employing: $(agg_cost_of_employing) ($(agg_cost_of_employing_as_share_of_output*100)%)")
-            println("Aggregate Loan-to-Value (Credit-to-Capital): $(agg_credit_to_capital)")
+            println_sameline("\n------Additional results---------")
+            println_sameline("Aggregate cost of employing: $(agg_cost_of_employing) ($(agg_cost_of_employing_as_share_of_output*100)%)")
+            println_sameline("Aggregate Loan-to-Value (Credit-to-Capital): $(agg_credit_to_capital)")
         end
-        println("\n------Productivity results---------")
-        println("TFP_ideal: $(TFP_ideal*100)%")
-        println("TFP_data: $(TFP_data*100)%")
-        println("Labour productivity: $(Labour_productivity)")
-        println("Capital productivity (Output-to-capital): $(Capital_productivity)")
-        println("Capital productivity (Expenses-to-revenue = (r+delta)*Capital-earnings): $(Investment_productivity)")
+        println_sameline("\n------Productivity results---------")
+        println_sameline("TFP_ideal: $(TFP_ideal*100)%")
+        println_sameline("TFP_data: $(TFP_data*100)%")
+        println_sameline("Labour productivity: $(Labour_productivity)")
+        println_sameline("Capital productivity (Output-to-capital): $(Capital_productivity)")
+        println_sameline("Capital productivity (Expenses-to-revenue = (r+delta)*Capital-earnings): $(Investment_productivity)")
 
     end
 

@@ -1,11 +1,11 @@
-
+include("print_sameline.jl")
 ############################
 ######### Libraries ########
-print("Initialising libraries                                             \r")
+print_sameline("Initialising libraries")
 using Plots
 using JLD2
 
-#print("Loading functions for steady_state procedure                           \r")
+print_sameline("Loading functions for steady_state procedure")
 include("Functions/steady_state.jl")
 
 # global parameters of the model's code
@@ -88,7 +88,6 @@ end
 @time ss_star = steady_state(guess_R, guess_W, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS)
 SS = copy(ss_star)
 
-# add differentiation between MAC and WINDOWS environments
 LOCAL_DIR = "$(@__DIR__)/Results/"
 if Sys.iswindows()
     LOCAL_DIR = "$(@__DIR__)\\Results\\"

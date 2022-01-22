@@ -1,14 +1,11 @@
-#print("Loading parameters and values                                      \r")
+include("print_sameline.jl")
+
 include("parameters.jl")
-
-###########################
-#print("Loading functions for AllubErosa procedure                           \r")
 include("AllubErosa.jl")
-
 
 function steady_state(R, W, global_params, global_approx_params, model_params)
 
-    rw_maxiters = 1#00
+    rw_maxiters = 1#100
 
     #           1       2     3     4       5   6       7   8       9       10          11              12      13          14          15              16          17              18              19       20
     #         lambda, beta, delta, gamma, eta, theta, c_e, rho_m, rho_w, sigma_eps_m, rho_eps_m_w, sigma_zeta, p_alpha, eta_alpha, prob_node1_alpha, mu_m_alpha, rho_alpha_m_w, sigma_alpha_w, sigma_eps_w, crra
@@ -72,10 +69,7 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
     new_R = new_R*0.1 + R*(1.0-0.9)
     new_W = new_W*0.1 + W*(1.0-0.9)
 
-    print("\e[2K") # clear whole line
-    print("\e[1G") # move cursor to column 1
-    println("#0 - r:$(round(R*100;digits=4))%, w:$(round(W;digits=6)) - total_len:$(round(total_len;digits=6)) - len_r:$(round(len_r;digits=6)) - len_w:$(round(len_w;digits=6)) - new_r:$(round(new_R*100;digits=4))%, new_w:$(round(new_W;digits=6))", ' '^70)
-
+    println_sameline("#0 - r:$(round(R*100;digits=4))%, w:$(round(W;digits=6)) - total_len:$(round(total_len;digits=6)) - len_r:$(round(len_r;digits=6)) - len_w:$(round(len_w;digits=6)) - new_r:$(round(new_R*100;digits=4))%, new_w:$(round(new_W;digits=6))")
 
     while rw_iters <= rw_maxiters && (abs(len_r) > gen_tol_f || abs(len_w) > gen_tol_f)
 
@@ -150,9 +144,7 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
             new_W = W + len_w
             new_W = min(max(w_min, new_W), w_max)
         end
-        print("\e[2K") # clear whole line
-        print("\e[1G") # move cursor to column 1
-        println("#$(rw_iters) - r:$(round(R*100;digits=4))%, w:$(round(W;digits=6)) - total_len:$(round(total_len;digits=6)) - len_r:$(round(len_r;digits=6)) - len_w:$(round(len_w;digits=6)) - new_r:$(round(new_R*100;digits=4))%, new_w:$(round(new_W;digits=6))")#, ' '^50)
+        println_sameline("#$(rw_iters) - r:$(round(R*100;digits=4))%, w:$(round(W;digits=6)) - total_len:$(round(total_len;digits=6)) - len_r:$(round(len_r;digits=6)) - len_w:$(round(len_w;digits=6)) - new_r:$(round(new_R*100;digits=4))%, new_w:$(round(new_W;digits=6))")
 
         # visualisation
         #=
