@@ -1,4 +1,4 @@
-include("print_sameline.jl")
+include("Functions/print_sameline.jl")
 ############################
 ######### Libraries ########
 print_sameline("Initialising libraries")
@@ -73,6 +73,10 @@ lambdas = [collect(range(1.01; length = 5, stop = 1.270437995455));
            collect(range(25.0; length = 4, stop = 100.0)         )[2:end];
            collect(range(100.0;length = 4, stop = 2500.0)        )[2:end]]
 
+l1_i = findfirst(x -> x==1.513028, lambdas)
+l2_i = findfirst(x -> (1.67-1e-2 < x)&&(x > 1.67+1e-2), lambdas)
+l3_i = findfirst(x -> (2.6-1e-2 < x)&&(x > 2.6+1e-2), lambdas)
+
 LOCAL_DIR_BRAZIL = "$(@__DIR__)/Results/Lambda_grid/Brazil/"
 LOCAL_DIR_ITALY = "$(@__DIR__)/Results/Lambda_grid/Italy/"
 if Sys.iswindows()
@@ -113,7 +117,7 @@ for country = ["Italy", "Brazil"]
 
     SSS = Array{Any}(undef,length(lambdas))
 
-    for i = 1:length(lambdas)
+    for i = [[l1_i, l2_i, l3_i]; deleteat!(collect(1:length(lambdas)),[l1_i, l2_i, l3_i])]#1:length(lambdas)
         println("\n$(country) - $(i)/$(length(lambdas))")
         MODEL_PARAMS = zeros(19)
         if country == "Brazil"
