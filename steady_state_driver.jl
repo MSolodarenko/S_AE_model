@@ -90,6 +90,9 @@ SS = copy(ss_star)
 
 # add differentiation between MAC and WINDOWS environments
 LOCAL_DIR = "$(@__DIR__)/Results/"
+if Sys.iswindows()
+    LOCAL_DIR = "$(@__DIR__)\\Results\\"
+end
 
 open("$(LOCAL_DIR)res_$(round(lambda;digits=2)).txt", "a") do f
     write(f, "Lambda: $(lambda)\n")
