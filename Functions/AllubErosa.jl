@@ -94,9 +94,9 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
     value_from_file_flag = true
     try
         #throw(error)
-        path = "$(@__DIR__)/Local Results/val_aprime/"
+        path = "$(@__DIR__)/val_aprime/"
         if Sys.iswindows()
-            path = "$(@__DIR__)\\Local Results\\val_aprime\\"
+            path = "$(@__DIR__)\\val_aprime\\"
         end
         @load "$(path)val_aprime_$(number_a_nodes)_$(number_u_nodes)_$(number_zeta_nodes)_$(number_alpha_m_nodes)_$(number_alpha_w_nodes).jld2" local_value local_aprime_nodes
         value = copy(local_value)
@@ -227,9 +227,9 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
     if !value_from_file_flag#false#
         local_value = copy(value)
         local_aprime_nodes = copy(aprime_nodes)
-        path = "$(@__DIR__)/Local Results/val_aprime/"
+        path = "$(@__DIR__)/val_aprime/"
         if Sys.iswindows()
-            path = "$(@__DIR__)\\Local Results\\val_aprime\\"
+            path = "$(@__DIR__)\\val_aprime\\"
         end
 
         @save "$(path)val_aprime_$(number_a_nodes)_$(number_u_nodes)_$(number_zeta_nodes)_$(number_alpha_m_nodes)_$(number_alpha_w_nodes).jld2" local_value local_aprime_nodes

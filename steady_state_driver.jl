@@ -6,7 +6,7 @@ using Plots
 using JLD2
 
 #print("Loading functions for steady_state procedure                           \r")
-include("steady_state.jl")
+include("Functions/steady_state.jl")
 
 # global parameters of the model's code
 #                   1           2           3       4
