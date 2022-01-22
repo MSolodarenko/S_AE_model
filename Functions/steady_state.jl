@@ -5,7 +5,7 @@ include("AllubErosa.jl")
 
 function steady_state(R, W, global_params, global_approx_params, model_params)
 
-    rw_maxiters = 1#100
+    rw_maxiters = 100
 
     #           1       2     3     4       5   6       7   8       9       10          11              12      13          14          15              16          17              18              19       20
     #         lambda, beta, delta, gamma, eta, theta, c_e, rho_m, rho_w, sigma_eps_m, rho_eps_m_w, sigma_zeta, p_alpha, eta_alpha, prob_node1_alpha, mu_m_alpha, rho_alpha_m_w, sigma_alpha_w, sigma_eps_w, crra
