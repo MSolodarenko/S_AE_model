@@ -94,9 +94,9 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
     value_from_file_flag = true
     try
         #throw(error)
-        path = "/Users/maxsolodarenko/OneDrive - University of Glasgow/PhD/Year 2/AllubErosa Transitional dynamics/Code/Test_firm_r_w/"
+        path = "$(@__DIR__)/Local Results/"
         if Sys.iswindows()
-            path = "C:\\Users\\2288144s\\OneDrive - University of Glasgow\\PhD\\Year 2\\AllubErosa Transitional dynamics\\Code\\Test_firm_r_w\\"
+            path = "$(@__DIR__)\\Local Results\\"
         end
         @load "$(path)val_aprime_$(number_a_nodes)_$(number_u_nodes)_$(number_zeta_nodes)_$(number_alpha_m_nodes)_$(number_alpha_w_nodes).jld2" local_value local_aprime_nodes
         value = copy(local_value)
@@ -227,9 +227,9 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
     if !value_from_file_flag#false#
         local_value = copy(value)
         local_aprime_nodes = copy(aprime_nodes)
-        path = "/Users/maxsolodarenko/OneDrive - University of Glasgow/PhD/Year 2/AllubErosa Transitional dynamics/Code/Test_firm_r_w/"
+        path = "$(@__DIR__)/Local Results/"
         if Sys.iswindows()
-            path = "C:\\Users\\2288144s\\OneDrive - University of Glasgow\\PhD\\Year 2\\AllubErosa Transitional dynamics\\Code\\Test_firm_r_w\\"
+            path = "$(@__DIR__)\\Local Results\\"
         end
         @save "$(path)val_aprime_$(number_a_nodes)_$(number_u_nodes)_$(number_zeta_nodes)_$(number_alpha_m_nodes)_$(number_alpha_w_nodes).jld2" local_value local_aprime_nodes
     end
