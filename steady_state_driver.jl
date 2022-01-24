@@ -11,7 +11,7 @@ include("Functions/steady_state.jl")
 # global parameters of the model's code
 #                   1           2           3       4
 #                gen_tol_x, gen_tol_f, distr_tol, val_tol
-GLOBAL_PARAMS = [1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-12, 1e-9]#[1e-8, 1e-4, 1e-7, 1e-5]#
+GLOBAL_PARAMS = [1e-6, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-12, 1e-9]#[1e-8, 1e-4, 1e-7, 1e-5]#
 
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
