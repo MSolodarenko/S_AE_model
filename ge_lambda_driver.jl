@@ -11,7 +11,7 @@ include("Functions/steady_state.jl")
 # global parameters of the model's code
 #                   1           2           3       4
 #                gen_tol_x, gen_tol_f, distr_tol, val_tol
-GLOBAL_PARAMS = [1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-12, 1e-9]#[1e-8, 1e-4, 1e-7, 1e-5]#
+GLOBAL_PARAMS = [1e-6, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-12, 1e-9]#[1e-8, 1e-4, 1e-7, 1e-5]#
 
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
@@ -93,8 +93,8 @@ for country = ["Italy", "Brazil"]
     end
     mkpath(LOCAL_DIR)
 
-    guess_R = -6.323809959525245/100#(r_min+r_max)/2#
-    guess_W = 0.19983052719342714#(w_min+w_max)/2#
+    guess_R = -6.323809959525245/100#-0.4933/100#(r_min+r_max)/2#
+    guess_W = 0.19983052719342714#0.22939#(w_min+w_max)/2#
 
     Rs = zeros(length(lambdas))
     Ws = zeros(length(lambdas))
@@ -117,7 +117,7 @@ for country = ["Italy", "Brazil"]
 
     SSS = Array{Any}(undef,length(lambdas))
 
-    for i = [[l1_i, l2_i, l3_i]; deleteat!(collect(1:length(lambdas)),[l1_i, l2_i, l3_i])]#1:length(lambdas)
+    for i = 1:length(lambdas)#[[l2_i, l1_i, l3_i]; deleteat!(collect(1:length(lambdas)),[l1_i, l2_i, l3_i])]#
         println("\n$(country) - $(i)/$(length(lambdas))")
         MODEL_PARAMS = zeros(19)
         if country == "Brazil"
@@ -125,7 +125,6 @@ for country = ["Italy", "Brazil"]
             #         lambda, beta, delta, gamma, eta, theta, c_e, rho_m, rho_w, sigma_eps_m, rho_eps_m_w, sigma_zeta, p_alpha, eta_alpha, prob_node1_alpha, mu_m_alpha, rho_alpha_m_w, sigma_alpha_w, sigma_eps_w, crra
             # brazil MODEL_PARAMS
             MODEL_PARAMS = [lambdas[i], 0.886291098471, 0.06, 0.197999, 0.325612, 0.476388, 0.080459934034, 0.78839752660496, 0.96, 1.14553769575612, 0.3351447009, 0.211613239161, 0.041225789925, 5.403585195245, 0.22878505546, -2.975991405139, 0.147638317002, 0.42, 0.07352027977526, CRRA]
-
         elseif country == "Italy"
             # italy MODEL_PARAMS
             MODEL_PARAMS = [lambdas[i], BETA, DELTA, GAMMA, ETA, THETA, C_E, RHO_M, RHO_W, SIGMA_EPS_M, RHO_EPS_M_W, SIGMA_ZETA, P_ALPHA, ETA_ALPHA, PROB_NODE1_ALPHA, MU_M_ALPHA, RHO_ALPHA_M_W, SIGMA_ALPHA_W, SIGMA_EPS_W, CRRA]

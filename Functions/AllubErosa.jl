@@ -216,13 +216,12 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
             #println_sameline(aprime_nodes[:,1,1,1,1])
         end
 
-
     end
 
     if text_output
         print_sameline("Calculation was finished on iteration - $(val_iters) with error: $(val_len)")
     end
-    if isnan(val_len)# || val_iters >= val_maxiters
+    if isnan(val_len) || val_iters >= val_maxiters
         throw(error("Policy function is NaN"))
     end
 
