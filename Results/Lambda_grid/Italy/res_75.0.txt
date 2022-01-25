@@ -1,0 +1,23 @@
+Lambda: 75.0
+Interest rate: 0.06694894292500304
+Wage: 0.2743125193187383
+
+
+Capital-to-output: 1.7887067499192155
+Credit-to-output: 1.413867416653589
+Share of workers: 0.8217576777202351
+Share of self-employed: 0.009921370394028479
+Share of employers: 0.1683209518857651
+Variance of log-consumption: 0.2723921500801316
+Occupational transition probabilities:
+[0.9091576751588973 0.007122687786707966 0.08371963705439472; 0.5740344219271232 0.24886438334804334 0.17710119472483368; 0.4096648041075927 0.009500726513893032 0.5808344693785144]
+Variance of log-earnings: 0.40909699441675323
+Gini for worker's income: 0.3815362788355129
+Gini for entrepreneurial's income: 0.34974029371366167
+
+------Productivity results---------
+TFP_ideal: 51.723474090252395%
+TFP_data: 50.34217383096878%
+Labour productivity: 0.5080453270744696
+Capital productivity (Output-to-capital): 0.5590631332079244
+Capital productivity (Expenses-to-revenue = (r+delta)*Capital-earnings): 1.8253844240622616
