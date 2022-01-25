@@ -287,79 +287,84 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
 
                             R = best_new_R
                             W = best_new_W
-                        elseif (old_len_r*best_len_r < 0.0 || abs(best_len_r)<1e-3 || abs(old_len_r)<1e-3) && (old_len_w*best_len_w < 0.0 || abs(best_len_w)<1e-3 || abs(old_len_w)<1e-3)#rw_iters > 1#19
-                            try
-                                _new_R     = (old_R+best_R)/2.0
-                                if _new_R <= r_min
-                                    _new_R = 0.9*r_min + (1.0-0.9)*old_R
-                                elseif _new_R >= r_max
-                                    _new_R = 0.9*r_max + (1.0-0.9)*old_R
+                        else
+                            if (old_len_r*best_len_r < 0.0 || abs(best_len_r)<1e-3 || abs(old_len_r)<1e-3) && (old_len_w*best_len_w < 0.0 || abs(best_len_w)<1e-3 || abs(old_len_w)<1e-3)#rw_iters > 1#19
+                                try
+                                    _new_R     = (old_R+best_R)/2.0
+                                    if _new_R <= r_min
+                                        _new_R = 0.9*r_min + (1.0-0.9)*old_R
+                                    elseif _new_R >= r_max
+                                        _new_R = 0.9*r_max + (1.0-0.9)*old_R
+                                    end
+                                    _new_W     = (old_W+best_W)/2.0
+                                    if _new_W <= w_min
+                                        _new_W = 0.9*w_min + (1.0-0.9)*old_W
+                                    elseif _new_W >= w_max
+                                        _new_W = 0.9*w_max + (1.0-0.9)*old_W
+                                    end
+                                    if abs(_new_R - best_R) < gen_tol_x && abs(_new_W - best_W) < gen_tol_x
+                                        throw(error("same as best_R and best_W"))
+                                    end
+                                    if abs(_new_R - old_R) < gen_tol_x && abs(_new_W - old_W) < gen_tol_x
+                                        throw(error("same as old_R and old_W"))
+                                    end
+                                    if abs(R - old_old_old_R) < gen_tol_x && abs(W - old_old_old_W) < gen_tol_x
+                                        throw(error("same as old_old_R and old_old_W"))
+                                    end
+                                    if abs(_new_R - R) < gen_tol_x && abs(_new_W - W) < gen_tol_x
+                                        throw(error("same as R and W"))
+                                    end
+                                    res1 = AllubErosa(_new_R,_new_W, global_params, global_approx_params, model_params, approx_object)
+                                    len_r1 = res1[10]
+                                    len_w1 = res1[11]
+                                    total_len1 = abs(len_r1)+abs(len_w1)
+                                    _new_R1     = _new_R - len_r1*(_new_R-old_R) /(len_r1-old_len_r)
+                                    best_new_R1 = _new_R - len_r1*(_new_R-best_R)/(len_r1-best_len_r)
+                                    new_R1 = (_new_R1+best_new_R1)/2.0
+                                    if new_R1 <= r_min
+                                        new_R1 = 0.9*r_min + (1.0-0.9)*_new_R
+                                        new_R1 = max(r_min, new_R1)
+                                    elseif new_R >= r_max
+                                        new_R1 = 0.9*r_max + (1.0-0.9)*_new_R
+                                        new_R1 = min(new_R1, r_max)
+                                    end
+                                    _new_W1     = _new_W - len_w1*(_new_W-old_W) /(len_w1-old_len_w)
+                                    best_new_W1 = _new_W - len_w1*(_new_W-best_W)/(len_w1-best_len_w)
+                                    new_W1 = (_new_W1+best_new_W1)/2.0
+                                    if new_W1 <= w_min
+                                        new_W1 = 0.9*w_min + (1.0-0.9)*_new_W
+                                        new_W1 = max(w_min, new_W1)
+                                    elseif new_W1 >= w_max
+                                        new_W1 = 0.9*w_max + (1.0-0.9)*_new_W
+                                        new_W1 = min(new_W1, w_max)
+                                    end
+                                    println_sameline("#$(rw_iters)c - r:$(round(_new_R*100;digits=4))%, w:$(round(_new_W;digits=6)) - total_len:$(round(total_len1;digits=6)) - len_r:$(round(len_r1;digits=6)) - len_w:$(round(len_w1;digits=6)) - new_r:$(round(new_R1*100;digits=4))%, new_w:$(round(new_W1;digits=6))")
+                                catch e
+                                    println_sameline(("c failed - ",e))
+                                    total_len1 = Inf
+                                    println_sameline("-> -")
                                 end
-                                _new_W     = (old_W+best_W)/2.0
-                                if _new_W <= w_min
-                                    _new_W = 0.9*w_min + (1.0-0.9)*old_W
-                                elseif _new_W >= w_max
-                                    _new_W = 0.9*w_max + (1.0-0.9)*old_W
+                                if total_len1 <= total_len
+                                    println_sameline("-> c")
+                                    res = copy(res1)
+
+                                    len_r = len_r1
+                                    len_w = len_w1
+                                    total_len = total_len1
+
+                                    new_R = new_R1
+                                    new_W = new_W1
+
+                                    R = _new_R
+                                    W = _new_W
+                                else
+                                    println_sameline("-> -")
                                 end
-                                if abs(_new_R - best_R) < gen_tol_x && abs(_new_W - best_W) < gen_tol_x
-                                    throw(error("same as best_R and best_W"))
-                                end
-                                if abs(_new_R - old_R) < gen_tol_x && abs(_new_W - old_W) < gen_tol_x
-                                    throw(error("same as old_R and old_W"))
-                                end
-                                if abs(R - old_old_old_R) < gen_tol_x && abs(W - old_old_old_W) < gen_tol_x
-                                    throw(error("same as old_old_R and old_old_W"))
-                                end
-                                if abs(_new_R - R) < gen_tol_x && abs(_new_W - W) < gen_tol_x
-                                    throw(error("same as R and W"))
-                                end
-                                res1 = AllubErosa(_new_R,_new_W, global_params, global_approx_params, model_params, approx_object)
-                                len_r1 = res1[10]
-                                len_w1 = res1[11]
-                                total_len1 = abs(len_r1)+abs(len_w1)
-                                _new_R1     = _new_R - len_r1*(_new_R-old_R) /(len_r1-old_len_r)
-                                best_new_R1 = _new_R - len_r1*(_new_R-best_R)/(len_r1-best_len_r)
-                                new_R1 = (_new_R1+best_new_R1)/2.0
-                                if new_R1 <= r_min
-                                    new_R1 = 0.9*r_min + (1.0-0.9)*_new_R
-                                    new_R1 = max(r_min, new_R1)
-                                elseif new_R >= r_max
-                                    new_R1 = 0.9*r_max + (1.0-0.9)*_new_R
-                                    new_R1 = min(new_R1, r_max)
-                                end
-                                _new_W1     = _new_W - len_w1*(_new_W-old_W) /(len_w1-old_len_w)
-                                best_new_W1 = _new_W - len_w1*(_new_W-best_W)/(len_w1-best_len_w)
-                                new_W1 = (_new_W1+best_new_W1)/2.0
-                                if new_W1 <= w_min
-                                    new_W1 = 0.9*w_min + (1.0-0.9)*_new_W
-                                    new_W1 = max(w_min, new_W1)
-                                elseif new_W1 >= w_max
-                                    new_W1 = 0.9*w_max + (1.0-0.9)*_new_W
-                                    new_W1 = min(new_W1, w_max)
-                                end
-                                println_sameline("#$(rw_iters)c - r:$(round(_new_R*100;digits=4))%, w:$(round(_new_W;digits=6)) - total_len:$(round(total_len1;digits=6)) - len_r:$(round(len_r1;digits=6)) - len_w:$(round(len_w1;digits=6)) - new_r:$(round(new_R1*100;digits=4))%, new_w:$(round(new_W1;digits=6))")
-                            catch e
-                                println_sameline(("c failed - ",e))
-                                total_len1 = Inf
+                            else
                                 println_sameline("-> -")
                             end
                         end
-                        if total_len1 <= total_len
-                            println_sameline("-> c")
-                            res = copy(res1)
 
-                            len_r = len_r1
-                            len_w = len_w1
-                            total_len = total_len1
-
-                            new_R = new_R1
-                            new_W = new_W1
-
-                            R = _new_R
-                            W = _new_W
-                        else
-                            println_sameline("-> -")
-                        end
                     end
 
                     if total_len < best_total_len
