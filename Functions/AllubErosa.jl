@@ -110,7 +110,7 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
     end
 
     val_Delta   = 0.05  # update parameter for value function iteration
-    val_maxiters= 500#1000#250#
+    val_maxiters= 1000#250#500#
     val_len     = Inf
     val_iters   = 0
     aprime_len = Inf
@@ -225,7 +225,7 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
         throw(error("Policy function is NaN"))
     end
 
-    if !value_from_file_flag#false#
+    if true#!value_from_file_flag#false#
         local_value = copy(value)
         local_aprime_nodes = copy(aprime_nodes)
         path = "$(@__DIR__)/val_aprime/"

@@ -389,7 +389,7 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
 
             total_len = old_total_len
 
-            println_sameline("#$(rw_iters) - r:$(round(R*100;digits=4))%, w:$(round(W;digits=6)) - total_len:-.------ - len_r:$(round(len_r;digits=6)) - len_w:$(round(len_w;digits=6)) - new_r:$(round(new_R*100;digits=4))%, new_w:$(round(new_W;digits=6))")
+            println_sameline("#$(rw_iters) - r:$(round(R*100;digits=4))%, w:$(round(W;digits=6)) - total_len:-.------ - len_r:-.------ - len_w:-.------ - new_r:$(round(new_R*100;digits=4))%, new_w:$(round(new_W;digits=6))")
 
             R = old_R
             old_R = old_old_R
