@@ -11,7 +11,7 @@ include("Functions/steady_state.jl")
 # global parameters of the model's code
 #                   1           2           3       4
 #                gen_tol_x, gen_tol_f, distr_tol, val_tol
-GLOBAL_PARAMS = [1e-6, 1e-4, 1e-8, 1e-6]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-12, 1e-9]#[1e-8, 1e-4, 1e-7, 1e-5]#
+GLOBAL_PARAMS = [1e-6/2, 1e-4, 1e-8, 1e-6]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-12, 1e-9]#[1e-8, 1e-4, 1e-7, 1e-5]#
 
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
@@ -53,8 +53,8 @@ r_min = -DELTA#-delta
 r_max = 1/BETA-1#1/beta-1
 
 # wage bounds #### NOT DONE!!! ########
-w_min = 0.01#0.25
-w_max = 0.99#0.5
+w_min = 0.18#0.01#0.25
+w_max = 0.3#0.99#0.5
 
 optimal_r = R_#(r_min+r_max)/2#r#
 optimal_w = W_#(w_min+w_max)/2#w#
@@ -93,8 +93,8 @@ for country = ["Italy"#=, "Brazil"=#]
     end
     mkpath(LOCAL_DIR)
 
-    guess_R = -6.323809959525245/100#-0.4933/100#(r_min+r_max)/2#
-    guess_W = 0.19983052719342714#0.22939#(w_min+w_max)/2#
+    guess_R = -9.5813533483948/100#-0.4933/100#(r_min+r_max)/2#
+    guess_W = 0.20913816427143422#0.22939#(w_min+w_max)/2#
 
     Rs = zeros(length(lambdas))
     Ws = zeros(length(lambdas))
@@ -117,7 +117,7 @@ for country = ["Italy"#=, "Brazil"=#]
 
     SSS = Array{Any}(undef,length(lambdas))
 
-    for i = 1:length(lambdas)#[[l2_i, l1_i, l3_i]; deleteat!(collect(1:length(lambdas)),[l1_i, l2_i, l3_i])]#
+    for i = [1, 11, 17, 20, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33]#1:length(lambdas)#[[l1_i, l3_i, l2_i]; deleteat!(collect(1:length(lambdas)),[l1_i, l2_i, l3_i])]#
         println("\n$(country) - $(i)/$(length(lambdas))")
         MODEL_PARAMS = zeros(19)
         if country == "Brazil"

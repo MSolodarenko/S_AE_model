@@ -53,8 +53,8 @@ r_min = -DELTA#-delta
 r_max = 1/BETA-1#1/beta-1
 
 # wage bounds #### NOT DONE!!! ########
-w_min = 0.01#0.25
-w_max = 0.99#0.5
+w_min = 0.18#0.01#0.25
+w_max = 0.3#0.99#0.5
 
 optimal_r = R_#(r_min+r_max)/2#r#
 optimal_w = W_#(w_min+w_max)/2#w#
@@ -83,7 +83,7 @@ if Sys.iswindows()
    LOCAL_DIR_BRAZIL = "$(@__DIR__)\\Results\\Lambda_grid\\Brazil\\"
    LOCAL_DIR_ITALY = "$(@__DIR__)\\Results\\Lambda_grid\\Italy\\"
 end
-for country = ["Italy", "Brazil"]
+for country = ["Italy"#=, "Brazil"=#]
     if country == "Italy"
         LOCAL_DIR = LOCAL_DIR_ITALY
     elseif country == "Brazil"
