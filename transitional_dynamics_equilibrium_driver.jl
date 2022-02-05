@@ -5,9 +5,6 @@ print_sameline("Initialising libraries")
 using Plots
 using JLD2
 
-print_sameline("Loading functions for steady_state procedure")
-include("Functions/steady_state.jl")
-
 print_sameline("Loading functions for transitional_dynamics procedure")
 include("Functions/transitional_dynamics_equilibrium.jl")
 
@@ -89,9 +86,9 @@ lambda_3 = SS[5][1]
 ss_3 = copy(SS)
 #@time ss_starstar = steady_state(lambda_2)
 
-MAXITERS = 50
-TIME_PERIODS = #=20,50,=#100#=,200=#
-SMOOTHING = #=true, =#false
+MAXITERS = 100#50#1000#
+TIME_PERIODS = 100#150#20#50#200#
+SMOOTHING = false#true
 RUNWAY = 0# Int64(round(TIME_PERIODS/2; digits=0))
 lambda_i = 2#=,3=#
 lambda_local = lambda_2
@@ -107,28 +104,23 @@ if Sys.iswindows()
 end
 mkpath(LOCAL_DIR)
 
-print("T$(TIME_PERIODS)")
-print(" $(SMOOTHING ? "- smooth" : "")")
-print(" - Lambda - $(lambda_local)")
-println(" $(RUNWAY==0 ? "- 1. Natural Convergence" : "- 2. Augmented Convergence Process (RUNWAY path))") ")
 # one-time change
-LAMBDA_S = ones(TIME_PERIODS-RUNWAY).*lambda_local
+LAMBDA_S = ones(TIME_PERIODS).*lambda_local
 LAMBDA_S[1] = lambda_1
 MODEL_PARAMS = [lambda_1, BETA, DELTA, GAMMA, ETA, THETA, C_E, RHO_M, RHO_W, SIGMA_EPS_M, RHO_EPS_M_W, SIGMA_ZETA, P_ALPHA, ETA_ALPHA, PROB_NODE1_ALPHA, MU_M_ALPHA, RHO_ALPHA_M_W, SIGMA_ALPHA_W, SIGMA_EPS_W, CRRA]
 
-trans_res = open("$(LOCAL_DIR)trans_$(lambda_1)_$(lambda_local)_$(RUNWAY==0 ? "nat" : "aug")$(SMOOTHING ? "_smooth" : "")_$(TIME_PERIODS).txt", "w") do F
-    #1         2        3            4              5                     6             7          8       9         10         11
-    #lambda_s, ss_star, ss_starstar, GLOBAL_PARAMS, GLOBAL_APPROX_PARAMS, model_params, file_name, runway, GUESS_RS, smoothing, maxiters
-    #                                 1         2    3         4             5                     6             7  8       9     10         11
-    @time res = transitional_dynamics(LAMBDA_S, ss_1,ss_local, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS, F, RUNWAY, true, SMOOTHING, MAXITERS)
+trans_res = open("$(LOCAL_DIR)trans_$(TIME_PERIODS)_results.txt", "w") do F
+    #1         2        3            4              5                     6             7          8         9
+    #lambda_s, ss_star, ss_starstar, GLOBAL_PARAMS, GLOBAL_APPROX_PARAMS, model_params, file_name, GUESS_RS, maxiters
+    #                                 1         2    3         4             5                     6             7  8     9
+    @time res = transitional_dynamics(LAMBDA_S, ss_1,ss_local, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS, F, true, MAXITERS)
     (res)
 end
 
 ss_2_temp = copy(ss_2)
 ss_2 = copy(ss_local)
-@save "$(LOCAL_DIR)trans_$(lambda_local)_$(RUNWAY==0 ? "nat" : "aug")$(SMOOTHING ? "_smooth" : "")_$(TIME_PERIODS).jld2" trans_res ss_1 ss_2
+@save "$(LOCAL_DIR)trans_$(TIME_PERIODS)_results.jld2" trans_res ss_1 ss_2
 ss_2 = copy(ss_2_temp)
-
 
 #=
 println_sameline("Experiments")
