@@ -11,13 +11,13 @@ using JLD2
 using ProgressMeter
 
 country = "Italy"
-LOCAL_DIR = "$(@__DIR__)/Results/Lambda_grid/$(country)/"
+LOCAL_DIR = "$(@__DIR__)/Results/Lambda_grid_big_grid_test/$(country)/"
 if Sys.iswindows()
-    LOCAL_DIR = "\\Results\\Lambda_grid\\$(country)\\"
+    LOCAL_DIR = "\\Results\\Lambda_grid_big_grid_test\\$(country)\\"
 end
-global_approx_params = [15,3,3,3,6,3]
+global_approx_params = [49,3,3,3,6,3]
 
-print_sameline("Loading data from Lambda_grid")
+print_sameline("Loading data from Lambda_grid_big_grid_test")
 #@load "$(LOCAL_DIR)SSS.jld2" SSS
 SSS_names = readdir(LOCAL_DIR)
 SSS_names = SSS_names[findall(x->occursin("SS_",x), SSS_names)]
