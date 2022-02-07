@@ -25,3 +25,9 @@ Manifest.toml
 *.jld2
 Results/Transitional_dynamics/.DS_Store
 *.png
+Results/Lambda_grid/Italy/.DS_Store
+Results/Lambda_grid/Italy/Productivity/.DS_Store
+Results/Lambda_grid_big_grid_test/Italy/.DS_Store
+Results/Lambda_grid_big_grid_test/Italy/Productivity/.DS_Store
+Results/Lambda_grid_big_grid_test/Italy/.DS_Store
+Results/Lambda_grid_big_grid_test/Italy/.DS_Store

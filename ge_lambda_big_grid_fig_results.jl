@@ -32,96 +32,105 @@ temp_is = sortperm(lambdas)
 lambdas = lambdas[temp_is]
 SSS = SSS[temp_is]
 
+num_lambdas = 20#length(lambda) #instead of length(lambda)
 calibrated_lambda = findfirst(x -> x==1.513028, lambdas)
 
-Rs = zeros(length(lambdas))
-Ws = zeros(length(lambdas))
-K_Ys = zeros(length(lambdas))
-C_Ys = zeros(length(lambdas))
-occWs = zeros(length(lambdas))
-occSEs = zeros(length(lambdas))
-occEMPs = zeros(length(lambdas))
-occENTs = zeros(length(lambdas))
-logcs = zeros(length(lambdas))
-loges = zeros(length(lambdas))
-giniWs = zeros(length(lambdas))
-giniEnts = zeros(length(lambdas))
+Rs = zeros(num_lambdas)
+Ws = zeros(num_lambdas)
+K_Ys = zeros(num_lambdas)
+C_Ys = zeros(num_lambdas)
+occWs = zeros(num_lambdas)
+occSEs = zeros(num_lambdas)
+occEMPs = zeros(num_lambdas)
+occENTs = zeros(num_lambdas)
+logcs = zeros(num_lambdas)
+loges = zeros(num_lambdas)
+giniWs = zeros(num_lambdas)
+giniEnts = zeros(num_lambdas)
 
-TFPis = zeros(length(lambdas))
-TFPds = zeros(length(lambdas))
-Labour_productivity_s = zeros(length(lambdas))
-Capital_productivity_s = zeros(length(lambdas))
-Investment_productivity_s = zeros(length(lambdas))
-
-Outputs = zeros(length(lambdas))
-Incomes = zeros(length(lambdas))
-Consumptions = zeros(length(lambdas))
-Income_to_outputs = zeros(length(lambdas))
+Outputs = zeros(num_lambdas)
+Incomes = zeros(num_lambdas)
+Consumptions = zeros(num_lambdas)
+Income_to_outputs = zeros(num_lambdas)
 
 # income, earnings, wealth, consumption
 # All, W, SP, EMP
 # lambdas
-means = zeros(4,4,length(lambdas))
-ginis = zeros(4,4,length(lambdas))
-avglogs = zeros(4,4,length(lambdas))
-varlogs = zeros(4,4,length(lambdas))
-avgs = zeros(4,4,length(lambdas))
-vars = zeros(4,4,length(lambdas))
+means = zeros(4,4,num_lambdas)
+ginis = zeros(4,4,num_lambdas)
+avglogs = zeros(4,4,num_lambdas)
+varlogs = zeros(4,4,num_lambdas)
+avgs = zeros(4,4,num_lambdas)
+vars = zeros(4,4,num_lambdas)
 
-output_SPs  = zeros(length(lambdas))
-output_EMPs = zeros(length(lambdas))
+interquartile_wealth = zeros(num_lambdas)
+interquintile_wealth = zeros(num_lambdas)
+interdecile_wealth = zeros(num_lambdas)
+interquartile_wealth_w = zeros(num_lambdas)
+interquintile_wealth_w = zeros(num_lambdas)
+interdecile_wealth_w = zeros(num_lambdas)
+interquartile_wealth_se = zeros(num_lambdas)
+interquintile_wealth_se = zeros(num_lambdas)
+interdecile_wealth_se = zeros(num_lambdas)
+interquartile_wealth_emp = zeros(num_lambdas)
+interquintile_wealth_emp = zeros(num_lambdas)
+interdecile_wealth_emp = zeros(num_lambdas)
 
-share_of_output_SPs  = zeros(length(lambdas))
-share_of_output_EMPs = zeros(length(lambdas))
+palma_wealth = zeros(num_lambdas)
+palma_wealth_w = zeros(num_lambdas)
+palma_wealth_se = zeros(num_lambdas)
+palma_wealth_emp = zeros(num_lambdas)
 
-ratio_of_capitals = zeros(length(lambdas))
-ratio_of_outputs  = zeros(length(lambdas))
+ratio2020 = zeros(num_lambdas)
+ratio2020_w = zeros(num_lambdas)
+ratio2020_se = zeros(num_lambdas)
+ratio2020_emp = zeros(num_lambdas)
 
-interquartile_wealth = zeros(length(lambdas))
-interquintile_wealth = zeros(length(lambdas))
-interdecile_wealth = zeros(length(lambdas))
-interquartile_wealth_w = zeros(length(lambdas))
-interquintile_wealth_w = zeros(length(lambdas))
-interdecile_wealth_w = zeros(length(lambdas))
-interquartile_wealth_se = zeros(length(lambdas))
-interquintile_wealth_se = zeros(length(lambdas))
-interdecile_wealth_se = zeros(length(lambdas))
-interquartile_wealth_emp = zeros(length(lambdas))
-interquintile_wealth_emp = zeros(length(lambdas))
-interdecile_wealth_emp = zeros(length(lambdas))
+gini_wealth = zeros(num_lambdas)
+gini_wealth_w = zeros(num_lambdas)
+gini_wealth_se = zeros(num_lambdas)
+gini_wealth_emp = zeros(num_lambdas)
 
-palma_wealth = zeros(length(lambdas))
-palma_wealth_w = zeros(length(lambdas))
-palma_wealth_se = zeros(length(lambdas))
-palma_wealth_emp = zeros(length(lambdas))
+Capital = zeros(num_lambdas)
 
-ratio2020 = zeros(length(lambdas))
-ratio2020_w = zeros(length(lambdas))
-ratio2020_se = zeros(length(lambdas))
-ratio2020_emp = zeros(length(lambdas))
+# ENT, SP, EMP
+TFPis = zeros(3,num_lambdas)
+TFPds = zeros(3,num_lambdas)
 
-gini_wealth = zeros(length(lambdas))
-gini_wealth_w = zeros(length(lambdas))
-gini_wealth_se = zeros(length(lambdas))
-gini_wealth_emp = zeros(length(lambdas))
+mean_MPL = zeros(3,num_lambdas)
+var_MPL = zeros(3,num_lambdas)
 
-Capital = zeros(length(lambdas))
+mean_MPK = zeros(3,num_lambdas)
+var_MPK = zeros(3,num_lambdas)
 
-share_ent_unbound = zeros(length(lambdas))
-share_se_unbound = zeros(length(lambdas))
-share_emp_unbound = zeros(length(lambdas))
+share_unbound = zeros(3,num_lambdas)
 
-# H, W,SP,EMP
-avg_w_skill = zeros(4,length(lambdas))
-avg_m_skill = zeros(4,length(lambdas))
+# W, ENT, SP,EMP
+avg_w_skill = zeros(4,num_lambdas)
+avg_m_skill = zeros(4,num_lambdas)
 
-var_w_skill = zeros(4,length(lambdas))
-var_m_skill = zeros(4,length(lambdas))
+var_w_skill = zeros(4,num_lambdas)
+var_m_skill = zeros(4,num_lambdas)
+
+output_SPs  = zeros(num_lambdas)
+output_EMPs = zeros(num_lambdas)
+
+share_of_output_SPs  = zeros(num_lambdas)
+share_of_output_EMPs = zeros(num_lambdas)
+
+ratio_of_capitals = zeros(num_lambdas)
+ratio_of_outputs  = zeros(num_lambdas)
+
+old_TFPis = zeros(num_lambdas)
+old_TFPds = zeros(num_lambdas)
+Labour_productivity_s = zeros(num_lambdas)
+Capital_productivity_s = zeros(num_lambdas)
+Investment_productivity_s = zeros(num_lambdas)
 
 #throw(error)
 
-@showprogress for i = 1:length(lambdas)
-    #println("\n$(country) - $(i)/$(length(lambdas))")
+@showprogress for i = 1:num_lambdas
+    #println("\n$(country) - $(i)/$(num_lambdas)")
     # ss_star = [res, r, w, approx_object, params]
     ss_star = copy(SSS[i])
 
@@ -138,11 +147,8 @@ var_m_skill = zeros(4,length(lambdas))
     giniWs[i] = ss_star[1][20]
     giniEnts[i] = ss_star[1][21]
 
-    TFPis[i] = ss_star[1][43][end-4]
-    TFPds[i] = ss_star[1][43][end-3]
-    Labour_productivity_s[i] = ss_star[1][43][end-2]
-    Capital_productivity_s[i] = ss_star[1][43][end-1]
-    Investment_productivity_s[i] = ss_star[1][43][end]
+    eta = ss_star[5][5]
+    theta = ss_star[5][6]
 
     z_m_nodes = ss_star[4][1]
     z_w_nodes = ss_star[4][2]
@@ -156,6 +162,7 @@ var_m_skill = zeros(4,length(lambdas))
     consumption = income .+ wealth .- policy
     occ_choice = ss_star[1][22]
     capital_d = ss_star[1][26]
+    labour_d = ss_star[1][29]
 
     output = ss_star[1][32]
 
@@ -171,6 +178,28 @@ var_m_skill = zeros(4,length(lambdas))
     number_zeta_nodes = global_approx_params[4]
     number_alpha_m_nodes = global_approx_params[5]
     number_alpha_w_nodes = global_approx_params[6]
+
+    w_choice   = copy(occ_choice)
+    sp_choice  = copy(occ_choice)
+    emp_choice = copy(occ_choice)
+    Threads.@threads for (u_i,(zeta_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes))))
+        for a_i in 1:number_asset_grid
+            if w_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] != 1
+                w_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 0
+            end
+            if sp_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] != 2
+                sp_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 0
+            else
+                sp_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 1
+            end
+            if emp_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] != 3
+                emp_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 0
+            else
+                emp_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 1
+            end
+        end
+    end
+    ent_choice = sp_choice.+emp_choice
 
     # [1] = income, earnings, wealth, consumption
     # [2] = All, W, SP, EMP
@@ -189,28 +218,14 @@ var_m_skill = zeros(4,length(lambdas))
 
         for h = 1:4 # [2] = All, W, SP, EMP
             choice = copy(occ_choice)
-            Threads.@threads for (u_i,(zeta_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes))))
-                for a_i in 1:number_asset_grid
-                    if h == 1 #All
-                        choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 1
-                    elseif h == 2 #W
-                        if choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] != 1
-                            choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 0
-                        end
-                    elseif h == 3 #SP
-                        if choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] != 2
-                            choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 0
-                        else
-                            choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 1
-                        end
-                    elseif h == 4 #EMP
-                        if choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] != 3
-                            choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 0
-                        else
-                            choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 1
-                        end
-                    end
-                end
+            if h == 1 #All
+                choice = choice.*0.0 .+ 1.0
+            elseif h == 2 #W
+                choice = copy(w_choice)
+            elseif h == 3 #SP
+                choice = copy(sp_choice)
+            elseif h == 4 #EMP
+                choice = copy(emp_choice)
             end
 
             # calculate mean
@@ -243,28 +258,6 @@ var_m_skill = zeros(4,length(lambdas))
             avgs[s,h,i] /= sum(density_distr.*choice)
         end
     end
-
-    w_choice   = copy(occ_choice)
-    sp_choice  = copy(occ_choice)
-    emp_choice = copy(occ_choice)
-    Threads.@threads for (u_i,(zeta_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes))))
-        for a_i in 1:number_asset_grid
-            if w_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] != 1
-                w_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 0
-            end
-            if sp_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] != 2
-                sp_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 0
-            else
-                sp_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 1
-            end
-            if emp_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] != 3
-                emp_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 0
-            else
-                emp_choice[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 1
-            end
-        end
-    end
-    ent_choice = sp_choice.+emp_choice
 
     output_SPs[i]  = sum(ss_star[1][32].* density_distr.* sp_choice)
     output_EMPs[i] = sum(ss_star[1][32].* density_distr.*emp_choice)
@@ -337,28 +330,17 @@ var_m_skill = zeros(4,length(lambdas))
     ratio2020_se[i] = csowbsop(1.0,0.8,cdf_se_1,asset_distr)/csowbsop(0.2,0.0,cdf_se_1,asset_distr)
     ratio2020_emp[i] = csowbsop(1.0,0.8,cdf_emp_1,asset_distr)/csowbsop(0.2,0.0,cdf_emp_1,asset_distr)
 
-    #=
-    gini_wealth[i] = sum([ cdf[y]*(1-cdf[y]) for y=1:max_a_i ]) / sum(asset_grid[1:max_a_i].*asset_distr[1:max_a_i])
-    gini_wealth_w[i] = sum([ cdf_w[y]*(1-cdf_w[y]) for y=1:max_a_i ]) / sum(asset_grid[1:max_a_i].*asset_distr_w[1:max_a_i])
-    gini_wealth_se[i] = sum([ cdf_se[y]*(1-cdf_se[y]) for y=1:max_a_i ]) / sum(asset_grid[1:max_a_i].*asset_distr_se[1:max_a_i])
-    gini_wealth_emp[i] = sum([ cdf_emp[y]*(1-cdf_emp[y]) for y=1:max_a_i ]) / sum(asset_grid[1:max_a_i].*asset_distr_emp[1:max_a_i])
-    =#
     gini_wealth[i] = sum([ asset_distr[y_i]*asset_distr[y_j]*abs(asset_grid[y_i]-asset_grid[y_j]) for y_i=1:max_a_i, y_j=1:max_a_i ]) / (2*sum(asset_grid[1:max_a_i].*asset_distr[1:max_a_i]))
     gini_wealth_w[i] = sum([ asset_distr_w[y_i]*asset_distr_w[y_j]*abs(asset_grid[y_i]-asset_grid[y_j]) for y_i=1:max_a_i, y_j=1:max_a_i ]) / (2*sum(asset_grid[1:max_a_i].*asset_distr_w[1:max_a_i]))
     gini_wealth_se[i] = sum([ asset_distr_se[y_i]*asset_distr_se[y_j]*abs(asset_grid[y_i]-asset_grid[y_j]) for y_i=1:max_a_i, y_j=1:max_a_i ]) / (2*sum(asset_grid[1:max_a_i].*asset_distr_se[1:max_a_i]))
     gini_wealth_emp[i] = sum([ asset_distr_emp[y_i]*asset_distr_emp[y_j]*abs(asset_grid[y_i]-asset_grid[y_j]) for y_i=1:max_a_i, y_j=1:max_a_i ]) / (2*sum(asset_grid[1:max_a_i].*asset_distr_emp[1:max_a_i]))
 
     unlimited_capital_choice = capital_d.<(lambdas[i].*(asset_grid.*ones(size(capital_d))))
-
-    share_ent_unbound[i] = sum(ent_choice.*density_distr.*unlimited_capital_choice)/occENTs[i]
-    share_se_unbound[i] = sum(sp_choice.*density_distr.*unlimited_capital_choice)/occSEs[i]
-    share_emp_unbound[i] = sum(emp_choice.*density_distr.*unlimited_capital_choice)/occEMPs[i]
-
     for c = 1:4
         if c==1
-            choice = ones(size(occ_choice))
-        elseif c==2
             choice = w_choice
+        elseif c==2
+            choice = ent_choice
         elseif c==3
             choice = sp_choice
         elseif c==4
@@ -366,20 +348,57 @@ var_m_skill = zeros(4,length(lambdas))
         else
             throw("c is out of bounds")
         end
+
+        denumerator = sum(choice.*density_distr)
+        if c>1
+            #if c==2
+            #    choice = ones(size(choice))
+            #end
+            #if c==2
+            #    denumerator = sum(choice.*density_distr)
+            #end
+            Y = sum(choice.*density_distr.*output)/denumerator
+            K = sum(choice.*density_distr.*capital_d)/denumerator
+            L = sum(choice.*density_distr.*labour_d)/denumerator
+            TFPis[c-1,i] = Y/(K^eta*L^theta)
+            TFPds[c-1,i] = Y/K^(eta/(theta+eta))
+
+            c_1 = capital_d.^(-1.0)
+            replace!(c_1,Inf=>0.0)
+            mean_MPK[c-1,i] = sum(choice.*density_distr.*(eta.*output.*c_1))/denumerator
+            var_MPK[c-1,i] = sum(choice.*density_distr.*(eta.*output.*c_1 .- mean_MPK[c-1,i]*denumerator).^2)/denumerator
+
+            l_1 = labour_d.^(-1.0)
+            replace!(l_1,Inf=>0.0)
+            mean_MPL[c-1,i] = sum(choice.*density_distr.*(theta.*output.*l_1))/denumerator
+            var_MPL[c-1,i] = sum(choice.*density_distr.*(theta.*output.*l_1 .- mean_MPL[c-1,i]*denumerator).^2)/denumerator
+
+            #if c==2
+            #    choice = ent_choice
+            #end
+            share_unbound[c-1,i] = sum(choice.*density_distr.*unlimited_capital_choice)/sum(choice.*density_distr)
+        end
+
         #[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
         #m = u_i,alpha_m_i,zeta_i
         m_skill_distr = permutedims(sum(density_distr.*choice, dims=[1,5])[1,:,:,:,1], [1,3,2])
         #w = u_i,alpha_m_i,alpha_w_i
         w_skill_distr = sum(density_distr.*choice, dims=[1,3])[1,:,1,:,:]
 
-        avg_m_skill[c,i] = sum(m_skill_distr.*z_m_nodes)/sum(density_distr.*choice)
-        avg_w_skill[c,i] = sum(w_skill_distr.*z_w_nodes)/sum(density_distr.*choice)
+        avg_m_skill[c,i] = sum(m_skill_distr.*z_m_nodes)/denumerator
+        avg_w_skill[c,i] = sum(w_skill_distr.*z_w_nodes)/denumerator
 
-        var_m_skill[c,i] = sum(m_skill_distr.*(z_m_nodes .- avg_m_skill[c,i]*sum(density_distr.*choice)).^2)/sum(density_distr.*choice)
-        var_w_skill[c,i] = sum(w_skill_distr.*(z_w_nodes .- avg_w_skill[c,i]*sum(density_distr.*choice)).^2)/sum(density_distr.*choice)
+        var_m_skill[c,i] = sum(m_skill_distr.*(z_m_nodes .- avg_m_skill[c,i]*denumerator).^2)/denumerator
+        var_w_skill[c,i] = sum(w_skill_distr.*(z_w_nodes .- avg_w_skill[c,i]*denumerator).^2)/denumerator
 
         #display([avg_w_skill[c,i],avg_m_skill[c,i], var_w_skill[c,i],var_m_skill[c,i]])
     end
+
+    old_TFPis[i] = ss_star[1][43][end-4]
+    old_TFPds[i] = ss_star[1][43][end-3]
+    Labour_productivity_s[i] = ss_star[1][43][end-2]
+    Capital_productivity_s[i] = ss_star[1][43][end-1]
+    Investment_productivity_s[i] = ss_star[1][43][end]
     #throw(error)
 end
 
@@ -400,17 +419,11 @@ for (u_i,(zeta_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:number_u
     end
 end
 #policy = SSS[l][1][4]
-num_lambdas = 20
 num_lambdas_sp = findfirst(x -> x>0.75, C_Ys)-1
-
-ratio_of_capitals = ratio_of_capitals./ratio_of_capitals[num_lambdas]
-ratio_of_outputs = Outputs./Outputs[num_lambdas]
-
-Capital = Capital./Capital[1]
 
 #throw(error)
 
-function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL::String, IS_Y_PERCENTAGE::Bool=true, OCCUPATION::String="H")
+function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL::String, IS_Y_PERCENTAGE::Bool=true, OCCUPATION::String="H", LOW_LIMIT=-Inf)
     COLOR="blue"
     if OCCUPATION=="W"
         COLOR="purple"
@@ -420,8 +433,8 @@ function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL
         COLOR="green"
     end
 
-    YLIMS1 = minimum(Y)
-    YLIMS2 = maximum(Y[1:num_lambdas])
+    YLIMS1 = max(minimum(Y), LOW_LIMIT)
+    YLIMS2 = maximum(Y)
     #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
     YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
     YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
@@ -436,7 +449,7 @@ function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL
     else
         YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
     end
-    plt = scatter(X[1:num_lambdas],Y[1:num_lambdas],
+    plt = scatter(X,Y,
                     #=regression=true,=#
                     color=COLOR,
                     legend=false,
@@ -472,7 +485,7 @@ function create_plots(X::Vector{Float64},XLABEL::String,Ys,YLABELs, IS_Y_PERCENT
         YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
         YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
         YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
-        DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]));digits=0) ))
+        DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]));digits=0) ))+1
         YPOS = mean(YTICKS[end-1:end])
         if maximum(filter(!isnan,copy(Y[calibrated_lambda:calibrated_lambda+4]))) > YTICKS[end-1]
             YPOS = mean(YTICKS[1:2])
@@ -491,7 +504,7 @@ function create_plots(X::Vector{Float64},XLABEL::String,Ys,YLABELs, IS_Y_PERCENT
         elseif OCCUPATION[y_i]=="EMP"
             COLOR="green"
         end
-        plt = scatter(X[1:num_lambdas],Y[1:num_lambdas],
+        plt = scatter(X,Y,
                         #=regression=true,=#
                         color = COLOR,
                         legend = false,
@@ -509,6 +522,61 @@ function create_plots(X::Vector{Float64},XLABEL::String,Ys,YLABELs, IS_Y_PERCENT
         push!(plts, plt)
     end
     return plts
+end
+function create_combined_plot(X::Vector{Float64},XLABEL::String,Ys,YLABELs,YLABEL, IS_Y_PERCENTAGE::Bool=true, OCCUPATION=["H", "W", "SP", "EMP"], LOW_LIMIT=-Inf)
+
+
+    YLIMS1 = max(minimum(minimum.(Ys)), LOW_LIMIT)
+    YLIMS2 = maximum(maximum.(Ys))
+    #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
+    YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
+    YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
+    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
+    DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]));digits=0) ))
+    YPOS = mean(YTICKS[end-1:end])
+
+    COLORS=[]
+    for y_i = 1:length(Ys)
+        if OCCUPATION[y_i]=="W"
+            push!(COLORS,"purple")
+        elseif OCCUPATION[y_i]=="SP"
+            push!(COLORS,"red")
+        elseif OCCUPATION[y_i]=="EMP"
+            push!(COLORS,"green")
+        else
+            push!(COLORS,"blue")
+        end
+
+        if maximum(Ys[y_i][calibrated_lambda:calibrated_lambda+4]) > YTICKS[end-1]
+            YPOS = mean(YTICKS[1:2])
+        end
+    end
+    if IS_Y_PERCENTAGE
+        YTICKS = (YTICKS, ["$(round(100*y;digits=DIGITS))%" for y in YTICKS])
+    else
+        YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
+    end
+    plt = vline([X[calibrated_lambda]], color="grey",label="")
+    if IS_Y_PERCENTAGE
+        TEXT = " Calibrated economy ($(round(X[calibrated_lambda]; digits=DIGITS+1))) "
+    else
+        TEXT = " Calibrated economy ($(round(X[calibrated_lambda]; digits=DIGITS+1))) "
+    end
+    annotate!([X[calibrated_lambda]], YPOS, text(TEXT, :grey, :left, 7))
+
+    for y_i = 1:length(Ys)
+        plt = scatter!(X,Ys[y_i],
+                        #=regression=true,=#
+                        color=COLORS[y_i],
+                        legend=:outertopright,
+                        xlabel=XLABEL,
+                        ylabel=YLABEL,
+                        label=YLABELs[y_i],
+                        yticks = YTICKS,
+                        ylims = YLIMS )
+    end
+
+    return plt
 end
 
 LOCAL_DIR_GENERAL = "$(LOCAL_DIR)/General/"
@@ -591,28 +659,6 @@ for i in 1:length(plts)
         savefig(plts[i],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_gini_entrepreneurs.png")
     end
 end
-
-LOCAL_DIR_PRODUCTIVITY = "$(LOCAL_DIR)/Productivity/"
-if Sys.iswindows()
-    LOCAL_DIR_PRODUCTIVITY = "$(LOCAL_DIR)\\Productivity\\"
-end
-mkpath(LOCAL_DIR_PRODUCTIVITY)
-#TFP_ideal, TFP_data, Labour_productivity, Capital_productivity, Investment_productivity
-plt = create_plot(C_Ys,"Credit/Output", TFPis,"TFP", false)
-display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_ideal.png")
-plt = create_plot(C_Ys,"Credit/Output", TFPds,"TFP_data", false)
-display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_data.png")
-plt = create_plot(C_Ys,"Credit/Output", Labour_productivity_s,"Output-to-labour", false)
-display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_labour_productivity.png")
-plt = create_plot(C_Ys,"Credit/Output", Capital_productivity_s,"Output-to-capital", false)
-display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_capital_productivity.png")
-plt = create_plot(C_Ys,"Credit/Output", Investment_productivity_s,"Expenses-to-revenue", false)
-display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_investment_productivity.png")
 
 # households' policy a_t+1
 middle_point = Int64(round((1+num_lambdas)/2;digits=0))
@@ -757,6 +803,9 @@ plt = create_plot(C_Ys,"Credit/Output", share_of_output_EMPs,"Share of output by
 display(plt)
 savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_share_of_output_emp.png")
 
+
+ratio_of_capitals = ratio_of_capitals./ratio_of_capitals[num_lambdas]
+ratio_of_outputs = Outputs./Outputs[num_lambdas]
 # ratio of capital restricted to unrestricted
 plt = create_plot(C_Ys,"Credit/Output", ratio_of_capitals,"Ratio of Restricted Capital to Unrestricted", true)
 display(plt)
@@ -783,11 +832,100 @@ annotate!([C_Ys[calibrated_lambda]], Outputs[num_lambdas], text(" Calibrated eco
 display(plt2)
 savefig(plt2,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_Outputs_modified.png")
 =#
+LOCAL_DIR_PRODUCTIVITY = "$(LOCAL_DIR)/Productivity/"
+if Sys.iswindows()
+    LOCAL_DIR_PRODUCTIVITY = "$(LOCAL_DIR)\\Productivity\\"
+end
+mkpath(LOCAL_DIR_PRODUCTIVITY)
+# TFP_ideal for SP,EMP
+plts = create_plots(C_Ys,"Credit/Output", [TFPis[2,:], TFPis[3,:]],["TFP for Sole Proprietors","TFP for Employers"],false,["SP","EMP"])
+for plt in plts
+    display(plt)
+end
+savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_ideal_sp.png")
+savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_ideal_emp.png")
+# TFP_data for SP,EMP
+plts = create_plots(C_Ys,"Credit/Output", [TFPds[2,:], TFPds[3,:]],["TFP_data for Sole Proprietors","TFP_data for Employers"],false,["SP","EMP"])
+for plt in plts
+    display(plt)
+end
+savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_data_sp.png")
+savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_data_emp.png")
+
+
+# mean of MPL for ENT, SP,EMP
+plt = create_plot(C_Ys,"Credit/Output",mean_MPL[1,:],"Mean of MPL for Entrepreneurs", false, "ENT")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_mean_mpl_ent.png")
+plts = create_plots(C_Ys,"Credit/Output", [mean_MPL[2,:], mean_MPL[3,:]],["Mean of MPL for Sole Proprietors","Mean of MPL for Employers"],false,["SP","EMP"])
+for plt in plts
+    display(plt)
+end
+savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_mean_mpl_sp.png")
+savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_mean_mpl_emp.png")
+LABELS = ["SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [mean_MPL[2,:], mean_MPL[3,:]],LABELS,"Mean of MPL",false,["SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_credit_to_gdp_mean_mpl.png")
+
+# variance of MPL for ENT, SP,EMP
+plt = create_plot(C_Ys,"Credit/Output",var_MPL[1,:],"Variance of MPL for Entrepreneurs", false, "ENT", 0.0)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_var_mpl_ent.png")
+plts = create_plots(C_Ys,"Credit/Output", [var_MPL[2,:], var_MPL[3,:]],["Variance of MPL for Sole Proprietors","Variance of MPL for Employers"],false,["SP","EMP"],0.0)
+for plt in plts
+    display(plt)
+end
+savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_var_mpl_sp.png")
+savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_var_mpl_emp.png")
+LABELS = ["SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [var_MPL[2,:], var_MPL[3,:]],LABELS,"Variance of MPL",false,["SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_credit_to_gdp_var_mpl.png")
+
+# mean of MPK for ENT, SP,EMP
+plt = create_plot(C_Ys,"Credit/Output",mean_MPK[1,:],"Mean of MPK for Entrepreneurs", false, "ENT")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_mean_mpk_ent.png")
+plts = create_plots(C_Ys,"Credit/Output", [mean_MPK[2,:], mean_MPK[3,:]],["Mean of MPK for Sole Proprietors","Mean of MPK for Employers"],false,["SP","EMP"])
+for plt in plts
+    display(plt)
+end
+savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_mean_mpk_sp.png")
+savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_mean_mpk_emp.png")
+LABELS = ["SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [mean_MPK[2,:], mean_MPK[3,:]],LABELS,"Mean of MPK",false,["SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_credit_to_gdp_mean_mpk.png")
+
+# variance of MPK for ENT, SP,EMP
+plt = create_plot(C_Ys,"Credit/Output",var_MPK[1,:],"Variance of MPK for Entrepreneurs", false, "ENT", 0.0)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_var_mpk_ent.png")
+plts = create_plots(C_Ys,"Credit/Output", [var_MPK[2,:], var_MPK[3,:]],["Variance of MPK for Sole Proprietors","Variance of MPK for Employers"],false,["SP","EMP"],0.0)
+for plt in plts
+    display(plt)
+end
+savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_var_mpk_sp.png")
+savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_var_mpk_emp.png")
+LABELS = ["SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [var_MPK[2,:], var_MPK[3,:]],LABELS,"Variance of MPK",false,["SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_credit_to_gdp_var_mpk.png")
+
+# share of unbound ENT, SP,EMP
+plts = create_plots(C_Ys,"Credit/Output", [share_unbound[1,:], share_unbound[2,:], share_unbound[3,:]],["Share of Unconstrained Entrepreneurs","Share of Unconstrained Sole Proprietors","Share of Unconstrained Employers"],true,["ENT","SP","EMP"])
+for plt in plts
+    display(plt)
+end
+savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_ent_unbound.png")
+savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_se_unbound.png")
+savefig(plts[3],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_emp_unbound.png")
 
 # average and variance of working and managerial skills across occupations
-CHOICE_NAMES = ["Households","Workers","Sole Proprietors","Employers"]
+CHOICE_NAMES = ["Workers","Entrepreneurs","Sole Proprietors","Employers"]
 LABELS = ["Average Managerial Skill across $(occup)" for occup in CHOICE_NAMES]
-plts = create_plots(C_Ys,"Credit/Output", [avg_m_skill[1,:], avg_m_skill[2,:], avg_m_skill[3,:], avg_m_skill[4,:]],LABELS,false,["H","W","SP","EMP"])
+plts = create_plots(C_Ys,"Credit/Output", [avg_m_skill[1,:], avg_m_skill[2,:], avg_m_skill[3,:], avg_m_skill[4,:]],LABELS,false,["W","ENT","SP","EMP"])
 for h in 1:length(plts)
     display(plts[h])
     occup = CHOICE_NAMES[h]
@@ -796,9 +934,18 @@ for h in 1:length(plts)
     end
     savefig(plts[h],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_avg_m_skill_$(occup).png")
 end
+LABELS = ["W","ENT","SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [avg_m_skill[1,:], avg_m_skill[2,:], avg_m_skill[3,:], avg_m_skill[4,:]],LABELS,"Average Managerial Skill",false,["W","ENT","SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_avg_m_skill_with_ENT.png")
+LABELS = ["W","SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [avg_m_skill[1,:], avg_m_skill[3,:], avg_m_skill[4,:]],LABELS,"Average Managerial Skill",false,["W","SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_avg_m_skill.png")
+
 
 LABELS = ["Average Working Skill across $(occup)" for occup in CHOICE_NAMES]
-plts = create_plots(C_Ys,"Credit/Output", [avg_w_skill[1,:], avg_w_skill[2,:], avg_w_skill[3,:], avg_w_skill[4,:]],LABELS,false,["H","W","SP","EMP"])
+plts = create_plots(C_Ys,"Credit/Output", [avg_w_skill[1,:], avg_w_skill[2,:], avg_w_skill[3,:], avg_w_skill[4,:]],LABELS,false,["W","ENT","SP","EMP"])
 for h in 1:length(plts)
     display(plts[h])
     occup = CHOICE_NAMES[h]
@@ -807,9 +954,18 @@ for h in 1:length(plts)
     end
     savefig(plts[h],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_avg_w_skill_$(occup).png")
 end
+LABELS = ["W","ENT","SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [avg_w_skill[1,:], avg_w_skill[2,:], avg_w_skill[3,:], avg_w_skill[4,:]],LABELS,"Average Working Skill",false,["W","ENT","SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_avg_w_skill_with_ENT.png")
+LABELS = ["W","SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [avg_w_skill[1,:], avg_w_skill[3,:], avg_w_skill[4,:]],LABELS,"Average Working Skill",false,["W","SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_avg_w_skill.png")
+
 
 LABELS = ["Variance of Managerial Skill across $(occup)" for occup in CHOICE_NAMES]
-plts = create_plots(C_Ys,"Credit/Output", [var_m_skill[1,:], var_m_skill[2,:], var_m_skill[3,:], var_m_skill[4,:]],LABELS,false,["H","W","SP","EMP"], 0.0)
+plts = create_plots(C_Ys,"Credit/Output", [var_m_skill[1,:], var_m_skill[2,:], var_m_skill[3,:], var_m_skill[4,:]],LABELS,false,["W","ENT","SP","EMP"], 0.0)
 for h in 1:length(plts)
     display(plts[h])
     occup = CHOICE_NAMES[h]
@@ -818,9 +974,18 @@ for h in 1:length(plts)
     end
     savefig(plts[h],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_var_m_skill_$(occup).png")
 end
+LABELS = ["W","ENT","SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [var_m_skill[1,:], var_m_skill[2,:], var_m_skill[3,:], var_m_skill[4,:]],LABELS,"Variance of Managerial Skill",false,["W","ENT","SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_var_m_skill_with_ENT.png")
+LABELS = ["W","SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [var_m_skill[1,:], var_m_skill[3,:], var_m_skill[4,:]],LABELS,"Variance of Managerial Skill",false,["W","SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_var_m_skill.png")
+
 
 LABELS = ["Variance of Working Skill across $(occup)" for occup in CHOICE_NAMES]
-plts = create_plots(C_Ys,"Credit/Output", [var_w_skill[1,:], var_w_skill[2,:], var_w_skill[3,:], var_w_skill[4,:]],LABELS,false,["H","W","SP","EMP"], 0.0)
+plts = create_plots(C_Ys,"Credit/Output", [var_w_skill[1,:], var_w_skill[2,:], var_w_skill[3,:], var_w_skill[4,:]],LABELS,false,["W","ENT","SP","EMP"], 0.0)
 for h in 1:length(plts)
     display(plts[h])
     occup = CHOICE_NAMES[h]
@@ -829,40 +994,71 @@ for h in 1:length(plts)
     end
     savefig(plts[h],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_var_w_skill_$(occup).png")
 end
-
-# cumulative growth & unconstrained
-plt = create_plot(C_Ys,"Credit/Output", Capital.-1.0,"Cumulative growth of aggregate assets", true)
+LABELS = ["W","ENT","SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [var_w_skill[1,:], var_w_skill[2,:], var_w_skill[3,:], var_w_skill[4,:]],LABELS,"Variance of Working Skill",false,["W","ENT","SP","EMP"])
 display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_cum_growth_agg_assets.png")
-
-plt = create_plot(C_Ys,"Credit/Output", share_ent_unbound,"Share of unconstrained entrepreneurs", true)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_var_w_skill_with_ENT.png")
+LABELS = ["W","SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [var_w_skill[1,:], var_w_skill[3,:], var_w_skill[4,:]],LABELS,"Variance of Working Skill",false,["W","SP","EMP"])
 display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_ent_unbound.png")
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_var_w_skill.png")
 
-plt = create_plot(C_Ys,"Credit/Output", share_se_unbound,"Share of unconstrained Sole Proprietors", true)
+
+# output by SP
+plt = create_plot(C_Ys,"Credit/Output", output_SPs,"Aggregate output by Sole Proprietors", false, "SP")
 display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_se_unbound.png")
-
-plt = create_plot(C_Ys,"Credit/Output", share_emp_unbound,"Share of unconstrained employers", true)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_output_sp.png")
+# output by EMP
+plt = create_plot(C_Ys,"Credit/Output", output_EMPs,"Aggregate output by Employers", false, "EMP")
 display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_emp_unbound.png")
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_output_emp.png")
 
-plts = create_plots(C_Ys,"Credit/Output", [share_ent_unbound, share_se_unbound, share_emp_unbound],["Share of Unconstrained Entrepreneurs","Share of Unconstrained Sole Proprietors","Share of Unconstrained Employers"],true,["ENT","SP","EMP"])
-for plt in plts
-    display(plt)
-end
-savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_ent_unbound.png")
-savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_se_unbound.png")
-savefig(plts[3],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_emp_unbound.png")
+# share of output by SP
+plt = create_plot(C_Ys,"Credit/Output", share_of_output_SPs,"Share of output by Sole Proprietors", true, "SP")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_sp.png")
+# share of output by EMP
+plt = create_plot(C_Ys,"Credit/Output", share_of_output_EMPs,"Share of output by Employers", true, "EMP")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_emp.png")
+
+# ratio of capital restricted to unrestricted
+plt = create_plot(C_Ys,"Credit/Output", ratio_of_capitals,"Ratio of Restricted Capital to Unrestricted", true)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_ratio_of_capital.png")
+# ratio of output restricted to unrestricted
+plt = create_plot(C_Ys,"Credit/Output", ratio_of_outputs,"Ratio of Restricted Output to Unrestricted", true)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_ratio_of_output.png")
+
+
+#TFP_ideal, TFP_data
+plt = create_plot(C_Ys,"Credit/Output", old_TFPis,"TFP", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_ideal.png")
+plt = create_plot(C_Ys,"Credit/Output", old_TFPds,"TFP_data", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_data.png")
+
+#Labour_productivity, Capital_productivity, Investment_productivity
+plt = create_plot(C_Ys,"Credit/Output", Labour_productivity_s,"Output-to-labour", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_labour_productivity.png")
+plt = create_plot(C_Ys,"Credit/Output", Capital_productivity_s,"Output-to-capital", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_capital_productivity.png")
+plt = create_plot(C_Ys,"Credit/Output", Investment_productivity_s,"Expenses-to-revenue", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_investment_productivity.png")
 
 # Print statistics for calibrated economy
 
 # income, earnings, wealth, consumption
 # All, W, SP, EMP
 # lambdas
-#means = zeros(4,4,length(lambdas))
-#ginis = zeros(4,4,length(lambdas))
-#vars = zeros(4,4,length(lambdas))
+#means = zeros(4,4,num_lambdas)
+#ginis = zeros(4,4,num_lambdas)
+#vars = zeros(4,4,num_lambdas)
 for i=1:4
 
     if i==1
