@@ -86,7 +86,7 @@ lambda_3 = SS[5][1]
 ss_3 = copy(SS)
 #@time ss_starstar = steady_state(lambda_2)
 
-MAXITERS = 100#50#1000#
+MAXITERS = 111#50#500#100#
 TIME_PERIODS = 100#150#20#50#200#
 SMOOTHING = false#true
 RUNWAY = 0# Int64(round(TIME_PERIODS/2; digits=0))
@@ -116,6 +116,11 @@ trans_res = open("$(LOCAL_DIR)trans_$(TIME_PERIODS)_results.txt", "w") do F
     @time res = transitional_dynamics(LAMBDA_S, ss_1,ss_local, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS, F, true, MAXITERS)
     (res)
 end
+
+p1 = Plots.plot([trans_res[3], ones(TIME_PERIODS).*ss_1[2],ones(TIME_PERIODS).*ss_2[2]], legend=false)
+p2 = Plots.plot([trans_res[4], ones(TIME_PERIODS).*ss_1[3],ones(TIME_PERIODS).*ss_2[3]], legend=false)
+display(Plots.plot(p1,p2, layout=(1,2)))
+
 
 ss_2_temp = copy(ss_2)
 ss_2 = copy(ss_local)
