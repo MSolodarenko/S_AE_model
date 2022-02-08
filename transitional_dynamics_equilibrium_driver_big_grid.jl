@@ -11,12 +11,12 @@ include("Functions/transitional_dynamics_equilibrium.jl")
 # global parameters of the model's code
 #                   1           2           3       4
 #                gen_tol_x, gen_tol_f, distr_tol, val_tol
-GLOBAL_PARAMS = [1e-6, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-12, 1e-9]#[1e-8, 1e-4, 1e-7, 1e-5]#
+GLOBAL_PARAMS = [1e-6/2, 1e-4, 1e-8, 1e-6]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-12, 1e-9]#[1e-8, 1e-4, 1e-7, 1e-5]#
 
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
-GLOBAL_APPROX_PARAMS = [15,3,3,3,6,3]#[49,3,3,3,6,3]#[25,5,5,3,6,3]#
+GLOBAL_APPROX_PARAMS = [49,3,3,3,6,3]#[25,5,5,3,6,3]#[15,3,3,3,6,3]#
 
 # parameters of the model's economy (Italy)
 LAMBDA = 1.513028#1.548387
@@ -65,9 +65,9 @@ fig_output = false
 calc_add_results = false
 
 country = "Italy"#"Brazil"
-LAMBDA_GE_DIR = "$(@__DIR__)/Results/Lambda_grid/$(country)/"
+LAMBDA_GE_DIR = "$(@__DIR__)/Results/Lambda_grid_big_grid_test/$(country)/"
 if Sys.iswindows()
-   LAMBDA_GE_DIR = "$(@__DIR__)\\Results\\Lambda_grid\\$(country)\\"
+   LAMBDA_GE_DIR = "$(@__DIR__)\\Results\\Lambda_grid_big_grid_test\\$(country)\\"
 end
 # Step 2
 # ss_star = [res, r, w, approx_object, params]
@@ -98,9 +98,9 @@ if lambda_i == 3
     ss_local = copy(ss_3)
 end
 
-LOCAL_DIR = "$(@__DIR__)/Results/Transitional_dynamics/$(country)/"
+LOCAL_DIR = "$(@__DIR__)/Results/Transitional_dynamics_big_grid_test/$(country)/"
 if Sys.iswindows()
-   LOCAL_DIR = "$(@__DIR__)\\Results\\Transitional_dynamics\\$(country)\\"
+   LOCAL_DIR = "$(@__DIR__)\\Results\\Transitional_dynamics_big_grid_test\\$(country)\\"
 end
 mkpath(LOCAL_DIR)
 
