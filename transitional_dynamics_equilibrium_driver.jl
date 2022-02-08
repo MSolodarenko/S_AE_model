@@ -86,7 +86,7 @@ lambda_3 = SS[5][1]
 ss_3 = copy(SS)
 #@time ss_starstar = steady_state(lambda_2)
 
-MAXITERS = 111#50#500#100#
+MAXITERS = 75#111#50#500#100#
 TIME_PERIODS = 100#150#20#50#200#
 SMOOTHING = false#true
 RUNWAY = 0# Int64(round(TIME_PERIODS/2; digits=0))

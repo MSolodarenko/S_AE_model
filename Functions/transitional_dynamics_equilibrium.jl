@@ -289,6 +289,9 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
     relax_r = 0.05
     relax_w = 0.1
 
+    relax_R = relax_r
+    relax_W = relax_w
+
     r_min = -model_params[3]
     r_max = 1/model_params[2]-1.0
 
@@ -330,9 +333,22 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
     best_abs_len_r = abs_len_r
     best_abs_len_w = abs_len_w
 
+
     println_sameline("#0 - total_len:$(round(total_len;digits=6)) - total_len_Rs:$(round(sum(abs,len_Rs);digits=6)) - total_len_Ws:$(round(sum(abs,len_Ws);digits=6)) - abs_len_r:$(round(abs_len_r;digits=6)) - abs_len_w:$(round(abs_len_w;digits=6))")
     plot_iter_results(Rs,Ws, new_Rs,new_Ws, best_Rs,best_Ws, len_Rs,len_Ws, best_len_Rs,best_len_Ws)
 
+    println_sameline("#$(rw_iters) - New best Rs and Ws")
+
+    #=
+    past_Rs = []
+    past_Ws = []
+    past_len_Rs = []
+    past_len_Ws = []
+    push!(past_Rs,Rs)
+    push!(past_Ws,Ws)
+    push!(past_len_Rs, len_Rs)
+    push!(past_len_Ws, len_Ws)
+    =#
     old_old_res = copy(res)
     old_old_Rs = copy(Rs)
     old_old_len_Rs = copy(len_Rs)
@@ -401,24 +417,46 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
             total_len = sum(abs,len_Rs)+sum(abs,len_Ws)
             abs_len_r = maximum(abs,len_Rs)
             abs_len_w = maximum(abs,len_Ws)
+            #=
+            push!(past_Rs,Rs)
+            push!(past_Ws,Ws)
+            push!(past_len_Rs, len_Rs)
+            push!(past_len_Ws, len_Ws)
+            =#
 
             # get new_Rs and new_Ws from len_Rs and len_Ws
 
-            #_new_Rs =     Rs .- len_Rs.*(Rs.-old_Rs) ./(len_Rs.-old_len_Rs)
-            best_new_Rs = Rs .- len_Rs.*(Rs.-best_Rs)./(len_Rs.-best_len_Rs)
-            #new_Rs = (_new_Rs.+best_new_Rs)./2.0
-            new_Rs = best_new_Rs
-            #new_Rs = Rs.*(1.0.+len_Rs)./(1.0.-len_Rs) .+ 2.0.*(1.0-r_min).*len_Rs./(1.0.-len_Rs)
-            #new_Rs = min.(max.(r_min, new_Rs), r_max).*relax_r .+ (1-relax_r).*Rs
+            ##_new_Rs =     Rs .- len_Rs.*(Rs.-old_Rs) ./(len_Rs.-old_len_Rs)
+            #best_new_Rs = Rs .- len_Rs.*(Rs.-best_Rs)./(len_Rs.-best_len_Rs)
+            ##new_Rs = (_new_Rs.+best_new_Rs)./2.0
+            #new_Rs = best_new_Rs
+            new_Rs = Rs.*(1.0.+len_Rs)./(1.0.-len_Rs) .+ 2.0.*(1.0-r_min).*len_Rs./(1.0.-len_Rs)
+            #relax_R = relax_r*(1.0-rw_iters/(rw_maxiters+1))
+            if old_total_len < total_len
+                relax_R /= 2.0
+            end
+            if maximum(abs,new_Rs.-Rs)*relax_R < gen_tol_x
+                relax_R = relax_r
+                new_Rs = best_Rs.*(1.0.+best_len_Rs)./(1.0.-best_len_Rs) .+ 2.0.*(1.0-r_min).*best_len_Rs./(1.0.-best_len_Rs)
+            end
+            new_Rs = min.(max.(r_min, new_Rs), r_max).*relax_R .+ (1-relax_R).*Rs
             new_Rs[3:end-1] = min.(max.(ss_starstar[2], new_Rs[3:end-1]), best_Rs[2])
             new_Rs[end] = ss_starstar[2]
 
-            #_new_Ws =     Ws .- len_Ws.*(Ws.-old_Ws) ./(len_Ws.-old_len_Ws)
-            best_new_Ws = Ws .- len_Ws.*(Ws.-best_Ws)./(len_Ws.-best_len_Ws)
-            #new_Ws = (_new_Ws.+best_new_Ws)./2.0
-            new_Ws = best_new_Ws
-            #new_Ws = Ws.*(1.0.+len_Ws)./(1.0.-len_Ws)
-            #new_Ws = min.(max.(w_min, new_Ws), w_max).*relax_w .+ (1-relax_w).*Ws
+            ##_new_Ws =     Ws .- len_Ws.*(Ws.-old_Ws) ./(len_Ws.-old_len_Ws)
+            #best_new_Ws = Ws .- len_Ws.*(Ws.-best_Ws)./(len_Ws.-best_len_Ws)
+            ##new_Ws = (_new_Ws.+best_new_Ws)./2.0
+            #new_Ws = best_new_Ws
+            new_Ws = Ws.*(1.0.+len_Ws)./(1.0.-len_Ws)
+            #relax_W = relax_w*(1.0-rw_iters/(rw_maxiters+1))
+            if old_total_len < total_len
+                relax_W /= 2.0
+            end
+            if maximum(abs,new_Ws.-Ws)*relax_W < gen_tol_x
+                relax_W = relax_w
+                new_Ws = best_Ws.*(1.0.+best_len_Ws)./(1.0.-best_len_Ws)
+            end
+            new_Ws = min.(max.(w_min, new_Ws), w_max).*relax_W .+ (1-relax_W).*Ws
             new_Ws[2:end-1] = min.(max.(ss_star[3], new_Ws[2:end-1]), ss_starstar[3])
             new_Ws[end] = ss_starstar[3]
 
@@ -458,13 +496,19 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                     end
                 end
                 if is_best_updated
-                    println_sameline("#$(rw_iters) - update the candidate for the best")
+                    #println_sameline("#$(rw_iters) - update the candidate for the best")
                     cand_best_res = partial_equilibrium_transition(cand_best_Rs, cand_best_Ws)
                     cand_best_len_Rs = copy(cand_best_res[1])
                     cand_best_len_Ws = copy(cand_best_res[2])
                     cand_best_total_len = sum(abs,cand_best_len_Rs)+sum(abs,cand_best_len_Ws)
                     cand_best_abs_len_r = maximum(abs,cand_best_len_Rs)
                     cand_best_abs_len_w = maximum(abs,cand_best_len_Ws)
+                    #=
+                    push!(past_Rs,cand_best_Rs)
+                    push!(past_Ws,cand_best_Ws)
+                    push!(past_len_Rs, cand_best_len_Rs)
+                    push!(past_len_Ws, cand_best_len_Ws)
+                    =#
                     println_sameline("#$(rw_iters) - cand_total_len:$(round(cand_best_total_len;digits=6)) - cand_total_len_Rs:$(round(sum(abs,cand_best_len_Rs);digits=6)) - cand_total_len_Ws:$(round(sum(abs,cand_best_len_Ws);digits=6)) - cand_abs_len_r:$(round(cand_best_abs_len_r;digits=6)) - cand_abs_len_w:$(round(cand_best_abs_len_w;digits=6))")
                     plot_iter_results(cand_best_Rs,cand_best_Ws, new_Rs,new_Ws, best_Rs,best_Ws, cand_best_len_Rs,cand_best_len_Ws, best_len_Rs,best_len_Ws)
                     if cand_best_total_len < best_total_len
@@ -477,100 +521,122 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                         best_abs_len_r = cand_best_abs_len_r
                         best_abs_len_w = cand_best_abs_len_w
                         println_sameline("#$(rw_iters) - New best Rs and Ws")
-                    else
-                        cand_best_Rs = copy(best_Rs)
-                        cand_best_Ws = copy(best_Ws)
-                        cand_best_len_Rs = copy(best_len_Rs)
-                        cand_best_len_Ws = copy(best_len_Ws)
+                    #=else
                         #=
-                        mean_len_Rs = mean(abs.(cand_best_len_Rs))*(1-0.75) + maximum(abs.(cand_best_len_Rs))*0.75
-                        mean_len_Ws = mean(abs.(cand_best_len_Ws))*(1-0.75) + maximum(abs.(cand_best_len_Ws))*0.75
+                        alt_Rs = Rs .- len_Rs.*(Rs.-past_Rs[1])./(len_Rs.-past_len_Rs[1])
+                        alt_Rs[3:end-1] = min.(max.(ss_starstar[2], alt_Rs[3:end-1]), best_Rs[2])
+                        alt_Rs[end] = ss_starstar[2]
 
-                        is_best_updated = false
-                        start_i = 0
-                        fin_i = 0
-                        for t = 3:T-2
-                            if abs(cand_best_len_Rs[t]) > mean_len_Rs || abs(cand_best_len_Ws[t]) > mean_len_Ws
-                                if start_i == 0
-                                    start_i = t-1
-                                    fin_i = t+1
-                                else
-                                    fin_i = t+1
-                                end
-                            else
-                                if fin_i != 0
-                                    cand_best_Rs[start_i:fin_i] = collect(range(cand_best_Rs[start_i]; stop=cand_best_Rs[fin_i], length=fin_i-start_i+1))
-                                    cand_best_Ws[start_i:fin_i] = collect(range(cand_best_Ws[start_i]; stop=cand_best_Ws[fin_i], length=fin_i-start_i+1))
-                                    start_i = 0
-                                    fin_i = 0
+                        alt_Ws = Ws .- len_Ws.*(Ws.-past_Ws[1])./(len_Ws.-past_len_Ws[1])
+                        alt_Ws[2:end-1] = min.(max.(ss_star[3], alt_Ws[2:end-1]), ss_starstar[3])
+                        alt_Ws[end] = ss_starstar[3]
+                        if !( !maximum(isnan.(alt_Rs)) || !maximum(isnan.(alt_Ws)) )
+                            alt_Rs = new_Rs
+                            alt_Ws = new_Ws
+                        end
 
-                                    is_best_updated = true
-                                end
+                        for i = 2:length(past_Rs)
+                            temp_alt_Rs = Rs .- len_Rs.*(Rs.-past_Rs[i])./(len_Rs.-past_len_Rs[i])
+                            temp_alt_Rs[3:end-1] = min.(max.(ss_starstar[2], temp_alt_Rs[3:end-1]), best_Rs[2])
+                            temp_alt_Rs[end] = ss_starstar[2]
+
+                            temp_alt_Ws = Ws .- len_Ws.*(Ws.-past_Ws[i])./(len_Ws.-past_len_Ws[i])
+                            temp_alt_Ws[2:end-1] = min.(max.(ss_star[3], temp_alt_Ws[2:end-1]), ss_starstar[3])
+                            temp_alt_Ws[end] = ss_starstar[3]
+                            if !maximum(isnan.(temp_alt_Rs)) || !maximum(isnan.(temp_alt_Ws))
+                                alt_Rs = (alt_Rs.+temp_alt_Rs)./2.0
+                                alt_Ws = (alt_Ws.+temp_alt_Ws)./2.0
                             end
+
                         end
                         =#
+                        best_new_Rs = Rs .- len_Rs.*(Rs.-best_Rs)./(len_Rs.-best_len_Rs)
+                        alt_Rs = best_new_Rs
+                        alt_Rs[3:end-1] = min.(max.(ss_starstar[2], alt_Rs[3:end-1]), best_Rs[2])
+                        alt_Rs[end] = ss_starstar[2]
 
-                        #=
-                        is_best_updated = false
-                        biggest_len_Rs_is = partialsortperm(abs.(cand_best_len_Rs[3:end-1]), 1:1, rev=true).+2
-                        biggest_len_Ws_is = partialsortperm(abs.(cand_best_len_Ws[3:end-1]), 1:1, rev=true).+2
-                        biggest_len_is = sort(unique(vcat(biggest_len_Rs_is,biggest_len_Ws_is)))
-                        to_remove_from_biggest_len_i = []
-                        for i = 1:length(biggest_len_is)-1
-                            if biggest_len_is[i]+1 == biggest_len_is[i+1]
-                                push!(to_remove_from_biggest_len_i, biggest_len_is[i])
-                                push!(to_remove_from_biggest_len_i, biggest_len_is[i+1])
-                            end
-                        end
-                        setdiff!(biggest_len_is, to_remove_from_biggest_len_i)
-                        for t in biggest_len_is
-                            cand_best_Rs[t-1:t+1] = collect(range(cand_best_Rs[t-1]; stop=cand_best_Rs[t+1], length=3))
-                            cand_best_Ws[t-1:t+1] = collect(range(cand_best_Ws[t-1]; stop=cand_best_Ws[t+1], length=3))
-                            is_best_updated = true
-                        end
-                        =#
-
-                        #=
-                        is_best_updated = false
-                        al_r = 0.995
-                        al_w = 0.995
-                        for t = 3:T-2
-                            cand_best_Rs[t] = al_r*cand_best_Rs[t] + (1.0-al_r)*cand_best_Rs[t-1]
-                            cand_best_Ws[t] = al_w*cand_best_Ws[t] + (1.0-al_w)*cand_best_Ws[t-1]
-                            is_best_updated = true
-                        end
-                        =#
-
-                        cand_best_Rs = best_Rs.*(1.0.+best_len_Rs)./(1.0.-best_len_Rs) .+ 2.0.*(1.0.-r_min).*best_len_Rs./(1.0.-best_len_Rs)
-                        relax_R = 0.01*(1.0 - rw_iters/(rw_maxiters*4))
-                        cand_best_Rs = cand_best_Rs.*relax_R .+ best_Rs.*(1-relax_R)
-
-                        cand_best_Ws = best_Ws.*(1.0.+best_len_Ws)./(1.0.-best_len_Ws)
-                        relax_W = 0.02*(1.0 - rw_iters/(rw_maxiters*2))
-                        cand_best_Ws = cand_best_Ws.*relax_W .+ best_Ws.*(1-relax_W)
+                        best_new_Ws = Ws .- len_Ws.*(Ws.-best_Ws)./(len_Ws.-best_len_Ws)
+                        alt_Ws = best_new_Ws
+                        alt_Ws[2:end-1] = min.(max.(ss_star[3], alt_Ws[2:end-1]), ss_starstar[3])
+                        alt_Ws[end] = ss_starstar[3]
 
                         if is_best_updated
-                            println_sameline("#$(rw_iters) - try direct move by len")
-                            cand_best_res = partial_equilibrium_transition(cand_best_Rs, cand_best_Ws)
-                            cand_best_len_Rs = copy(cand_best_res[1])
-                            cand_best_len_Ws = copy(cand_best_res[2])
-                            cand_best_total_len = sum(abs,cand_best_len_Rs)+sum(abs,cand_best_len_Ws)
-                            cand_best_abs_len_r = maximum(abs,cand_best_len_Rs)
-                            cand_best_abs_len_w = maximum(abs,cand_best_len_Ws)
-                            println_sameline("#$(rw_iters) - cand_2_total_len:$(round(cand_best_total_len;digits=6)) - cand_2_total_len_Rs:$(round(sum(abs,cand_best_len_Rs);digits=6)) - cand_2_total_len_Ws:$(round(sum(abs,cand_best_len_Ws);digits=6)) - cand_2_abs_len_r:$(round(cand_best_abs_len_r;digits=6)) - cand_2_abs_len_w:$(round(cand_best_abs_len_w;digits=6))")
-                            plot_iter_results(cand_best_Rs,cand_best_Ws, new_Rs,new_Ws, best_Rs,best_Ws, cand_best_len_Rs,cand_best_len_Ws, best_len_Rs,best_len_Ws)
-                            if cand_best_total_len < best_total_len
-                                best_Rs = copy(cand_best_Rs)
-                                best_Ws = copy(cand_best_Ws)
-                                best_res = copy(cand_best_res)
-                                best_len_Rs = copy(cand_best_len_Rs)
-                                best_len_Ws = copy(cand_best_len_Ws)
-                                best_total_len = cand_best_total_len
-                                best_abs_len_r = cand_best_abs_len_r
-                                best_abs_len_w = cand_best_abs_len_w
+                            #println_sameline("#$(rw_iters) - try alternative")
+                            alt_res = partial_equilibrium_transition(alt_Rs, alt_Ws)
+                            alt_len_Rs = copy(alt_res[1])
+                            alt_len_Ws = copy(alt_res[2])
+                            alt_total_len = sum(abs,alt_len_Rs)+sum(abs,alt_len_Ws)
+                            alt_abs_len_r = maximum(abs,alt_len_Rs)
+                            alt_abs_len_w = maximum(abs,alt_len_Ws)
+                            #=
+                            push!(past_Rs,alt_Rs)
+                            push!(past_Ws,alt_Ws)
+                            push!(past_len_Rs, alt_len_Rs)
+                            push!(past_len_Ws, alt_len_Ws)
+                            =#
+                            println_sameline("#$(rw_iters) - cand_2_total_len:$(round(alt_total_len;digits=6)) - cand_2_total_len_Rs:$(round(sum(abs,alt_len_Rs);digits=6)) - cand_2_total_len_Ws:$(round(sum(abs,alt_len_Ws);digits=6)) - cand_2_abs_len_r:$(round(alt_abs_len_r;digits=6)) - cand_2_abs_len_w:$(round(alt_abs_len_w;digits=6))")
+                            plot_iter_results(alt_Rs,alt_Ws, new_Rs,new_Ws, best_Rs,best_Ws, alt_len_Rs,alt_len_Ws, best_len_Rs,best_len_Ws)
+                            if alt_total_len < best_total_len
+                                best_Rs = copy(alt_Rs)
+                                best_Ws = copy(alt_Ws)
+                                best_res = copy(alt_res)
+                                best_len_Rs = copy(alt_len_Rs)
+                                best_len_Ws = copy(alt_len_Ws)
+                                best_total_len = alt_total_len
+                                best_abs_len_r = alt_abs_len_r
+                                best_abs_len_w = alt_abs_len_w
                                 println_sameline("#$(rw_iters) - New best Rs and Ws")
+                            else
+                                is_best_updated = false
+                                cand_best_Rs = copy(best_Rs)
+                                cand_best_Ws = copy(best_Ws)
+                                cand_best_res = copy(best_res)
+                                cand_best_len_Rs = copy(best_len_Rs)
+                                cand_best_len_Ws = copy(best_len_Ws)
+                                cand_best_total_len = best_total_len
+                                cand_best_abs_len_r = best_abs_len_r
+                                cand_best_abs_len_w = best_abs_len_w
+                                Threads.@threads for i=1:T
+                                    if abs(best_len_Rs[i]) > abs(alt_len_Rs[i])
+                                        cand_best_Rs[i] = alt_Rs[i]
+                                        is_best_updated = true
+                                    end
+                                    if abs(best_len_Ws[i]) > abs(alt_len_Ws[i])
+                                        cand_best_Ws[i] = alt_Ws[i]
+                                        is_best_updated = true
+                                    end
+                                end
+                                if is_best_updated
+                                    #println_sameline("#$(rw_iters) - update the candidate for the best")
+                                    cand_best_res = partial_equilibrium_transition(cand_best_Rs, cand_best_Ws)
+                                    cand_best_len_Rs = copy(cand_best_res[1])
+                                    cand_best_len_Ws = copy(cand_best_res[2])
+                                    cand_best_total_len = sum(abs,cand_best_len_Rs)+sum(abs,cand_best_len_Ws)
+                                    cand_best_abs_len_r = maximum(abs,cand_best_len_Rs)
+                                    cand_best_abs_len_w = maximum(abs,cand_best_len_Ws)
+                                    #=
+                                    push!(past_Rs,cand_best_Rs)
+                                    push!(past_Ws,cand_best_Ws)
+                                    push!(past_len_Rs, cand_best_len_Rs)
+                                    push!(past_len_Ws, cand_best_len_Ws)
+                                    =#
+                                    println_sameline("#$(rw_iters) - cand_3_total_len:$(round(cand_best_total_len;digits=6)) - cand_3_total_len_Rs:$(round(sum(abs,cand_best_len_Rs);digits=6)) - cand_3_total_len_Ws:$(round(sum(abs,cand_best_len_Ws);digits=6)) - cand_3_abs_len_r:$(round(cand_best_abs_len_r;digits=6)) - cand_3_abs_len_w:$(round(cand_best_abs_len_w;digits=6))")
+                                    plot_iter_results(cand_best_Rs,cand_best_Ws, new_Rs,new_Ws, best_Rs,best_Ws, cand_best_len_Rs,cand_best_len_Ws, best_len_Rs,best_len_Ws)
+                                    if cand_best_total_len < best_total_len
+                                        best_Rs = copy(cand_best_Rs)
+                                        best_Ws = copy(cand_best_Ws)
+                                        best_res = copy(cand_best_res)
+                                        best_len_Rs = copy(cand_best_len_Rs)
+                                        best_len_Ws = copy(cand_best_len_Ws)
+                                        best_total_len = cand_best_total_len
+                                        best_abs_len_r = cand_best_abs_len_r
+                                        best_abs_len_w = cand_best_abs_len_w
+                                        println_sameline("#$(rw_iters) - New best Rs and Ws")
+                                    end
+                                end
                             end
                         end
+                    =#
                     end
                     is_best_updated = false
                 end
@@ -631,7 +697,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
     #       1       2       3   4   5   6    7      8
     # res = len_Rs, len_Ws, K_d,K_s,L_d,L_s, distrs,policies
 
-    #       1  2         3   4   5    6
+    #       1  2         3   4   5    6      7               8        9                  10
     return [T, lambda_s, Rs, Ws, res, a_max, number_a_nodes, a_nodes, number_asset_grid, asset_grid]
 
 end
