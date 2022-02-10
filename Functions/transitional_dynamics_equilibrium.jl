@@ -93,8 +93,15 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
         policies_small_grid = zeros(T, number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
         policies_small_grid[T,:,:,:,:,:] .= policies_small_grid_T
 
+        policy_function = Array{Any}(undef,T,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
+
         values = zeros(T, number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
         values[T,:,:,:,:,:] .= values_T
+
+        policies = zeros(T, number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
+        a1_indices = Array{Int64}(undef,T, number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
+        lottery_prob_1 = zeros(T, number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
+        lottery_prob_2 = zeros(T, number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
 
         for t = T-1:-1:1
 
@@ -134,15 +141,34 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
 
                 values[t,:,u_i,zeta_i,alpha_m_i,alpha_w_i], policies_small_grid[t,:,u_i,zeta_i,alpha_m_i,alpha_w_i] = new_val_and_a1(values[t+1,:,u_i,zeta_i,alpha_m_i,alpha_w_i],policies_small_grid[t+1,:,u_i,zeta_i,alpha_m_i,alpha_w_i], income[:,u_i,zeta_i,alpha_m_i,alpha_w_i], value_tran_rhs[:,alpha_m_i,alpha_w_i],expectation_value_death_rhs, u_i,alpha_m_i,alpha_w_i ,a_min,a_max,a_nodes, 0.0,0.0, number_a_nodes, beta, p_alpha, P_u, number_u_nodes, CRRA)
 
+                policy_function[t,u_i,zeta_i,alpha_m_i,alpha_w_i] = Schumaker(a_nodes,policies_small_grid[t,:,u_i,zeta_i,alpha_m_i,alpha_w_i]; extrapolation = (Linear,Linear))
+
+                for a_i in 1:number_asset_grid
+                    try
+                        a1 = evaluate(policy_function[t,u_i,zeta_i,alpha_m_i,alpha_w_i], asset_grid[a_i])
+                        policies[t, a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = a1
+                        j_1 = sum(a1 .>= asset_grid)
+                        j = j_1 + 1
+
+                        a1_indices[t, a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = j_1
+                        if j <= number_asset_grid && j_1 >= 1
+                            lottery_prob_1[t, a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = (asset_grid[j] - a1             )/(asset_grid[j]-asset_grid[j_1])
+                            lottery_prob_2[t, a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = (a1            - asset_grid[j_1])/(asset_grid[j]-asset_grid[j_1])
+                        elseif j_1 == number_asset_grid
+                            lottery_prob_1[t, a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 1.0
+                            lottery_prob_2[t, a_i,u_i,zeta_i,alpha_m_i,alpha_w_i] = 0.0
+                        end
+                    catch e
+                        println_sameline("Trouble is in loop for increasing grid for policies")
+                        throw(e)
+                    end
+                end
             end
 
             print_sameline("#$(rw_iters) - Policy iteration: $(t)/$(T)")
         end
 
-        policies = zeros(T, number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-        a1_indices = Array{Int64}(undef,T, number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-        lottery_prob_1 = zeros(T, number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-        lottery_prob_2 = zeros(T, number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
+        #=
         Threads.@threads for (t,(u_i,(zeta_i,(alpha_m_i,alpha_w_i)))) in collect(Iterators.product(1:T,Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))))
             try
                 policy_function = Schumaker(a_nodes,policies_small_grid[t,:,u_i,zeta_i,alpha_m_i,alpha_w_i]; extrapolation = (Linear,Linear))
@@ -166,6 +192,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                 throw(e)
             end
         end
+        =#
 
         return policies, a1_indices, lottery_prob_1, lottery_prob_2
     end
