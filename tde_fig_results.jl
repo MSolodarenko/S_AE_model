@@ -92,7 +92,7 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::B
         DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
         YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
     end
-    plt = plot(collect(X), collect.([Y,ones(length(Y)).*Y1,ones(length(Y)).*Y2]),
+    plt = plot(collect([0; X]), collect.([[Y1; Y],ones(length(Y)+1).*Y1,ones(length(Y)+1).*Y2]),
                     color=[COLOR "green" "red"],
                     legend=false,
                     xlabel=XLABEL,
