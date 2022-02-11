@@ -69,13 +69,15 @@ guess_W = 0.23529682939411575#(w_min+w_max)/2#
 
 MODEL_PARAMS = [LAMBDA, BETA, DELTA, GAMMA, ETA, THETA, C_E, RHO_M, RHO_W, SIGMA_EPS_M, RHO_EPS_M_W, SIGMA_ZETA, P_ALPHA, ETA_ALPHA, PROB_NODE1_ALPHA, MU_M_ALPHA, RHO_ALPHA_M_W, SIGMA_ALPHA_W, SIGMA_EPS_W, CRRA]
 
-println_sameline(("NUMBER_A_NODES","len_r","len_w","cap_out","cre_out","occ_w","occ_se","occ_emp"))
+println_sameline(("NUMBER_A_NODES","time_length","len_r","len_w","cap_out","cre_out","occ_w","occ_se","occ_emp"))
 for NUMBER_A_NODES = 15:2:99#49
     global_approx_params = [NUMBER_A_NODES,3,3,3,6,3]
 
+    start_time = time()
     approx_object = build_skill_nodes(global_approx_params, MODEL_PARAMS)
     res = AllubErosa(guess_R,guess_W, GLOBAL_PARAMS, global_approx_params, MODEL_PARAMS, approx_object)
 
+    time_length = round(time() - start_time; digits=0)
     len_r = round(res[10]; digits=7)
     len_w = round(res[11]; digits=7)
     cap_out=round(res[12]; digits=7)
@@ -84,7 +86,7 @@ for NUMBER_A_NODES = 15:2:99#49
     occ_se= round(res[15]; digits=7)
     occ_emp=round(res[16]; digits=7)
 
-    println_sameline((NUMBER_A_NODES,len_r,len_w,cap_out,cre_out,occ_w,occ_se,occ_emp))
+    println_sameline((NUMBER_A_NODES,time_length,len_r,len_w,cap_out,cre_out,occ_w,occ_se,occ_emp))
 end
 #=
 # ss_star = [res, r, w, approx_object, MODEL_PARAMS]
