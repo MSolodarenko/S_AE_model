@@ -195,5 +195,5 @@ function build_skill_nodes(approx_ps, ps)
     end
     z_m_nodes .*= exp(mu_m_alpha)
 
-    return [z_m_nodes, z_w_nodes, P_zeta, P_u, stat_P_u, P_alpha, number_u_nodes]
+    return [z_m_nodes, z_w_nodes, P_zeta, P_u, stat_P_u, P_alpha, number_u_nodes, approx_ps, ps]
 end
