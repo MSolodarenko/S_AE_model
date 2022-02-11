@@ -88,6 +88,30 @@ for NUMBER_A_NODES = 15:2:99#49
 
     println_sameline((NUMBER_A_NODES,time_length,len_r,len_w,cap_out,cre_out,occ_w,occ_se,occ_emp))
 end
+throw(error)
+NUMBER_A_NODES = 15
+println_sameline(("NUMBER_U_NODES","time_length","len_r","len_w","cap_out","cre_out","occ_w","occ_se","occ_emp"))
+for NUMBER_U_NODES = 3:2:9#49
+    global_approx_params = [NUMBER_A_NODES,NUMBER_U_NODES,NUMBER_U_NODES,3,6,3]
+
+    start_time = time()
+    approx_object = build_skill_nodes(global_approx_params, MODEL_PARAMS)
+    res = AllubErosa(guess_R,guess_W, GLOBAL_PARAMS, global_approx_params, MODEL_PARAMS, approx_object)
+
+    time_length = round(time() - start_time; digits=0)
+    len_r = round(res[10]; digits=7)
+    len_w = round(res[11]; digits=7)
+    cap_out=round(res[12]; digits=7)
+    cre_out=round(res[13]; digits=7)
+    occ_w = round(res[14]; digits=7)
+    occ_se= round(res[15]; digits=7)
+    occ_emp=round(res[16]; digits=7)
+
+    println_sameline((NUMBER_A_NODES,time_length,len_r,len_w,cap_out,cre_out,occ_w,occ_se,occ_emp))
+end
+
+
+
 #=
 # ss_star = [res, r, w, approx_object, MODEL_PARAMS]
 @time ss_star = steady_state(guess_R, guess_W, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS)
