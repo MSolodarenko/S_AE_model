@@ -94,7 +94,7 @@ function calculate_aggregate_errors(deviations)
     calibration_weights ./= sum(calibration_weights)
     agg_errs[1] = sum(abs, deviations.*calibration_weights)*length(deviations)
     agg_errs[2] = sum(abs, deviations)
-    agg_errs[3] = sum(deviation.^2)
+    agg_errs[3] = sum(deviations.^2)
     return agg_errs
 end
 
