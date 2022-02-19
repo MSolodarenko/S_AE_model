@@ -105,12 +105,36 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
         aprime_nodes = copy(local_aprime_nodes)
         print_sameline("Initialise value function from file")
     catch e
-        value_from_file_flag = false
-        print_sameline("Initialise value function from scratch")
+        try
+            path = "$(@__DIR__)/val_aprime/"
+            if Sys.iswindows()
+                path = "$(@__DIR__)\\val_aprime\\"
+            end
+            files = readdir(path)
+            cand_file = files[findlast(x->occursin("_$(number_u_nodes)_$(number_zeta_nodes)_$(number_alpha_m_nodes)_$(number_alpha_w_nodes).jld2",x), files)]
+            local_number_a_nodes = parse(Int64,split(test_str,"_")[3])
+            @load "$(path)$(cand_file)" local_value local_aprime_nodes
+            local_a_nodes = exp.(collect(range(log(a_min+1); stop=log(a_max+1), length=local_number_a_nodes))).-1
+            Threads.@threads for (u_i,(zeta_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes))))
+                loval_value_f = Schumaker(local_a_nodes,local_value[:,u_i,zeta_i,alpha_m_i,alpha_w_i]; extrapolation = (Linear,Linear))
+                value[:,u_i,zeta_i,alpha_m_i,alpha_w_i] .= evaluate.(loval_value_f, a_nodes)
+
+                local_aprime_nodes_f = Schumaker(local_a_nodes,local_aprime_nodes[:,u_i,zeta_i,alpha_m_i,alpha_w_i]; extrapolation = (Linear,Linear))
+                value[:,u_i,zeta_i,alpha_m_i,alpha_w_i] .= evaluate.(local_aprime_nodes_f, a_nodes)
+
+            end
+            print_sameline("Initialise value function with the approximation from file")
+        catch e
+            value_from_file_flag = false
+            print_sameline("Initialise value function from scratch")
+        end
     end
 
-    val_Delta   = 0.05  # update parameter for value function iteration
+    val_Delta   = 0.5#0.05  # update parameter for value function iteration
     val_maxiters= 1000#250#500#
+    if value_from_file_flag
+        val_maxiters= 300
+    end
     val_len     = Inf
     val_iters   = 0
     aprime_len = Inf
@@ -185,7 +209,7 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
 
         print_sameline("VF#$(val_iters) - err: $(round(val_len;digits=12)) b_l:$(round(b_lowerbar;digits=4)) b_u:$(round(b_upperbar;digits=4)), sum_err:$(round(val_sumlen;digits=9)), a_err:$(round(aprime_len;digits=4)), a_sumerr:$(round(aprime_sumlen;digits=4))")
 
-        if old_val_len > val_len && stable
+        if val_len > val_tol*5 && old_val_len > val_len && stable
             if b_lowerbar > -10000000+1#=-Inf=# && b_upperbar < 10000000-1#=Inf=# #&& b_lowerbar < 0.0 && b_upperbar > 0.0
                 value .= new_value .+ (b_lowerbar + b_upperbar)/2
             else
@@ -199,8 +223,6 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
         end
 
         old_val_len = val_len
-
-        val_len = val_sumlen
 
         if fig_output
             #=
@@ -1786,7 +1808,7 @@ function AllubErosa(r,w, gps, gaps, ps, ao)
     capital_to_output, credit_to_output, share_of_workers, share_of_self_employed, share_of_employers, var_log_c, occ_trans_matrix, var_log_income, gini_y_w, gini_y_ent, agg_capital, agg_output, agg_credit, avg_log_income, avg_log_c, additional_results = quick_calculate_results(number_asset_grid,asset_grid,policy, a1_indices, lottery_prob_1, lottery_prob_2,density_distr,r,w, occ_choice, income, earnings, capital_d, credit, output, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes, p_alpha, P_zeta, P_u, stat_P_u, P_alpha, number_u_nodes, cost_of_employing, z_m_nodes, z_w_nodes, lambda,delta,gamma,eta,theta,c_e, labour_d)
     #                       1                       2                                       3                           4
     # additional_results = agg_cost_of_employing, agg_cost_of_employing_as_share_of_output, number_non_zero_asset_grid, occ_mobility_matrices
-    #           1           2               3       4           5           6           7       8           9           10              11              12              13              14                      15                  16                  17          18          19              20         21          22        23       24          25          26            27          28      29        30          31      32      33      34            35              36      37              38          39          40              41              42                  43
-    return [a_max, number_asset_grid, asset_grid, policy, density_distr, K_demand, K_supply, L_demand, L_supply, Capital_excess, Labor_excess, capital_to_output, credit_to_output, share_of_workers, share_of_self_employed, share_of_employers, var_log_c, occ_trans_matrix, var_log_income, gini_y_w, gini_y_ent, occ_choice, income, earnings, capital_excess, capital_d, credit, labour_excess, labour_d, labour_s, deposit, output, value, agg_capital, agg_output, agg_credit, avg_log_income, avg_log_c, a1_indices, lottery_prob_1, lottery_prob_2, cost_of_employing, additional_results]
+    #           1           2               3       4           5           6           7       8           9           10              11              12              13              14                      15                  16                  17          18          19              20         21          22        23       24          25          26            27          28      29        30          31      32      33      34            35              36      37              38          39          40              41              42                  43                 44 45 46   47   48   49  50
+    return [a_max, number_asset_grid, asset_grid, policy, density_distr, K_demand, K_supply, L_demand, L_supply, Capital_excess, Labor_excess, capital_to_output, credit_to_output, share_of_workers, share_of_self_employed, share_of_employers, var_log_c, occ_trans_matrix, var_log_income, gini_y_w, gini_y_ent, occ_choice, income, earnings, capital_excess, capital_d, credit, labour_excess, labour_d, labour_s, deposit, output, value, agg_capital, agg_output, agg_credit, avg_log_income, avg_log_c, a1_indices, lottery_prob_1, lottery_prob_2, cost_of_employing, additional_results, r, w, gps, gaps, ps, ao, a_nodes]
 
 end
