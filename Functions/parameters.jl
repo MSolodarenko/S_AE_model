@@ -54,7 +54,7 @@ function build_skill_nodes(approx_ps, ps)
     #display("zeta_nodes:"*string(zeta_nodes))
 
 
-    if number_u_m_nodes == 7 && number_u_w_nodes == 7
+    if false#number_u_m_nodes == 7 && number_u_w_nodes == 7
         ymat2 = open("$(@__DIR__)/ymat2.txt") do f
             read(f, String)
         end
