@@ -112,7 +112,6 @@ text_output = false
 fig_output = false
 calc_add_results = false
 
-CODE_NAME = 0
 function func(cur_int_params)
     global CODE_NAME += 1
     println_sameline("Params - $(round.(cur_int_params; digits=6))")
@@ -141,10 +140,9 @@ function func(cur_int_params)
     end
 end
 
-
+#=
 candidates = []
 push!(candidates, init_int_params)
-#=
 for i in 1:length(init_int_params)
     for k in [-0.1, -0.05, -0.01, 0.01, 0.05, 0.1]
         int_params = copy(init_int_params)
@@ -154,15 +152,16 @@ for i in 1:length(init_int_params)
         push!(candidates, int_params)
     end
 end
+println_sameline(length(candidates))
 =#
 
-#=
+variation = [-0.05,-0.01,0.0,0.01,0.05]
 candidates = []
 push!(candidates, init_int_params)
 for i in 1:length(init_int_params)-1
-    for ik in [-0.05,0.05]
+    for ik in variation
         for j in i:length(init_int_params)
-            for jk in [-0.05,0.05]
+            for jk in variation
                 int_params = copy(init_int_params)
                 percent_dev_i = ik*int_params[i]
                 int_params[i] += percent_dev_i
@@ -178,10 +177,9 @@ for i in 1:length(init_int_params)-1
     end
 end
 println_sameline(length(candidates))
-=#
-println_sameline(length(candidates))
 
-for i_ps in 1:length(candidates)
+CODE_NAME = 291
+for i_ps in (CODE_NAME+1):length(candidates)
     println_sameline(i_ps)
-    @time func(candidates[i_ps])
+    func(candidates[i_ps])
 end
