@@ -111,6 +111,7 @@ GLOBAL_APPROX_PARAMS = [35,3,3,3,6,3]
 text_output = false
 fig_output = false
 calc_add_results = false
+
 CODE_NAME = 0
 function func(cur_int_params)
     global CODE_NAME += 1
@@ -135,7 +136,7 @@ function func(cur_int_params)
         sheet1["A$(CODE_NAME+1)"] = row1
 
         sheet2 = xf[2]
-        row2 = hcat([CODE_NAME],cur_int_params)
+        row2 = vcat([CODE_NAME],cur_int_params)
         sheet2["A$(CODE_NAME+1)"] = row2
     end
 end

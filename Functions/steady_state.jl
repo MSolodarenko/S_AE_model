@@ -4,41 +4,43 @@ include("parameters.jl")
 include("AllubErosa.jl")
 
 function draw_best_grid(best_total_len_grid, best_len_r_grid,best_len_w_grid, best_R_grid,best_W_grid, R,W, len_r,len_w, new_R,new_W)
-    len_r_grid = []
-    len_w_grid = []
-    R_grid = []
-    W_grid = []
-    for r_i=1:2
-        for w_i=1:2
-            if best_total_len_grid[r_i,w_i] != Inf
-                push!(len_r_grid, best_len_r_grid[r_i,w_i])
-                push!(len_w_grid, best_len_w_grid[r_i,w_i])
-                push!(R_grid, best_R_grid[r_i,w_i])
-                push!(W_grid, best_W_grid[r_i,w_i])
+    if fig_output
+        len_r_grid = []
+        len_w_grid = []
+        R_grid = []
+        W_grid = []
+        for r_i=1:2
+            for w_i=1:2
+                if best_total_len_grid[r_i,w_i] != Inf
+                    push!(len_r_grid, best_len_r_grid[r_i,w_i])
+                    push!(len_w_grid, best_len_w_grid[r_i,w_i])
+                    push!(R_grid, best_R_grid[r_i,w_i])
+                    push!(W_grid, best_W_grid[r_i,w_i])
+                end
             end
         end
-    end
 
-    p1 = scatter(len_r_grid, len_w_grid, legend=false)
-    for i1 = 1:length(len_r_grid)
-        for i2 = i1+1:length(len_w_grid)
-            plot!(p1, [len_r_grid[i1],len_r_grid[i2]], [len_w_grid[i1],len_w_grid[i2]], legend=false)
+        p1 = scatter(len_r_grid, len_w_grid, legend=false)
+        for i1 = 1:length(len_r_grid)
+            for i2 = i1+1:length(len_w_grid)
+                plot!(p1, [len_r_grid[i1],len_r_grid[i2]], [len_w_grid[i1],len_w_grid[i2]], legend=false)
+            end
         end
-    end
-    hline!(p1, [0.0])
-    vline!(p1, [0.0])
-    scatter!(p1, [len_r], [len_w], legend=false)
+        hline!(p1, [0.0])
+        vline!(p1, [0.0])
+        scatter!(p1, [len_r], [len_w], legend=false)
 
-    p2 = scatter(R_grid, W_grid, legend=false)
-    for i1 = 1:length(R_grid)
-        for i2 = i1+1:length(W_grid)
-            plot!(p2, [R_grid[i1],R_grid[i2]], [W_grid[i1],W_grid[i2]], legend=false)
+        p2 = scatter(R_grid, W_grid, legend=false)
+        for i1 = 1:length(R_grid)
+            for i2 = i1+1:length(W_grid)
+                plot!(p2, [R_grid[i1],R_grid[i2]], [W_grid[i1],W_grid[i2]], legend=false)
+            end
         end
-    end
-    scatter!(p2, [R,new_R], [W,new_W], legend=false)
-    plot!(p2, [R,new_R], [W,new_W], arrow=true, legend=false)
+        scatter!(p2, [R,new_R], [W,new_W], legend=false)
+        plot!(p2, [R,new_R], [W,new_W], arrow=true, legend=false)
 
-    display(plot(p1,p2, layout=(1,2)))
+        display(plot(p1,p2, layout=(1,2)))
+    end
 end
 
 function steady_state(R, W, global_params, global_approx_params, model_params)
