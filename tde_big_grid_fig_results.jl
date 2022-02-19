@@ -16,7 +16,7 @@ mkpath(LOCAL_DIR)
 @load "$(LOCAL_DIR)trans_$(TIME_PERIODS)_results.jld2" trans_res ss_1 ss_2
 
 approx_object = ss_1[4]
-global_approx_params = [49,3,3,3,6,3]
+global_approx_params = [69,3,3,3,6,3]
 model_params = ss_1[5]
 
 

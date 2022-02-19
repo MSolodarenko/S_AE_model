@@ -11,12 +11,12 @@ include("Functions/steady_state.jl")
 # global parameters of the model's code
 #                   1           2           3       4
 #                gen_tol_x, gen_tol_f, distr_tol, val_tol
-GLOBAL_PARAMS = [1e-6/2, 1e-4, 1e-8, 1e-6]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-12, 1e-9]#[1e-8, 1e-4, 1e-7, 1e-5]#
+GLOBAL_PARAMS = [1e-6, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-12, 1e-9]#[1e-8, 1e-4, 1e-7, 1e-5]#
 
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
-GLOBAL_APPROX_PARAMS = [49,3,3,3,6,3]#[25,5,5,3,6,3]#[15,3,3,3,6,3]#
+GLOBAL_APPROX_PARAMS = [35,3,3,3,6,3]#[25,5,5,3,6,3]#[15,3,3,3,6,3]#
 
 # parameters of the model's economy (Italy)
 LAMBDA = 1.513028#1.548387
@@ -64,14 +64,14 @@ fig_output = false
 calc_add_results = false
 
 # Generate gen eq'm for different lambdas
-lambdas = [collect(range(1.01; length = 5, stop = 1.270437995455));
+lambdas = #=[1.513028, 2.6]=#[collect(range(1.01; length = 5, stop = 1.270437995455));
            collect(range(1.27; length = 6, stop = 1.513028)      )[2:end];
            collect(range(1.51; length = 4, stop = 2.0)           )[2:end];
            collect(range(2.0;  length = 6, stop = 5.0)           )[2:end];
            collect(range(5.0;  length = 6, stop = 10.0)          )[2:end];
            collect(range(10.0; length = 5, stop = 25.0)          )[2:end];
            collect(range(25.0; length = 4, stop = 100.0)         )[2:end];
-           collect(range(100.0;length = 4, stop = 2500.0)        )[2:end]]
+           collect(range(100.0;length = 4, stop = 2500.0)        )[2:end]]##=#
 
 l1_i = findfirst(x -> x==1.513028, lambdas)
 l2_i = findfirst(x -> (1.67-1e-2 < x)&&(x > 1.67+1e-2), lambdas)
@@ -93,8 +93,8 @@ for country = ["Italy"#=, "Brazil"=#]
     end
     mkpath(LOCAL_DIR)
 
-    guess_R = -9.5813533483948/100#-0.4933/100#(r_min+r_max)/2#
-    guess_W = 0.20913816427143422#0.22939#(w_min+w_max)/2#
+    guess_R = -0.88337/100#(r_min+r_max)/2#
+    guess_W = 0.2357213#(w_min+w_max)/2#
 
     Rs = zeros(length(lambdas))
     Ws = zeros(length(lambdas))
@@ -117,7 +117,7 @@ for country = ["Italy"#=, "Brazil"=#]
 
     SSS = Array{Any}(undef,length(lambdas))
 
-    for i = [1, 11, 17, 20, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33]#1:length(lambdas)#[[l1_i, l3_i, l2_i]; deleteat!(collect(1:length(lambdas)),[l1_i, l2_i, l3_i])]#
+    for i = 1:length(lambdas)#[[l1_i, l3_i, l2_i]; deleteat!(collect(1:length(lambdas)),[l1_i, l2_i, l3_i])]#
         println("\n$(country) - $(i)/$(length(lambdas))")
         MODEL_PARAMS = zeros(19)
         if country == "Brazil"
