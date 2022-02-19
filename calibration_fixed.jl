@@ -90,11 +90,7 @@ function calculate_deviations(res)
 end
 function calculate_aggregate_errors(deviations)
     agg_errs = zeros(3)
-<<<<<<< HEAD
     calibration_weights = [1.0,1.0,1000.0,1000.0,0.0,100.0,100.0,100.0,100.0,100.0,100.0,10.0,10.0,10.0]
-=======
-    calibration_weights = [1,1,1000,1000,0,100,100,100,100,100,100,10,10,10]
->>>>>>> 3a09c56b7c68bcc458a725b6363a234c8daad3e8
     calibration_weights ./= sum(calibration_weights)
     agg_errs[1] = sum(abs, deviations.*calibration_weights)*length(deviations)
     agg_errs[2] = sum(abs, deviations)
