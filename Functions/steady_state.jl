@@ -43,7 +43,7 @@ end
 
 function steady_state(R, W, global_params, global_approx_params, model_params)
 
-    rw_maxiters = 50#100
+    rw_maxiters = 60#100
 
     #           1       2     3     4       5   6       7   8       9       10          11              12      13          14          15              16          17              18              19       20
     #         lambda, beta, delta, gamma, eta, theta, c_e, rho_m, rho_w, sigma_eps_m, rho_eps_m_w, sigma_zeta, p_alpha, eta_alpha, prob_node1_alpha, mu_m_alpha, rho_alpha_m_w, sigma_alpha_w, sigma_eps_w, crra
@@ -349,6 +349,11 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
                 best_new_W = W - len_w*(W-best_W)/(len_w-best_len_w)
                 new_W = (_new_W+best_new_W)/2.0
             end
+            _new_R     = R - len_r*(R-old_R) /(len_r-old_len_r)
+            new_R = _new_R*0.25+new_R*(1.0-0.25)
+
+            _new_W     = W - len_w*(W-old_W) /(len_w-old_len_w)
+            new_W = _new_W*0.25+new_W*(1.0-0.25)
 
             if new_R <= r_min
                 new_R = 0.9*r_min + (1.0-0.9)*best_R
@@ -404,7 +409,7 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
             old_W = old_old_W
             old_len_w = old_old_len_w
 
-            rw_iters -= 1
+            #rw_iters -= 1
 
         end
 
