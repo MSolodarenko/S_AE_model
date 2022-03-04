@@ -87,7 +87,7 @@ function calculate_deviations(res)
     deviations = (model_moments .- TARGET_MOMENTS)#./TARGET_MOMENTS
 
     deviations[1:2]   ./= TARGET_MOMENTS[1:2]
-    deviations[5]     ./= TARGET_MOMENTS[5]
+    deviations[5]     /= TARGET_MOMENTS[5]
     deviations[12:14] ./= TARGET_MOMENTS[12:14]
 
     return deviations, model_moments
