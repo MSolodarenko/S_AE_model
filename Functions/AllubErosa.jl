@@ -138,9 +138,7 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
     val_len     = Inf
     val_iters   = 0
     aprime_len = Inf
-    if text_output
-        print_sameline("Start of the main VFI loop")
-    end
+    print_sameline("Start of the main VFI loop")
 
     new_value = copy(value)
     new_aprime_nodes = copy(aprime_nodes)
@@ -206,9 +204,9 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
 
         aprime_len = maximum(abs,new_aprime_nodes-aprime_nodes)/maximum(abs,new_aprime_nodes)
         aprime_sumlen = sum(abs,new_aprime_nodes-aprime_nodes)/maximum(abs,new_aprime_nodes)
-
-        print_sameline("VF#$(val_iters) - err: $(round(val_len;digits=12)) b_l:$(round(b_lowerbar;digits=4)) b_u:$(round(b_upperbar;digits=4)), sum_err:$(round(val_sumlen;digits=9)), a_err:$(round(aprime_len;digits=4)), a_sumerr:$(round(aprime_sumlen;digits=4))")
-
+        if text_output
+            print_sameline("VF#$(val_iters) - err: $(round(val_len;digits=12)) b_l:$(round(b_lowerbar;digits=4)) b_u:$(round(b_upperbar;digits=4)), sum_err:$(round(val_sumlen;digits=9)), a_err:$(round(aprime_len;digits=4)), a_sumerr:$(round(aprime_sumlen;digits=4))")
+        end
         if val_len > val_tol*5 && old_val_len > val_len && stable
             if b_lowerbar > -10000000+1#=-Inf=# && b_upperbar < 10000000-1#=Inf=# #&& b_lowerbar < 0.0 && b_upperbar > 0.0
                 value .= new_value .+ (b_lowerbar + b_upperbar)/2
@@ -381,9 +379,9 @@ function find_stationary_distribution_pdf(a1_nodes,a_min,a_max,a_nodes, distr_to
 
         newK_supply = sum(distr.*policy)
         K_s_error = abs(newK_supply-oldK_supply)
-
-        print_sameline("Distr#$(distr_iters) - err: $(distr_len) - sumdistr: $(round(sum(distr);digits=2)), K_s:$(round(newK_supply;digits=6)), K_s_err:$(K_s_error)")
-
+        if text_output
+            print_sameline("Distr#$(distr_iters) - err: $(distr_len) - sumdistr: $(round(sum(distr);digits=2)), K_s:$(round(newK_supply;digits=6)), K_s_err:$(K_s_error)")
+        end
         distr_len = K_s_error
 
         oldK_supply = newK_supply

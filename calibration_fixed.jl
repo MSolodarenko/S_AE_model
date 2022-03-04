@@ -19,7 +19,7 @@ mkpath(LOCAL_DIR)
 #                 1      2         3      4       5          6       7       8       9       10      11      12         13        14
 #                 K/Y,   Credit/Y, occ_W, occ_SP, var_log_C, W-W,    W-SP,   SP-SP,  SP-EMP, EMP-SP, EMP-EMP,var_log_y, gini_y_w, gini_y_ent
 TARGET_MOMENTS = [1.704, 0.6035,   0.702, 0.085,  0.26,      0.9853, 0.0089, 0.8366, 0.1349, 0.0842, 0.8873, 0.48,      0.43,     0.25]
-
+#=
 XLSX.openxlsx("$(LOCAL_DIR)calibration_res.xlsx",mode="w") do xf
     sheet1 = xf[1]
     labels1=["CODE_NAME", "Weighted sum of deviations", "Sum of abs deviations", "Sum of squared deviations","K/Y","$(TARGET_MOMENTS[1])","Credit/Y","$(TARGET_MOMENTS[2])","occ_W","$(TARGET_MOMENTS[3])","occ_SP","$(TARGET_MOMENTS[4])","var_log_C","$(TARGET_MOMENTS[5])","W-W","$(TARGET_MOMENTS[6])","W-SP","$(TARGET_MOMENTS[7])","SP-SP","$(TARGET_MOMENTS[8])","SP-EMP","$(TARGET_MOMENTS[9])","EMP-SP","$(TARGET_MOMENTS[10])","EMP-EMP","$(TARGET_MOMENTS[11])","var_log_y","$(TARGET_MOMENTS[12])","gini_y_w","$(TARGET_MOMENTS[13])","gini_y_ent","$(TARGET_MOMENTS[14])","R","len_R","W","len_W"]
@@ -31,7 +31,7 @@ XLSX.openxlsx("$(LOCAL_DIR)calibration_res.xlsx",mode="w") do xf
     labels2=["CODE_NAME", "lambda","beta","c_e","rho_m","sigma_eps_m","rho_eps_m_w","sigma_zeta","p_alpha","eta_alpha","mu_m_alpha","rho_alpha_m_w","sigma_eps_w"]
     XLSX.writetable!(sheet2, zeros(length(labels2)),labels2, anchor_cell=XLSX.CellRef("A1"))
 end
-
+=#
 # externally calibrated parameters of the model's economy (Italy)
 #LAMBDA = 1.513028
 #BETA = 0.917506
@@ -84,7 +84,11 @@ function calculate_deviations(res)
     #                 K/Y,     Credit/Y, occ_W,   occ_SP,  var_log_C, W-W,          W-SP,         SP-SP,        SP-EMP,       EMP-SP,       EMP-EMP,      var_log_y, gini_y_w, gini_y_ent
     model_moments  = [res[12], res[13],  res[14], res[15], res[17],   res[18][1,1], res[18][1,2], res[18][2,2], res[18][2,3], res[18][3,2], res[18][3,3], res[19],   res[20],  res[21]]
 
-    deviations = (model_moments .- TARGET_MOMENTS)./TARGET_MOMENTS
+    deviations = (model_moments .- TARGET_MOMENTS)#./TARGET_MOMENTS
+
+    deviations[1:2]   ./= TARGET_MOMENTS[1:2]
+    deviations[5]     ./= TARGET_MOMENTS[5]
+    deviations[12:14] ./= TARGET_MOMENTS[12:14]
 
     return deviations, model_moments
 end
@@ -113,15 +117,33 @@ fig_output = false
 calc_add_results = false
 
 function func(cur_int_params)
-    global CODE_NAME += 1
+    XLSX.openxlsx("$(LOCAL_DIR)calibration_res.xlsx",mode="rw") do xf
+        sheet1 = xf[1]
+        row1=[ CODE_NAME ]
+        sheet1["A$(CODE_NAME+1)"] = row1
+
+        sheet2 = xf[2]
+        row2 = vcat([CODE_NAME],cur_int_params)
+        sheet2["A$(CODE_NAME+1)"] = row2
+    end
+
     println_sameline("Params - $(round.(cur_int_params; digits=6))")
     if !(int_params_min < cur_int_params < int_params_max)
         problematic_i = findfirst(!(int_params_min .< cur_int_params .< int_params_max))
         println_sameline("error: $problematic_i parameter out of bounds")
         return ones(length(TARGET_MOMENTS)).*(10000.0/length(TARGET_MOMENTS))
     end
-
-    SS = steady_state(Inf,Inf, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS,params_from_int_params(cur_int_params))
+    SS = []
+    try
+        @load "$(LOCAL_DIR)SS_$(CODE_NAME).jld2" SS
+    catch e
+        try
+            SS = steady_state(Inf,Inf, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS,params_from_int_params(cur_int_params))
+        catch e
+            println_sameline(e)
+            return ones(length(TARGET_MOMENTS)).*(10000.0/length(TARGET_MOMENTS))
+        end
+    end
 
     deviations, model_moments = calculate_deviations(SS[1])
 
@@ -133,10 +155,6 @@ function func(cur_int_params)
         sheet1 = xf[1]
         row1=[CODE_NAME, agg_errs[1], agg_errs[2], agg_errs[3], deviations[1], model_moments[1], deviations[2], model_moments[2], deviations[3], model_moments[3], deviations[4], model_moments[4], deviations[5], model_moments[5], deviations[6], model_moments[6], deviations[7], model_moments[7], deviations[8], model_moments[8], deviations[9], model_moments[9], deviations[10], model_moments[10], deviations[11], model_moments[11], deviations[12], model_moments[12], deviations[13], model_moments[13], deviations[14], model_moments[14], SS[2], SS[1][10], SS[3], SS[1][11]]
         sheet1["A$(CODE_NAME+1)"] = row1
-
-        sheet2 = xf[2]
-        row2 = vcat([CODE_NAME],cur_int_params)
-        sheet2["A$(CODE_NAME+1)"] = row2
     end
 end
 
@@ -176,10 +194,17 @@ for i in 1:length(init_int_params)-1
         end
     end
 end
-println_sameline(length(candidates))
+println_sameline(length(candidates)) #1849
 
-CODE_NAME = 291
-for i_ps in (CODE_NAME+1):length(candidates)
+
+CODE_NAME = 0
+list_of_tasks = 1:length(candidates)
+if Sys.iswindows()
+    list_of_tasks = length(candidates):-1:1
+end
+
+for i_ps in list_of_tasks
     println_sameline(i_ps)
+    global CODE_NAME = i_ps
     func(candidates[i_ps])
 end
