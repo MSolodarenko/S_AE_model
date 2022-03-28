@@ -54,8 +54,8 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
     r_min = -model_params[3]
     r_max = 1/model_params[2]-1
 
-    w_min = 0.18#0.01#0.25
-    w_max = 0.3#0.99#0.5
+    w_min = W_MIN#0.18#0.01
+    w_max = W_MAX#0.3#0.99
     # approximation object for skills nodes
     #               1               2       3       4       5       6           7
     #               z_m_nodes, z_w_nodes, P_zeta, P_u, stat_P_u, P_alpha, number_u_nodes
