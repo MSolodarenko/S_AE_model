@@ -21,8 +21,8 @@ DEVIATIONS, PARAMETERS = XLSX.openxlsx("$(LOCAL_DIR)calibration_res.xlsx",mode="
     not_converged_pars = [] # len_r or len_w > 1e-4
     not_converged_devs = []
 
-    good_converged_pars = [] # any deviation < 1%
-    good_converged_devs = []
+    best_converged_pars = [] # any deviation < 1%
+    best_converged_devs = []
 
     converged_pars = [] # everything else
     converged_devs = []
@@ -36,32 +36,46 @@ DEVIATIONS, PARAMETERS = XLSX.openxlsx("$(LOCAL_DIR)calibration_res.xlsx",mode="
              #interest rate and # wage
             if abs(Float64(sheet1["AH$row_i"])) <= 1e-4 && abs(Float64(sheet1["AJ$row_i"])) <= 1e-4
 
-                is_good = false
 
+                is_best = false
+                # best = any deviation < 1%
+                #=
                 for i in [5,7,9,11,13,27,29,31]
                     if abs(cur_dev[i]) < 0.01
-                        is_good = true
+                        is_best = true
                     end
                 end
-
-                if is_good
-                    append!(good_converged_devs, [cur_dev] )
-                    append!(good_converged_pars, [cur_par] )
+                =#
+                max_deviation_local = 0.25#0.15
+                if abs(cur_dev[5]) < max_deviation_local && abs(cur_dev[7]) < max_deviation_local && abs(cur_dev[9]) < max_deviation_local && abs(cur_dev[11]) < max_deviation_local && cur_dev[14] < cur_dev[28] && cur_dev[30] > cur_dev[32]
+                    is_best = true
+                end
+                #=
+                if abs(cur_dev[5]) < 0.02 && abs(cur_dev[7]) < 0.07 && abs(cur_dev[9]) < 0.03 && abs(cur_dev[11]) < 0.03 && cur_dev[14] < cur_dev[28] && cur_dev[30] > cur_dev[32]
+                    is_best = true
+                end
+                =#
+                if is_best
+                    append!(best_converged_devs, [cur_dev] )
+                    append!(best_converged_pars, [cur_par] )
                 else
                     append!(converged_devs, [cur_dev] )
                     append!(converged_pars, [cur_par] )
                 end
+
+
+
             else
                 append!(not_converged_devs, [cur_dev] )
                 append!(not_converged_pars, [cur_par] )
             end
         else
             append!(error_pars, [cur_par])
-            append!(error_devs, [[cur_par[1], 125.0, 125.0, 125.0]])
+            append!(error_devs, [[cur_par[1], 250.0, 250.0, 250.0]])
         end
     end
 
-    return [good_converged_devs, converged_devs, not_converged_devs, error_devs], [good_converged_pars, converged_pars, not_converged_pars, error_pars]
+    return [best_converged_devs, converged_devs, not_converged_devs, error_devs], [best_converged_pars, converged_pars, not_converged_pars, error_pars]
 end
 
 max_cats = 1
@@ -127,7 +141,7 @@ for dev_i in 1#:length(DEV_LIST)
     plt = plot()
     for cat = 1:max_cats
         scatter!(plt, ID_LISTs[cat], DEV_LISTs[cat][dev_i], ylabel=DEV_LIST_NAMES[dev_i], color=COLORS_LIST[cat], legend=false)
-        #display(plt)
+        display(plt)
 
         min_iter = argmin(DEV_LISTs[cat][dev_i])
         max_iter = argmax(DEV_LISTs[cat][dev_i])
@@ -152,6 +166,9 @@ for dev_i in 1#:length(DEV_LISTs[1])
     end
 end
 #throw(error)
+for dev_i in 1#:length(IND_DEV_LISTs[1])
+    display(plot(Tuple(plot_PAR_DEV[:,dev_i])..., layout=length(plot_PAR_DEV[:,dev_i])))
+end
 
 plot_PAR_IND_DEV = Array{Any}(undef, length(PAR_LISTs[1]), length(IND_DEV_LISTs[1]))
 for dev_i in 1:length(IND_DEV_LISTs[1])
@@ -178,13 +195,13 @@ for dev_i in 1:length(IND_DEV_LISTs[1])
 
 end
 #throw(error)
-
 for par_i in 1:length(PAR_LISTs[1])
     display(plot(Tuple(plot_PAR_IND_DEV[par_i,:])..., layout=length(plot_PAR_IND_DEV[par_i,:])))
 end
 for dev_i in 1:length(IND_DEV_LISTs[1])
     display(plot(Tuple(plot_PAR_IND_DEV[:,dev_i])..., layout=length(plot_PAR_IND_DEV[:,dev_i])))
 end
+
 
 # beta to Capital-to-Output
 #display(plot(plot_PAR_IND_DEV[2,1]))
