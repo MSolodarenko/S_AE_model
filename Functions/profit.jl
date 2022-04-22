@@ -219,7 +219,7 @@ function compute_income_and_earnings(a_nodes::Array{Float64,1},number_a_nodes::I
 end
 
 # computation of income prodile for fixed occupation
-function compute_income_profile(occ_choice::Int64,a::Float64,zm::Float64,zw::Float64,r::Float64,w::Float64, lambda, delta, gamma, eta, theta, c_e)
+function compute_income_profile(occ_choice::Int64, a::Float64,zm::Float64,zw::Float64,r::Float64,w::Float64, lambda, delta, gamma, eta, theta, c_e)
 
     se_opt = self_optimal(zm,zw,r,w, delta, gamma, eta, theta)
     se_const = self_constrained(a,zm,zw,r,w, lambda, delta, gamma, eta, theta)
@@ -341,23 +341,29 @@ function compute_income_profile(occ::Int64,a_nodes::Array{Float64,1},number_a_no
 end
 
 function compute_income_profile_fixed_occ(a_nodes::Array{Float64,1},number_a_nodes::Int64,r::Float64, w::Float64, number_zeta_nodes::Int64, number_alpha_m_nodes::Int64, number_alpha_w_nodes::Int64, lambda, delta, gamma, eta, theta, c_e, z_m_nodes, z_w_nodes, number_u_nodes)
-	occ_choice = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-	income = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-	earnings = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-	capital_excess = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-	capital_d = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-	credit = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-	labour_excess = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-	labour_d = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-	labour_s = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-	deposit = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-	output = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-	cost_of_employing = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
-	managerial_input = Array{Any}(undef, 3,number_a_nodes,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
+	occ_choice = Array{Any}(undef, 3)
+	income = Array{Any}(undef, 3)
+	earnings = Array{Any}(undef, 3)
+	capital_excess = Array{Any}(undef, 3)
+	capital_d = Array{Any}(undef, 3)
+	credit = Array{Any}(undef, 3)
+	labour_excess = Array{Any}(undef, 3)
+	labour_d = Array{Any}(undef, 3)
+	labour_s = Array{Any}(undef, 3)
+	deposit = Array{Any}(undef, 3)
+	output = Array{Any}(undef, 3)
+	cost_of_employing = Array{Any}(undef, 3)
+	managerial_input = Array{Any}(undef, 3)
 
 	Threads.@threads for occ = 1:3
-		occ_choice[occ,:,:,:,:,:], income[occ,:,:,:,:,:], earnings[occ,:,:,:,:,:], capital_excess[occ,:,:,:,:,:], capital_d[occ,:,:,:,:,:], credit[occ,:,:,:,:,:], labour_excess[occ,:,:,:,:,:], labour_d[occ,:,:,:,:,:], labour_s[occ,:,:,:,:,:], deposit[occ,:,:,:,:,:], output[occ,:,:,:,:,:], cost_of_employing[occ,:,:,:,:,:], managerial_input[occ,:,:,:,:,:] = compute_income_profile(occ,a_nodes,number_a_nodes,r,w, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes, lambda, delta, gamma, eta, theta, c_e, z_m_nodes, z_w_nodes, number_u_nodes)
+		occ_choice[occ], income[occ], earnings[occ], capital_excess[occ], capital_d[occ], credit[occ], labour_excess[occ], labour_d[occ], labour_s[occ], deposit[occ], output[occ], cost_of_employing[occ], managerial_input[occ] = compute_income_profile(occ,a_nodes,number_a_nodes,r,w, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes, lambda, delta, gamma, eta, theta, c_e, z_m_nodes, z_w_nodes, number_u_nodes)
 	end
 
 	return occ_choice, income, earnings, capital_excess, capital_d, credit, labour_excess, labour_d, labour_s, deposit, output, cost_of_employing, managerial_input
+end
+
+function compute_income_and_earnings_fixed_occ(a_nodes::Array{Float64,1},number_a_nodes::Int64,r::Float64, w::Float64, number_zeta_nodes::Int64, number_alpha_m_nodes::Int64, number_alpha_w_nodes::Int64, lambda, delta, gamma, eta, theta, c_e, z_m_nodes, z_w_nodes, number_u_nodes)
+	res = compute_income_profile_fixed_occ(a_nodes::Array{Float64,1},number_a_nodes::Int64,r::Float64, w::Float64, number_zeta_nodes::Int64, number_alpha_m_nodes::Int64, number_alpha_w_nodes::Int64, lambda, delta, gamma, eta, theta, c_e, z_m_nodes, z_w_nodes, number_u_nodes)
+
+	return res[2], res[3]
 end
