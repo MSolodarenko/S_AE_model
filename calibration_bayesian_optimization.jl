@@ -45,17 +45,21 @@ SIGMA_ALPHA_W = 0.12
 #SIGMA_EPS_W = 0.021947
 CRRA = 1.0 # >0.0
 
-W_MIN = 0.18
-W_MAX = 0.3
+W_MIN = 0.01#0.18
+W_MAX = 0.47#0.3
 
 # internally calibrated parameters
 #                  1         2         3         4         5           6           7          8         9         10         11            12
 #                  lambda    beta      c_e       rho_m     sigma_eps_m rho_eps_m_w sigma_zeta p_alpha   eta_alpha mu_m_alpha rho_alpha_m_w sigma_eps_w
 init_int_params = [1.513028, 0.917506, 0.007001, 0.710266, 1.022857,   0.361605,   0.091089,  0.024445, 5.896035, -4.817675, 0.181454,     0.021947]
 
-int_params_min  = [1.001,    0.86,     0.001,    0.70,     0.75,       0.215,      0.09,      0.02,     4.5,      -5.0,      0.04,         0.01]
-int_params_max  = [2.000,    0.99,     0.070,    0.99,     1.33,       0.455,      0.28,      0.06,     6.0,      -2.0,      0.21,         0.30]
+#int_params_min  = [1.001,    0.86,     0.001,    0.70,     0.75,       0.215,      0.09,      0.02,     4.5,      -5.0,      0.04,         0.01]
+int_params_min  = [1.510,    0.9175,   0.001,    0.60,     0.75,       0.215,      0.09,      0.02,     5.0,      -5.0,      0.04,         0.01]
+#int_params_max  = [2.000,    0.99,     0.070,    0.99,     1.33,       0.455,      0.28,      0.06,     6.0,      -2.0,      0.21,         0.30]
+int_params_max  = [1.680,    0.9267,   0.070,    0.99,     1.33,       0.455,      0.28,      0.30,     6.0,      -4.0,      0.21,         0.10]
 
+number_of_splitted_blocks = 8
+percent_deviation = (int_params_max.-int_params_min)./(number_of_splitted_blocks*2)
 search_range = [(int_params_min[i], int_params_max[i]) for i in 1:length(init_int_params)]
 
 function params_from_int_params(i_ps)
@@ -120,6 +124,7 @@ function f(cur_int_params)
     is_read_success = true
     CODE_NAME = -1
     result = XLSX.openxlsx("$(LOCAL_DIR)calibration_res.xlsx",mode="rw") do xf
+        res_RW = [Inf, Inf]
         sheet1 = xf[1]
         sheet2 = xf[2]
 
@@ -127,7 +132,8 @@ function f(cur_int_params)
 
         for row_i in 2:CODE_NAME
             i_int_params = vec(Float64.(sheet2["B$row_i:M$row_i"]))
-            if maximum(abs,(i_int_params - cur_int_params)./(i_int_params + cur_int_params)) < 0.01
+            #if maximum(abs,(i_int_params - cur_int_params)./(i_int_params + cur_int_params)) < 0.01
+            if minimum(abs.(i_int_params - cur_int_params) .< percent_deviation)
                 #=
                 @load "$(LOCAL_DIR)SS_$(sheet2["A$(row_i)"]).jld2" SS
                 deviations, model_moments = calculate_deviations(SS[1])
@@ -135,27 +141,38 @@ function f(cur_int_params)
                 =#
                 agg_errs = [Float64(sheet1["B$row_i"])]
                 if agg_errs[1] < 10000.0
-                    print_sameline("error: cur_int_params have been previously calculated in SS_$(sheet1["A$row_i"])) (max diff is < 0.01)")
-                    is_read_success = false
-                    return agg_errs[1]
+                    if true#(abs(Float64(sheet1["AH$row_i"])) <= 1e-4 && abs(Float64(sheet1["AJ$row_i"])) <= 1e-4) #interest rate #wage
+                        print_sameline("error: cur_int_params have been previously calculated in SS_$(sheet1["A$row_i"])) (max diff is < 0.01)")
+                        is_read_success = false
+                        return agg_errs[1]
+                    else
+                        res_RW = [Float64(sheet1["AG$row_i"]), Float64(sheet1["AJ$row_i"])]
+                    end
                 end
             end
         end
-
+        print_sameline("Start calculations: ")
         row1=[ CODE_NAME, 10000.0 ]
         sheet1["A$(CODE_NAME+1)"] = row1
 
         row2 = vcat([CODE_NAME],cur_int_params)
         sheet2["A$(CODE_NAME+1)"] = row2
+
+        return res_RW
     end
 
-    if !is_read_success
+    local_guess_R = Inf
+    local_guess_W = Inf
+    if is_read_success
+        local_guess_R = result[1]
+        local_guess_W = result[2]
+    else
         return result
     end
 
     SS = []
     try
-        SS = steady_state(Inf,Inf, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS,params_from_int_params(cur_int_params))
+        SS = steady_state(local_guess_R,local_guess_W, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS,params_from_int_params(cur_int_params))
     catch e
         println_sameline(e)
         return 10000.0+sum(cur_int_params.-((int_params_min.+int_params_max)./2))
@@ -163,7 +180,14 @@ function f(cur_int_params)
 
     deviations, model_moments = calculate_deviations(SS[1])
 
-    agg_errs = calculate_aggregate_errors(deviations)
+    cond_error  = 50.0 .* (abs(SS[1][10])+abs(SS[1][11]))   #is capital and labor markets
+    cond_error += model_moments[5]  < model_moments[12] ? 0.0 : 10.0 #is Varlogc<Varloge
+    cond_error += model_moments[13] > model_moments[14] ? 0.0 : 10.0 #is Giniw>Ginie
+    cond_error += abs(deviations[1])<0.02 ? 0.0 : (abs(deviations[1])-0.02)*10 #is K/Y appr
+    cond_error += abs(deviations[2])<0.07 ? 0.0 : (abs(deviations[2])-0.07)*10 #is C/Y appr
+    cond_error += abs(deviations[3])<0.03 ? 0.0 : (abs(deviations[3])-0.03)*10 #is occW appr
+    cond_error += abs(deviations[4])<0.03 ? 0.0 : (abs(deviations[4])-0.03)*10 #is occS appr
+    agg_errs = calculate_aggregate_errors(deviations) .+ cond_error
 
     println_sameline("Agg_error: $(agg_errs[1])")
 
@@ -177,7 +201,8 @@ function f(cur_int_params)
     return agg_errs[1]
 end
 
-#=
+# Bayesian
+
 using BayesianOptimization, GaussianProcesses, Distributions
 # Choose as a model an elastic GP with input dimensions 2.
 # The GP is called elastic, because data can be appended efficiently.
@@ -223,7 +248,26 @@ opt = BOpt(f,
           )
 
 result = boptimize!(opt)
-=#
 
+
+# Classic black box optimization
+#=
 using BlackBoxOptim
 res = bboptimize(f; SearchRange=search_range, Method=:adaptive_de_rand_1_bin)
+=#
+
+# Grid search
+#=
+BBBB = []
+for par_i in 1:length(init_int_params)
+    AAAA = collect(range(int_params_min[par_i]; stop=int_params_max[par_i], length=number_of_splitted_blocks+1))
+    push!(BBBB, (AAAA[1:end-1].+AAAA[2:end])./2.0)
+end
+candidates = vec(collect(Iterators.product(Tuple(BBBB)...)))
+list_of_tasks = 1:length(candidates)
+for i_ps in list_of_tasks
+    println_sameline(i_ps)
+    global CODE_NAME = i_ps
+    f(collect(candidates[i_ps]))
+end
+=#

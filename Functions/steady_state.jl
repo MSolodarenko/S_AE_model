@@ -406,12 +406,25 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
 
             println_sameline("#$(rw_iters) - r:$(round(R*100;digits=4))%, w:$(round(W;digits=6)) - total_len:-.------ - len_r:-.------ - len_w:-.------ - new_r:$(round(new_R*100;digits=4))%, new_w:$(round(new_W;digits=6))")
             draw_best_grid(best_total_len_grid, best_len_r_grid,best_len_w_grid, best_R_grid,best_W_grid, R,W, len_r,len_w, new_R,new_W)
-            R = old_R
-            old_R = old_old_R
-            old_len_r = old_old_len_r
-            W = old_W
-            old_W = old_old_W
-            old_len_w = old_old_len_w
+            if max(abs(new_R-R), abs(new_W-W)) < gen_tol_x
+                #=
+                new_R = R + len_r
+                new_R = min(max(r_min, new_R), r_max)
+                new_W = W + len_w
+                new_W = min(max(w_min, new_W), w_max)
+
+                println_sameline("#$(rw_iters) - r:$(round(R*100;digits=4))%, w:$(round(W;digits=6)) - total_len:$(round(total_len;digits=6)) - len_r:$(round(len_r;digits=6)) - len_w:$(round(len_w;digits=6)) - new_r:$(round(new_R*100;digits=4))%, new_w:$(round(new_W;digits=6))")
+                =#
+                println_sameline("Factor prices have convereged, but markets are not clear")
+                rw_iters = rw_maxiters
+            else
+                R = old_R
+                old_R = old_old_R
+                old_len_r = old_old_len_r
+                W = old_W
+                old_W = old_old_W
+                old_len_w = old_old_len_w
+            end
 
             #rw_iters -= 1
 
