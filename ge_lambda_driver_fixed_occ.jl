@@ -123,7 +123,7 @@ for country = ["Italy"#=, "Brazil"=#]
 
     SSS = Array{Any}(undef,length(lambdas))
 
-    for i = 1:length(lambdas)#[[l2_i, l1_i, l3_i]; deleteat!(collect(1:length(lambdas)),[l1_i, l2_i, l3_i])]#
+    for i = 1:length(lambdas)
         println("\n$(country) - $(i)/$(length(lambdas))")
         MODEL_PARAMS = zeros(19)
         if country == "Brazil"
