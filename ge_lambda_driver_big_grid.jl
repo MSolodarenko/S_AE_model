@@ -55,8 +55,8 @@ r_min = -DELTA#-delta
 r_max = 1/BETA-1#1/beta-1
 
 # wage bounds #### NOT DONE!!! ########
-w_min = 0.01
-w_max = 0.47
+W_MIN = 0.01
+W_MAX = 0.47
 
 optimal_r = R_#(r_min+r_max)/2#r#
 optimal_w = W_#(w_min+w_max)/2#w#
