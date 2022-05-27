@@ -18,32 +18,34 @@ GLOBAL_PARAMS = [1e-6, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
 GLOBAL_APPROX_PARAMS = [35,3,3,3,6,3]#[25,5,5,3,6,3]#[15,3,3,3,6,3]#
 
+CODENAME = "SS_2092"
 # parameters of the model's economy (Italy)
-LAMBDA = 1.513028#1.548387
-BETA = 0.917506#0.859906
-DELTA = 0.1
-GAMMA = 0.16
-ETA = 0.3
-THETA = 0.54
+                    #SS_2092 #prev.calibration
+LAMBDA =            1.665907 #1.513028
+BETA =              0.934172 #0.917506
+DELTA =             0.1
+GAMMA =             0.16
+ETA =               0.3
+THETA =             0.54
 
-C_E = 0.007001#0.036321
-RHO_M = 0.710266#0.849951
-RHO_W = 0.96
-SIGMA_EPS_M = 1.022857#0.942809
-RHO_EPS_M_W = 0.361605#0.384691
-SIGMA_ZETA = 0.091089#0.151709
-P_ALPHA = 0.024445#0.043692
-ETA_ALPHA = 5.896035#5.202754
-PROB_NODE1_ALPHA = 0.39
-MU_M_ALPHA = -4.817675#-3.909137
-RHO_ALPHA_M_W = 0.181454#0.095903
-SIGMA_ALPHA_W = 0.12
-SIGMA_EPS_W = 0.021947#0.285519
+C_E =               0.057572 #0.007001
+RHO_M =             0.951032 #0.710266
+RHO_W =             0.96
+SIGMA_EPS_M =       0.754644 #1.022857
+RHO_EPS_M_W =       0.216037 #0.361605
+SIGMA_ZETA =        0.211565 #0.091089
+P_ALPHA =           0.022080 #0.024445
+ETA_ALPHA =         5.811008 #5.896035
+PROB_NODE1_ALPHA =  0.39
+MU_M_ALPHA =       -3.266806#-4.817675
+RHO_ALPHA_M_W =     0.147661 #0.181454
+SIGMA_ALPHA_W =     0.12
+SIGMA_EPS_W =       0.048689 #0.021947
 
 CRRA = 1.0 # >0.0
 
-R_ = -0.005338#-0.069128
-W_ = 0.230294#0.393906
+R_ =                1.409477/100#-0.005338
+W_ =                0.295296 #0.230294
 
 gen_tol_x = GLOBAL_PARAMS[1]
 gen_tol_f = GLOBAL_PARAMS[2]
@@ -53,8 +55,8 @@ r_min = -DELTA#-delta
 r_max = 1/BETA-1#1/beta-1
 
 # wage bounds #### NOT DONE!!! ########
-w_min = 0.18#0.01#0.25
-w_max = 0.3#0.99#0.5
+w_min = 0.01
+w_max = 0.47
 
 optimal_r = R_#(r_min+r_max)/2#r#
 optimal_w = W_#(w_min+w_max)/2#w#
@@ -65,23 +67,23 @@ calc_add_results = false
 
 # Generate gen eq'm for different lambdas
 lambdas = #=[1.513028, 2.6]=#[collect(range(1.01; length = 5, stop = 1.270437995455));
-           collect(range(1.27; length = 6, stop = 1.513028)      )[2:end];
-           collect(range(1.51; length = 4, stop = 2.0)           )[2:end];
+           collect(range(1.27; length = 6, stop = LAMBDA)      )[2:end];
+           collect(range(LAMBDA; length = 4, stop = 2.0)           )[2:end];
            collect(range(2.0;  length = 6, stop = 5.0)           )[2:end];
-           collect(range(5.0;  length = 6, stop = 10.0)          )[2:end];
+           collect(range(5.0;  length = 6, stop = 10.0)          )[2:end]#=;
            collect(range(10.0; length = 5, stop = 25.0)          )[2:end];
            collect(range(25.0; length = 4, stop = 100.0)         )[2:end];
-           collect(range(100.0;length = 4, stop = 2500.0)        )[2:end]]##=#
+           collect(range(100.0;length = 4, stop = 2500.0)        )[2:end]=#]
 
-l1_i = findfirst(x -> x==1.513028, lambdas)
+l1_i = findfirst(x -> x==LAMBDA, lambdas)
 l2_i = findfirst(x -> (1.67-1e-2 < x)&&(x > 1.67+1e-2), lambdas)
 l3_i = findfirst(x -> (2.6-1e-2 < x)&&(x > 2.6+1e-2), lambdas)
 
-LOCAL_DIR_BRAZIL = "$(@__DIR__)/Results/Lambda_grid_big_grid_test/Brazil/"
-LOCAL_DIR_ITALY = "$(@__DIR__)/Results/Lambda_grid_big_grid_test/Italy/"
+LOCAL_DIR_BRAZIL = "$(@__DIR__)/Results/Lambda_grid_big_grid/Brazil/"
+LOCAL_DIR_ITALY = "$(@__DIR__)/Results/Lambda_grid_big_grid/Italy_$(CODENAME)/"
 if Sys.iswindows()
-   LOCAL_DIR_BRAZIL = "$(@__DIR__)\\Results\\Lambda_grid_big_grid_test\\Brazil\\"
-   LOCAL_DIR_ITALY = "$(@__DIR__)\\Results\\Lambda_grid_big_grid_test\\Italy\\"
+   LOCAL_DIR_BRAZIL = "$(@__DIR__)\\Results\\Lambda_grid_big_grid\\Brazil\\"
+   LOCAL_DIR_ITALY = "$(@__DIR__)\\Results\\Lambda_grid_big_grid\\Italy_$(CODENAME)\\"
 end
 for country = ["Italy"#=, "Brazil"=#]
     if country == "Italy"
