@@ -60,6 +60,10 @@ int_params_max  = [1.680,    0.9267,   0.070,    0.99,     1.33,       0.455,   
 
 number_of_splitted_blocks = 8
 percent_deviation = (int_params_max.-int_params_min)./(number_of_splitted_blocks*2)
+percent_deviation .= 1e-2/2
+percent_deviation[3] /= 10
+percent_deviation[12] /= 10
+
 search_range = [(int_params_min[i], int_params_max[i]) for i in 1:length(init_int_params)]
 
 function params_from_int_params(i_ps)
@@ -242,7 +246,7 @@ opt = BOpt(f,
            modeloptimizer,
            int_params_min,
            int_params_max,
-           maxiterations = 300,
+           maxiterations = 250,
            sense = Min,
            initializer_iterations = 0
           )
