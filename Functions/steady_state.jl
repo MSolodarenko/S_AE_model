@@ -89,8 +89,15 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
             try
                 res = AllubErosa(R,W, global_params, global_approx_params, model_params, approx_object)
             catch e
-                println_sameline("Error in iteration #0")
-                throw(error(e))
+                R = optimal_r
+                W = optimal_w
+                println_sameline(("Set guess as the optimals - R:$R - W:$W - ",e))
+                try
+                    res = AllubErosa(R,W, global_params, global_approx_params, model_params, approx_object)
+                catch e
+                    println_sameline("Error in iteration #0")
+                    throw(error(e))
+                end
             end
         end
     end
@@ -117,6 +124,9 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
 
     println_sameline("#0 - r:$(round(R*100;digits=4))%, w:$(round(W;digits=6)) - total_len:$(round(total_len;digits=6)) - len_r:$(round(len_r;digits=6)) - len_w:$(round(len_w;digits=6)) - new_r:$(round(new_R*100;digits=4))%, new_w:$(round(new_W;digits=6))")
 
+    worst_R_grid = ones(2,2).*Inf
+    worst_W_grid = ones(2,2).*Inf
+
     best_total_len_grid = ones(2,2).*Inf
     best_len_r_grid = zeros(2,2)
     best_len_w_grid = zeros(2,2)
@@ -124,13 +134,17 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
     best_W_grid = zeros(2,2)
     if len_r > 0.0
         r_i = 1
+        r_i_= 2
     else
         r_i = 2
+        r_i_= 1
     end
     if len_w > 0.0
         w_i = 1
+        w_i_= 2
     else
         w_i = 2
+        w_i_= 1
     end
     if best_total_len_grid[r_i,w_i] > total_len
         best_total_len_grid[r_i,w_i] = total_len
@@ -370,7 +384,47 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
             elseif new_W >= w_max
                 new_W = 0.9*w_max + (1.0-0.9)*best_W
             end
-
+            #=
+            if best_total_len_grid[r_i_,w_i_] == Inf && worst_R_grid[r_i_,w_i_] != Inf && worst_W_grid[r_i_,w_i_] != Inf
+                if r_i_ == 1
+                    if w_i_ == 1
+                        if new_R < worst_R_grid[r_i_,w_i_] && new_W < worst_W_grid[r_i_,w_i_]
+                            new_R = (R + worst_R_grid[r_i_,w_i_] + best_R)/3.0
+                            new_R = min(max(r_min, new_R), r_max)
+                            new_W = (W + worst_W_grid[r_i_,w_i_] + best_W)/3.0
+                            new_W = min(max(w_min, new_W), w_max)
+                            println_sameline("#$(rw_iters) - new_R and new_W limited by worst_R_W_grid[$(r_i_),$(w_i_)]")
+                        end
+                    else#w_i_==2
+                        if new_R < worst_R_grid[r_i_,w_i_] && new_W > worst_W_grid[r_i_,w_i_]
+                            new_R = (R + worst_R_grid[r_i_,w_i_] + best_R)/3.0
+                            new_R = min(max(r_min, new_R), r_max)
+                            new_W = (W + worst_W_grid[r_i_,w_i_] + best_W)/3.0
+                            new_W = min(max(w_min, new_W), w_max)
+                            println_sameline("#$(rw_iters) - new_R and new_W limited by worst_R_W_grid[$(r_i_),$(w_i_)]")
+                        end
+                    end
+                else#r_i_ == 2
+                    if w_i_ == 1
+                        if new_R > worst_R_grid[r_i_,w_i_] && new_W < worst_W_grid[r_i_,w_i_]
+                            new_R = (R + worst_R_grid[r_i_,w_i_] + best_R)/3.0
+                            new_R = min(max(r_min, new_R), r_max)
+                            new_W = (W + worst_W_grid[r_i_,w_i_] + best_W)/3.0
+                            new_W = min(max(w_min, new_W), w_max)
+                            println_sameline("#$(rw_iters) - new_R and new_W limited by worst_R_W_grid[$(r_i_),$(w_i_)]")
+                        end
+                    else#w_i_==2
+                        if new_R > worst_R_grid[r_i_,w_i_] && new_W > worst_W_grid[r_i_,w_i_]
+                            new_R = (R + worst_R_grid[r_i_,w_i_] + best_R)/3.0
+                            new_R = min(max(r_min, new_R), r_max)
+                            new_W = (W + worst_W_grid[r_i_,w_i_] + best_W)/3.0
+                            new_W = min(max(w_min, new_W), w_max)
+                            println_sameline("#$(rw_iters) - new_R and new_W limited by worst_R_W_grid[$(r_i_),$(w_i_)]")
+                        end
+                    end
+                end
+            end
+            =#
             println_sameline("#$(rw_iters) - r:$(round(R*100;digits=4))%, w:$(round(W;digits=6)) - total_len:$(round(total_len;digits=6)) - len_r:$(round(len_r;digits=6)) - len_w:$(round(len_w;digits=6)) - new_r:$(round(new_R*100;digits=4))%, new_w:$(round(new_W;digits=6))")
             draw_best_grid(best_total_len_grid, best_len_r_grid,best_len_w_grid, best_R_grid,best_W_grid, R,W, len_r,len_w, new_R,new_W)
             if best_total_len_grid[r_i,w_i] > total_len
@@ -401,7 +455,61 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
             #new_W = (old_W + new_W)/2.0
             new_W = (old_W + new_W + best_W)/3.0
             new_W = min(max(w_min, new_W), w_max)
-
+            #=
+            if best_total_len_grid[r_i_,w_i_] == Inf
+                if worst_R_grid[r_i_,w_i_] == Inf && worst_R_grid[r_i_,w_i_] == Inf
+                    worst_R_grid[r_i_,w_i_] = R
+                    worst_W_grid[r_i_,w_i_] = W
+                else
+                    if r_i_ == 1
+                        if w_i_ == 1
+                            if R > worst_R_grid[r_i_,w_i_] && W > worst_W_grid[r_i_,w_i_]
+                                worst_R_grid[r_i_,w_i_] = R
+                                worst_W_grid[r_i_,w_i_] = W
+                            elseif R < worst_R_grid[r_i_,w_i_] && W < worst_W_grid[r_i_,w_i_]
+                                nothing
+                            else
+                                worst_R_grid[r_i_,w_i_] = min(R, worst_R_grid[r_i_,w_i_])
+                                worst_W_grid[r_i_,w_i_] = min(W, worst_W_grid[r_i_,w_i_])
+                            end
+                        else#w_i_==2
+                            if R > worst_R_grid[r_i_,w_i_] && W < worst_W_grid[r_i_,w_i_]
+                                worst_R_grid[r_i_,w_i_] = R
+                                worst_W_grid[r_i_,w_i_] = W
+                            elseif R < worst_R_grid[r_i_,w_i_] && W > worst_W_grid[r_i_,w_i_]
+                                nothing
+                            else
+                                worst_R_grid[r_i_,w_i_] = min(R, worst_R_grid[r_i_,w_i_])
+                                worst_W_grid[r_i_,w_i_] = max(W, worst_W_grid[r_i_,w_i_])
+                            end
+                        end
+                    else#r_i_ == 2
+                        if w_i_ == 1
+                            if R < worst_R_grid[r_i_,w_i_] && W > worst_W_grid[r_i_,w_i_]
+                                worst_R_grid[r_i_,w_i_] = R
+                                worst_W_grid[r_i_,w_i_] = W
+                            elseif R > worst_R_grid[r_i_,w_i_] && W < worst_W_grid[r_i_,w_i_]
+                                nothing
+                            else
+                                worst_R_grid[r_i_,w_i_] = max(R, worst_R_grid[r_i_,w_i_])
+                                worst_W_grid[r_i_,w_i_] = max(W, worst_W_grid[r_i_,w_i_])
+                            end
+                        else#w_i_==2
+                            if R < worst_R_grid[r_i_,w_i_] && W < worst_W_grid[r_i_,w_i_]
+                                worst_R_grid[r_i_,w_i_] = R
+                                worst_W_grid[r_i_,w_i_] = W
+                            elseif R > worst_R_grid[r_i_,w_i_] && W > worst_W_grid[r_i_,w_i_]
+                                nothing
+                            else
+                                worst_R_grid[r_i_,w_i_] = max(R, worst_R_grid[r_i_,w_i_])
+                                worst_W_grid[r_i_,w_i_] = min(W, worst_W_grid[r_i_,w_i_])
+                            end
+                        end
+                    end
+                end
+                println_sameline("#$(rw_iters) - new worst_R_W_grid[$(r_i_),$(w_i_)] - [r:$(round(worst_R_grid[r_i_,w_i_]*100;digits=4))%, w:$(round(worst_W_grid[r_i_,w_i_];digits=6))]")
+            end
+            =#
             total_len = old_total_len
 
             println_sameline("#$(rw_iters) - r:$(round(R*100;digits=4))%, w:$(round(W;digits=6)) - total_len:-.------ - len_r:-.------ - len_w:-.------ - new_r:$(round(new_R*100;digits=4))%, new_w:$(round(new_W;digits=6))")
@@ -424,9 +532,10 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
                 W = old_W
                 old_W = old_old_W
                 old_len_w = old_old_len_w
+
+                rw_iters -= 1
             end
 
-            #rw_iters -= 1
 
         end
 

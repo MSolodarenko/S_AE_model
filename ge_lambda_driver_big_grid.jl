@@ -44,8 +44,8 @@ SIGMA_EPS_W =       0.048689 #0.021947
 
 CRRA = 1.0 # >0.0
 
-R_ =                1.409477/100#-0.005338
-W_ =                0.295296 #0.230294
+R_ =                1.434096/100#-0.005338
+W_ =                0.294537 #0.230294
 
 gen_tol_x = GLOBAL_PARAMS[1]
 gen_tol_f = GLOBAL_PARAMS[2]
@@ -55,8 +55,8 @@ r_min = -DELTA#-delta
 r_max = 1/BETA-1#1/beta-1
 
 # wage bounds #### NOT DONE!!! ########
-W_MIN = 0.01
-W_MAX = 0.47
+W_MIN = 0.23#0.01
+W_MAX = 0.33#0.47
 
 optimal_r = R_#(r_min+r_max)/2#r#
 optimal_w = W_#(w_min+w_max)/2#w#
@@ -93,7 +93,7 @@ for country = ["Italy"#=, "Brazil"=#]
     end
     mkpath(LOCAL_DIR)
 
-    guess_R = -9.88337/100#R_#(r_min+r_max)/2#
+    guess_R = R_#-9.88337/100#(r_min+r_max)/2#
     guess_W = W_#0.2357213#(w_min+w_max)/2#
 
     Rs = zeros(length(lambdas))
@@ -118,7 +118,7 @@ for country = ["Italy"#=, "Brazil"=#]
     SSS = Array{Any}(undef,length(lambdas))
 
     for i = [l1_i; l1_i-1:-1:1; l1_i+1:1:length(lambdas)]#1:length(lambdas)#[[l1_i, l3_i, l2_i]; deleteat!(collect(1:length(lambdas)),[l1_i, l2_i, l3_i])]#
-        println("\n$(country) - $(i)/$(length(lambdas))")
+        println("\n$(country) - $(i)/$(length(lambdas)) - $(lambdas[i])")
         if i >= l1_i-1 && i <= l1_i+1
             guess_R = R_
             guess_W = W_
@@ -142,7 +142,11 @@ for country = ["Italy"#=, "Brazil"=#]
         catch e
             println_sameline("Calculation has failed")
             try
-                ss_star = copy(SSS[i-1])
+                try
+                    ss_star = copy(SSS[i-1])
+                catch eee
+                    ss_star = copy(SSS[i+1])
+                end
             catch ee
                 nothing
             end
