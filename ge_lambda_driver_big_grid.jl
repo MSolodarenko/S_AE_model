@@ -95,8 +95,8 @@ for country = ["Italy"#=, "Brazil"=#]
     end
     mkpath(LOCAL_DIR)
 
-    guess_R = -0.88337/100#(r_min+r_max)/2#
-    guess_W = 0.2357213#(w_min+w_max)/2#
+    guess_R = -9.88337/100#R_#(r_min+r_max)/2#
+    guess_W = W_#0.2357213#(w_min+w_max)/2#
 
     Rs = zeros(length(lambdas))
     Ws = zeros(length(lambdas))
@@ -133,8 +133,18 @@ for country = ["Italy"#=, "Brazil"=#]
         else
             throw(error)
         end
-        # ss_star = [res, r, w, approx_object, model_params]
-        @time ss_star = steady_state(guess_R, guess_W, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS)
+        ss_star = []
+        try
+            # ss_star = [res, r, w, approx_object, model_params]
+            @time ss_star = steady_state(guess_R, guess_W, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS)
+        catch e
+            println_sameline("Calculation has failed")
+            try
+                ss_star = copy(SSS[i-1])
+            catch ee
+                nothing
+            end
+        end
         SSS[i] = copy(ss_star)
 
         SS = copy(ss_star)
