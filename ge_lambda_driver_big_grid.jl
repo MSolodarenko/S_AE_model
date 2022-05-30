@@ -16,7 +16,7 @@ GLOBAL_PARAMS = [1e-6, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
-GLOBAL_APPROX_PARAMS = [35,3,3,3,6,3]#[25,5,5,3,6,3]#[15,3,3,3,6,3]#
+GLOBAL_APPROX_PARAMS = [35,3,3,3,6,3]
 
 CODENAME = "SS_2092"
 # parameters of the model's economy (Italy)
