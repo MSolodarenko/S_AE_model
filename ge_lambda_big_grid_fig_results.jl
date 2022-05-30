@@ -10,12 +10,16 @@ using Statistics
 using JLD2
 using ProgressMeter
 
+CODENAME = "SS_2092"
+# parameters of the model's economy (Italy)
+                    #SS_2092 #prev.calibration
+LAMBDA =            1.665907 #1.513028
 country = "Italy"
-LOCAL_DIR = "$(@__DIR__)/Results/Lambda_grid_big_grid_test/$(country)/"
+LOCAL_DIR = "$(@__DIR__)/Results/Lambda_grid_big_grid/$(country)_$(CODENAME)/"
 if Sys.iswindows()
-    LOCAL_DIR = "\\Results\\Lambda_grid_big_grid_test\\$(country)\\"
+    LOCAL_DIR = "\\Results\\Lambda_grid_big_grid\\$(country)_$(CODENAME)\\"
 end
-global_approx_params = [49,3,3,3,6,3]
+global_approx_params = [35,3,3,3,6,3]
 
 print_sameline("Loading data from Lambda_grid_big_grid_test")
 #@load "$(LOCAL_DIR)SSS.jld2" SSS
@@ -33,7 +37,7 @@ lambdas = lambdas[temp_is]
 SSS = SSS[temp_is]
 
 num_lambdas = 20#length(lambda) #instead of length(lambda)
-calibrated_lambda = findfirst(x -> x==1.513028, lambdas)
+calibrated_lambda = findfirst(x -> x==LAMBDA, lambdas)
 
 Rs = zeros(num_lambdas)
 Ws = zeros(num_lambdas)

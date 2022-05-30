@@ -76,8 +76,6 @@ lambdas = #=[1.513028, 2.6]=#[collect(range(1.01; length = 5, stop = 1.270437995
            collect(range(100.0;length = 4, stop = 2500.0)        )[2:end]=#]
 
 l1_i = findfirst(x -> x==LAMBDA, lambdas)
-l2_i = findfirst(x -> (1.67-1e-2 < x)&&(x > 1.67+1e-2), lambdas)
-l3_i = findfirst(x -> (2.6-1e-2 < x)&&(x > 2.6+1e-2), lambdas)
 
 LOCAL_DIR_BRAZIL = "$(@__DIR__)/Results/Lambda_grid_big_grid/Brazil/"
 LOCAL_DIR_ITALY = "$(@__DIR__)/Results/Lambda_grid_big_grid/Italy_$(CODENAME)/"
@@ -119,8 +117,12 @@ for country = ["Italy"#=, "Brazil"=#]
 
     SSS = Array{Any}(undef,length(lambdas))
 
-    for i = 1:length(lambdas)#[[l1_i, l3_i, l2_i]; deleteat!(collect(1:length(lambdas)),[l1_i, l2_i, l3_i])]#
+    for i = [l1_i; l1_i-1:-1:1; l1_i+1:1:length(lambdas)]#1:length(lambdas)#[[l1_i, l3_i, l2_i]; deleteat!(collect(1:length(lambdas)),[l1_i, l2_i, l3_i])]#
         println("\n$(country) - $(i)/$(length(lambdas))")
+        if i >= l1_i-1 && i <= l1_i+1
+            guess_R = R_
+            guess_W = W_
+        end
         MODEL_PARAMS = zeros(19)
         if country == "Brazil"
             #           1       2     3     4       5   6       7   8       9       10          11              12      13          14          15              16          17              18              19       20
