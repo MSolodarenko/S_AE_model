@@ -18,34 +18,34 @@ GLOBAL_PARAMS = [1e-6, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
 GLOBAL_APPROX_PARAMS = [35,3,3,3,6,3]
 
-CODENAME = "SS_2065"#"SS_2092"
+CODENAME = "SS_2642"#"SS_2065"#"SS_2092"
 # parameters of the model's economy (Italy)
-                    #SS_2065 #SS_2092 #prev.calibration
-LAMBDA =            1.405096#1.665907 #1.513028
-BETA =              0.910782#0.934172 #0.917506
+                    #SS_2642 #SS_2065 #SS_2092 #prev.calibration
+LAMBDA =            1.633951#1.405096#1.665907 #1.513028
+BETA =              0.923514#0.910782#0.934172 #0.917506
 DELTA =             0.1
 GAMMA =             0.16
 ETA =               0.3
 THETA =             0.54
 
-C_E =               0.011300#0.057572 #0.007001
-RHO_M =             0.963735#0.951032 #0.710266
+C_E =               0.034618#0.011300#0.057572 #0.007001
+RHO_M =             0.961272#0.963735#0.951032 #0.710266
 RHO_W =             0.96
-SIGMA_EPS_M =       0.877067#0.754644 #1.022857
-RHO_EPS_M_W =       0.309361#0.216037 #0.361605
-SIGMA_ZETA =        0.247935#0.211565 #0.091089
-P_ALPHA =           0.034184#0.022080 #0.024445
-ETA_ALPHA =         5.567285#5.811008 #5.896035
+SIGMA_EPS_M =       0.996198#0.877067#0.754644 #1.022857
+RHO_EPS_M_W =       0.296954#0.309361#0.216037 #0.361605
+SIGMA_ZETA =        0.256800#0.247935#0.211565 #0.091089
+P_ALPHA =           0.039732#0.034184#0.022080 #0.024445
+ETA_ALPHA =         5.860434#5.567285#5.811008 #5.896035
 PROB_NODE1_ALPHA =  0.39
-MU_M_ALPHA =       -2.089921#-3.266806#-4.817675
-RHO_ALPHA_M_W =     0.166184#0.147661 #0.181454
+MU_M_ALPHA =       -4.950012#-2.089921#-3.266806#-4.817675
+RHO_ALPHA_M_W =     0.103225#0.166184#0.147661 #0.181454
 SIGMA_ALPHA_W =     0.12
-SIGMA_EPS_W =       0.152209#0.048689 #0.021947
+SIGMA_EPS_W =       0.119669#0.152209#0.048689 #0.021947
 
 CRRA = 1.0 # >0.0
 
-R_ =                -5.147463/100#1.434096/100#-0.005338
-W_ =                0.287390#0.294537 #0.230294
+R_ =                -2.627421/100#-5.147463/100#1.434096/100#-0.005338
+W_ =                0.136814#0.287390#0.294537 #0.230294
 
 gen_tol_x = GLOBAL_PARAMS[1]
 gen_tol_f = GLOBAL_PARAMS[2]
@@ -55,8 +55,8 @@ r_min = -DELTA#-delta
 r_max = 1/BETA-1#1/beta-1
 
 # wage bounds #### NOT DONE!!! ########
-W_MIN = 0.23#0.01
-W_MAX = 0.33#0.47
+W_MIN = 0.01#0.23#
+W_MAX = 0.47#0.33#
 
 optimal_r = R_#(r_min+r_max)/2#r#
 optimal_w = W_#(w_min+w_max)/2#w#
