@@ -5,18 +5,28 @@ using ProgressMeter
 
 include("Functions/profit.jl")
 
+# global parameters of the approximation objects
+#                               1               2               3               4                       5                   6
+#                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
+GLOBAL_APPROX_PARAMS = [69,3,3,3,6,3]#[35,3,3,3,6,3]
+
+CODENAME = #="SS_2642"#"SS_2065"=#"SS_2092"
+CODENAME = "$(CODENAME)_$(GLOBAL_APPROX_PARAMS[1])"
+# parameters of the model's economy (Italy)
+                    #SS_2642 #SS_2065 #SS_2092 #prev.calibration
+LAMBDA =            #=1.633951#1.405096=#1.665907 #1.513028
 country = "Italy"
 TIME_PERIODS = 30#100
-LOCAL_DIR = "$(@__DIR__)/Results/Transitional_dynamics_big_grid_test/$(country)/"
+LOCAL_DIR = "$(@__DIR__)/Results/Transitional_dynamics_big_grid/$(country)_$(CODENAME)/"
 if Sys.iswindows()
-    LOCAL_DIR = "$(@__DIR__)\\Results\\Transitional_dynamics_big_grid_test\\$(country)\\"
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Transitional_dynamics_big_grid\\$(country)_$(CODENAME)\\"
 end
 mkpath(LOCAL_DIR)
 
 @load "$(LOCAL_DIR)trans_$(TIME_PERIODS)_results.jld2" trans_res ss_1 ss_2
 
 approx_object = ss_1[4]
-global_approx_params = [69,3,3,3,6,3]
+global_approx_params = copy(GLOBAL_APPROX_PARAMS)
 model_params = ss_1[5]
 
 

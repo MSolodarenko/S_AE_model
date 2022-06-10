@@ -10,16 +10,22 @@ using Statistics
 using JLD2
 using ProgressMeter
 
-CODENAME = "SS_2092"
+# global parameters of the approximation objects
+#                               1               2               3               4                       5                   6
+#                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
+GLOBAL_APPROX_PARAMS = [69,3,3,3,6,3]#[35,3,3,3,6,3]
+
+CODENAME = #="SS_2642"#"SS_2065"=#"SS_2092"
+CODENAME = "$(CODENAME)_$(GLOBAL_APPROX_PARAMS[1])"
 # parameters of the model's economy (Italy)
-                    #SS_2092 #prev.calibration
-LAMBDA =            1.665907 #1.513028
+                    #SS_2642 #SS_2065 #SS_2092 #prev.calibration
+LAMBDA =            #=1.633951#1.405096=#1.665907 #1.513028
 country = "Italy"
 LOCAL_DIR = "$(@__DIR__)/Results/Lambda_grid_big_grid/$(country)_$(CODENAME)/"
 if Sys.iswindows()
     LOCAL_DIR = "\\Results\\Lambda_grid_big_grid\\$(country)_$(CODENAME)\\"
 end
-global_approx_params = [35,3,3,3,6,3]
+global_approx_params = copy(GLOBAL_APPROX_PARAMS)
 
 print_sameline("Loading data from Lambda_grid_big_grid_test")
 #@load "$(LOCAL_DIR)SSS.jld2" SSS
@@ -693,6 +699,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     # calculate mean
     #means[s,h,i]
     LABELS = ["Mean of $cn' $stat_name" for cn in CHOICE_NAMES]
+    #=
     ms = [means[s,3,1:num_lambdas][1:num_lambdas_sp];  fill(NaN, num_lambdas-num_lambdas_sp)]
     plts = create_plots(C_Ys,"Credit/Output", [means[s,1,:], means[s,2,:], ms, means[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:length(plts)
@@ -703,6 +710,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_mean_$(choice_name)_$(stat_name).png")
     end
+    =#
     plts = create_plots(C_Ys,"Credit/Output", [means[s,1,:], means[s,2,:], means[s,3,:], means[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:length(plts)
         display(plts[h])
@@ -717,6 +725,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     # calculate gini coefficent
     #ginis[s,h,i]
     LABELS = ["Gini of $cn' $stat_name" for cn in CHOICE_NAMES]
+    #=
     gs = [ginis[s,3,1:num_lambdas][1:num_lambdas_sp];  fill(NaN, num_lambdas-num_lambdas_sp)]
     plts = create_plots(C_Ys,"Credit/Output", [ginis[s,1,:], ginis[s,2,:], gs, ginis[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:length(plts)
@@ -727,6 +736,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_gini_$(choice_name)_$(stat_name).png")
     end
+    =#
     plts = create_plots(C_Ys,"Credit/Output", [ginis[s,1,:], ginis[s,2,:], ginis[s,3,:], ginis[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:length(plts)
         display(plts[h])
@@ -741,6 +751,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     # calculate variance of log-s
     #avglogs[s,h,i]
     LABELS = ["Average of $cn' Log-$stat_name" for cn in CHOICE_NAMES]
+    #=
     als = [avglogs[s,3,1:num_lambdas][1:num_lambdas_sp];  fill(NaN, num_lambdas-num_lambdas_sp)]
     plts = create_plots(C_Ys,"Credit/Output", [avglogs[s,1,:], avglogs[s,2,:], als, avglogs[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:length(plts)
@@ -751,6 +762,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_log$(stat_name).png")
     end
+    =#
     plts = create_plots(C_Ys,"Credit/Output", [avglogs[s,1,:], avglogs[s,2,:], avglogs[s,3,:], avglogs[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:length(plts)
         display(plts[h])
@@ -768,6 +780,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     else
         LABELS = ["Variance of $cn' $stat_name" for cn in CHOICE_NAMES]
     end
+    #=
     vls = [varlogs[s,3,1:num_lambdas][1:num_lambdas_sp];  fill(NaN, num_lambdas-num_lambdas_sp)]
     plts = create_plots(C_Ys,"Credit/Output", [varlogs[s,1,:], varlogs[s,2,:], vls, varlogs[s,4,:]],LABELS,false,["H","W","SP","EMP"], 0.0)
     for h in 1:length(plts)
@@ -778,6 +791,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_log$(stat_name).png")
     end
+    =#
     plts = create_plots(C_Ys,"Credit/Output", [varlogs[s,1,:], varlogs[s,2,:], varlogs[s,3,:], varlogs[s,4,:]],LABELS,false,["H","W","SP","EMP"], 0.0)
     for h in 1:length(plts)
         display(plts[h])
