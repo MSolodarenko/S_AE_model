@@ -346,8 +346,8 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
     r_min = -model_params[3]
     r_max = 1/model_params[2]-1.0
 
-    w_min = 0.18
-    w_max = 0.3
+    w_min = W_MIN
+    w_max = W_MAX
 
     # guess Rs and Ws
     Rs = (log.(collect(range(exp(-2.0); stop=exp(10.0), length=T))) .- (-2.0)).*(ss_starstar[2] - ss_star[2])./(10 - (-2)) .+ ss_star[2]
@@ -625,9 +625,10 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
             new_Rs = Rs .+ len_Rs
             new_Rs = min.(max.(r_min, new_Rs), r_max)
             new_Rs[end] = ss_starstar[2]
-
+            
             new_Ws = Ws .+ len_Ws
-            new_Ws = min.(max.(w_min, new_Ws), w_max)
+            #new_Ws = min.(max.(w_min, new_Ws), w_max)
+            new_Ws = min.(max.(min(ss_star[3],ss_starstar[3]), new_Ws), max(ss_star[3],ss_starstar[3]))
             new_Ws[end] = ss_starstar[3]
 
             plot_iter_results(Rs,Ws, new_Rs,new_Ws, best_Rs,best_Ws, len_Rs,len_Ws, best_len_Rs,best_len_Ws)
