@@ -42,7 +42,8 @@ temp_is = sortperm(lambdas)
 lambdas = lambdas[temp_is]
 SSS = SSS[temp_is]
 
-num_lambdas = 20#length(lambda) #instead of length(lambda)
+num_lambdas = length(lambdas)#20# #instead of length(lambda)
+lambdas = lambdas[1:num_lambdas]
 calibrated_lambda = findfirst(x -> x==LAMBDA, lambdas)
 
 Rs = zeros(num_lambdas)
