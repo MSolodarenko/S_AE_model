@@ -23,7 +23,7 @@ LAMBDA =            #=1.633951#1.405096=#1.665907 #1.513028
 country = "Italy"
 LOCAL_DIR = "$(@__DIR__)/Results/Lambda_grid_big_grid/$(country)_$(CODENAME)/"
 if Sys.iswindows()
-    LOCAL_DIR = "\\Results\\Lambda_grid_big_grid\\$(country)_$(CODENAME)\\"
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Lambda_grid_big_grid\\$(country)_$(CODENAME)\\"
 end
 global_approx_params = copy(GLOBAL_APPROX_PARAMS)
 
@@ -217,13 +217,13 @@ Investment_productivity_s = zeros(num_lambdas)
     # = means, ginis, varlogs
     for s = 1:4 # [1] = income, earnings, wealth, consumption
         # if s == 1
-        stat_distr = income
+        stat_distr = copy(income)
         if s == 2
-            stat_distr = earnings
+            stat_distr = copy(earnings)
         elseif s == 3
-            stat_distr = wealth
+            stat_distr = copy(wealth)
         elseif s == 4
-            stat_distr = consumption
+            stat_distr = copy(consumption)
         end
 
         for h = 1:4 # [2] = All, W, SP, EMP
@@ -431,7 +431,7 @@ end
 #policy = SSS[l][1][4]
 num_lambdas_sp = findfirst(x -> x>0.75, C_Ys)-1
 
-#throw(error)
+throw(error)
 
 function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL::String, IS_Y_PERCENTAGE::Bool=true, OCCUPATION::String="H", LOW_LIMIT=-Inf)
     COLOR="blue"
@@ -1089,8 +1089,99 @@ for i=1:4
         stat_name="consumption"
     end
 
-    println("Mean of $(stat_name) for H,W,SP,EMP: $(round.(means[i,:,calibrated_lambda];digits=2))")
-    println("Variance of $(stat_name) for H,W,SP,EMP: $(round.(vars[i,:,calibrated_lambda];digits=2))")
-    println("Varlog of $(stat_name) for H,W,SP,EMP: $(round.(varlogs[i,:,calibrated_lambda];digits=2))")
-    println("Gini of $(stat_name) for H,W,SP,EMP: $(round.(ginis[i,:,calibrated_lambda];digits=2))")
+    for j=[1]#1:4
+        if j==1
+            stat_type_name="Mean"
+            stat_type = means
+        elseif j==2
+            stat_type_name="Variance"
+            stat_type = vars
+        elseif j==3
+            stat_type_name="Varlog"
+            stat_type = varlogs
+        else  #i==4
+            stat_type_name="Gini"
+            stat_type = ginis
+        end
+        println("$(stat_type_name) of $(stat_name) for H,W,SP,EMP: $(round.(stat_type[i,:,calibrated_lambda];digits=2))")
+    end
+end
+
+ss_star = SSS[10]
+asset_grid = ss_star[1][3]
+density_distr = ss_star[1][5]
+wealth = ones(size(density_distr)).*asset_grid
+policy = ss_star[1][4]
+income = ss_star[1][23] .- wealth
+earnings = ss_star[1][24]
+consumption = income .+ wealth .- policy
+occ_choice = ss_star[1][22]
+
+w_choice = Float64.(ss_star[1][22].==1.0)
+sp_choice = Float64.(ss_star[1][22].==2.0)
+emp_choice = Float64.(ss_star[1][22].==3.0)
+
+mean_income = Array{Any}(undef,3)
+mean_earnings = Array{Any}(undef,3)
+mean_policy = Array{Any}(undef,3)
+mean_wealth = Array{Any}(undef,3)
+
+mean_consumption_to_income_wealth = Array{Any}(undef,3)
+var_consumption_to_income_wealth = Array{Any}(undef,3)
+std_consumption_to_income_wealth = Array{Any}(undef,3)
+mean_income_to_income_wealth = Array{Any}(undef,3)
+var_income_to_income_wealth = Array{Any}(undef,3)
+std_income_to_income_wealth = Array{Any}(undef,3)
+mean_consumption_to_income = Array{Any}(undef,3)
+var_consumption_to_income = Array{Any}(undef,3)
+std_consumption_to_income = Array{Any}(undef,3)
+for i = 1:3
+    if i==1
+        choice = w_choice
+    elseif i==2
+        choice = sp_choice
+    else
+        choice = emp_choice
+    end
+#=
+    mean_income[i] = sum(income.*choice.*density_distr./sum(choice.*density_distr))
+    display(mean_income[i])
+
+    mean_earnings[i] = sum(earnings.*choice.*density_distr./sum(choice.*density_distr))
+    display(mean_earnings[i])
+
+    mean_policy[i] = sum(policy.*choice.*density_distr./sum(choice.*density_distr))
+    display(mean_policy[i])
+
+    mean_wealth[i] = sum(wealth.*choice.*density_distr./sum(choice.*density_distr))
+    display(mean_wealth[i])
+    =#
+
+    #=
+    mean_consumption_to_income_wealth[i] = sum((consumption./ss_star[1][23]).*choice.*density_distr)
+    var_consumption_to_income_wealth[i] = sum((consumption./ss_star[1][23] .- mean_consumption_to_income_wealth[i]).^2 .*choice.*density_distr./sum(choice.*density_distr))
+    mean_consumption_to_income_wealth[i] /= sum(choice.*density_distr)
+    std_consumption_to_income_wealth[i] = sqrt(var_consumption_to_income_wealth[i])
+    display(mean_consumption_to_income_wealth[i])
+    #display(var_consumption_to_income_wealth[i])
+    display(std_consumption_to_income_wealth[i])
+    =#
+
+    mean_income_to_income_wealth[i] = sum((income./ss_star[1][23]).*choice.*density_distr)
+    var_income_to_income_wealth[i] = sum((income./ss_star[1][23] .- mean_income_to_income_wealth[i]).^2 .*choice.*density_distr./sum(choice.*density_distr))
+    mean_income_to_income_wealth[i] /= sum(choice.*density_distr)
+    std_income_to_income_wealth[i] = sqrt(var_income_to_income_wealth[i])
+    display(mean_income_to_income_wealth[i])
+    #display(var_income_to_income_wealth[i])
+    display(std_income_to_income_wealth[i])
+
+    #=
+    mean_consumption_to_income[i] = sum((consumption./income).*choice.*density_distr)
+    var_consumption_to_income[i] = sum((consumption./income .- mean_consumption_to_income[i]).^2 .*choice.*density_distr./sum(choice.*density_distr))
+    mean_consumption_to_income[i] /= sum(choice.*density_distr)
+    std_consumption_to_income[i] = sqrt(var_consumption_to_income[i])
+    display(mean_consumption_to_income[i])
+    #display(var_consumption_to_income[i])
+    display(std_consumption_to_income[i])
+    =#
 end
