@@ -204,8 +204,8 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
 
         aprime_len = maximum(abs,new_aprime_nodes-aprime_nodes)/maximum(abs,new_aprime_nodes)
         aprime_sumlen = sum(abs,new_aprime_nodes-aprime_nodes)/maximum(abs,new_aprime_nodes)
-        if text_output
-            print_sameline("VF#$(val_iters) - err: $(round(val_len;digits=12)) b_l:$(round(b_lowerbar;digits=4)) b_u:$(round(b_upperbar;digits=4)), sum_err:$(round(val_sumlen;digits=9)), a_err:$(round(aprime_len;digits=4)), a_sumerr:$(round(aprime_sumlen;digits=4))")
+        if true#text_output
+            print_sameline("VF#$(val_iters) - err: $(round(val_len;digits=12)) b_l:$(round(b_lowerbar;digits=4)) b_u:$(round(b_upperbar;digits=4)), sum_err:$(round(val_sumlen;digits=9)), a_err:$(round(aprime_len;digits=9)), a_sumerr:$(round(aprime_sumlen;digits=9))")
         end
         if val_len > val_tol*5 && old_val_len > val_len && stable
             if b_lowerbar > -10000000+1#=-Inf=# && b_upperbar < 10000000-1#=Inf=# #&& b_lowerbar < 0.0 && b_upperbar > 0.0
@@ -241,7 +241,7 @@ function find_policy(a_min,a_max,a_nodes,r,w, income,earnings, val_tol, number_a
     if text_output
         print_sameline("Calculation was finished on iteration - $(val_iters) with error: $(val_len)")
     end
-    if isnan(val_len) || val_iters >= val_maxiters
+    if isnan(val_len) || (val_iters >= val_maxiters && aprime_len >= val_tol/2)
         throw(error("Policy function is NaN"))
     end
 
