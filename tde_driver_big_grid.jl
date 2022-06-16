@@ -73,7 +73,7 @@ if Sys.iswindows()
 end
 # Step 2
 # ss_star = [res, r, w, approx_object, params]
-@load "$(LAMBDA_GE_DIR)SS_lambda_1.63.jld2" SS
+@load "$(LAMBDA_GE_DIR)SS_lambda_1.67.jld2" SS
 lambda_1 = SS[5][1]
 ss_1 = copy(SS)
 #@time ss_star = steady_state(lambda_star)
