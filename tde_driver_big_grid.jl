@@ -78,7 +78,8 @@ lambda_1 = SS[5][1]
 ss_1 = copy(SS)
 #@time ss_star = steady_state(lambda_star)
 
-@load "$(LAMBDA_GE_DIR)SS_lambda_2.6.jld2" SS
+#@load "$(LAMBDA_GE_DIR)SS_lambda_2.6.jld2" SS
+@load "$(LAMBDA_GE_DIR)SS_lambda_10.0.jld2" SS
 lambda_2 = SS[5][1]
 ss_2 = copy(SS)
 #@time ss_starstar = steady_state(lambda_2)
