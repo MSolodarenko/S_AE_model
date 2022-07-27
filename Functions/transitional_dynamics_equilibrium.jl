@@ -6,7 +6,7 @@ print_sameline("Loading functions for calculating profit and income")
 include("AllubErosa.jl")
 include("profit.jl")
 
-function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, global_approx_params, model_params, file_name, GUESS_RS, maxiters)
+function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, global_approx_params, model_params, file_name, GUESS_RS, maxiters, LOCAL_DIR)
     # Initialisation of model's internal parameters
     T = length(lambda_s)
 
@@ -72,9 +72,9 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
 
     ###########################
     function plot_iter_results(r_s,w_s, new_r_s,new_w_s, best_r_s,best_w_s, len_r_s,len_w_s, best_len_r_s,best_len_w_s)
-        p5 = Plots.plot(r_s.-best_r_s, legend=false)
+        p5 = Plots.plot([new_r_s.-r_s, r_s.-best_r_s], legend=false)
         hline!(p5,[0.0])
-        p6 = Plots.plot(w_s.-best_w_s, legend=false)
+        p6 = Plots.plot([new_w_s.-w_s, w_s.-best_w_s], legend=false)
         hline!(p6,[0.0])
 
         p1 = Plots.plot([r_s, ones(T).*ss_star[2],ones(T).*ss_starstar[2], new_r_s, best_r_s], label=["Current" "" "" "New" "Best"], legend=false)
@@ -337,13 +337,19 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
     rw_maxiters = maxiters
     gen_tol_x = global_params[1]
     gen_tol_f = global_params[2]
-    relax_r = 0.05
-    relax_w = 0.1
+    relax_r = 1.0#0.05
+    relax_w = 1.0#0.1
 
     relax_R = relax_r
     relax_W = relax_w
 
+    relax_r_mult = 0.5
+    relax_w_mult = 0.5
+
     relax_conv = 1.0
+
+    r_border_width = abs(ss_star[2]-ss_starstar[2])*0.1
+    w_border_width = abs(ss_star[3]-ss_starstar[3])*0.1
 
     r_min = -model_params[3]
     r_max = 1/model_params[2]-1.0
@@ -352,11 +358,39 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
     w_max = W_MAX
 
     # guess Rs and Ws
-    Rs = (log.(collect(range(exp(-2.0); stop=exp(10.0), length=T))) .- (-2.0)).*(ss_starstar[2] - ss_star[2])./(10 - (-2)) .+ ss_star[2]
-    Ws = (log.(collect(range(exp(-2.0); stop=exp(10.0), length=T))) .- (-2.0)).*(ss_starstar[3] - ss_star[3])./(10 - (-2)) .+ ss_star[3]
+    guess_Rs = (log.(collect(range(exp(-2.0); stop=exp(10.0), length=T))) .- (-2.0)).*(ss_starstar[2] - ss_star[2])./(10 - (-2)) .+ ss_star[2]
+    guess_Ws = (log.(collect(range(exp(-2.0); stop=exp(10.0), length=T))) .- (-2.0)).*(ss_starstar[3] - ss_star[3])./(10 - (-2)) .+ ss_star[3]
     if GUESS_RS
-        Rs = [ss_star[2]; (1.0./(collect(range(0.5; stop=2.0, length=T-1))) .- 1.0/0.5).*(ss_starstar[2] - 2*ss_starstar[2])./(1.0/(2.0) - 1.0/0.5).+2*ss_starstar[2] ]
+        guess_Rs = [ss_star[2]; (1.0./(collect(range(0.5; stop=2.0, length=T-1))) .- 1.0/0.5).*(ss_starstar[2] - 2*ss_starstar[2])./(1.0/(2.0) - 1.0/0.5).+2*ss_starstar[2] ]
+        #guess_Ws = collect(range(ss_star[3]; stop=ss_starstar[3], length=T))
     end
+    Rs = copy(guess_Rs)
+    Ws = copy(guess_Ws)
+    guess_Rs[end-2:end] .= guess_Rs[end-2]
+    guess_Ws = collect(range(ss_star[3]; stop=ss_starstar[3], length=T))
+    guess_Ws[end-2:end] .= guess_Ws[end-2]
+
+    try
+        @load "$(LOCAL_DIR)trans_$(T)_results.jld2" trans_res ss_1 ss_2
+        Rs = copy(trans_res[3])
+        Ws = copy(trans_res[4])
+    catch e
+        #throw(e)
+        # guess Rs and Ws
+        guess_Rs = (log.(collect(range(exp(-2.0); stop=exp(10.0), length=T))) .- (-2.0)).*(ss_starstar[2] - ss_star[2])./(10 - (-2)) .+ ss_star[2]
+        guess_Ws = (log.(collect(range(exp(-2.0); stop=exp(10.0), length=T))) .- (-2.0)).*(ss_starstar[3] - ss_star[3])./(10 - (-2)) .+ ss_star[3]
+        if GUESS_RS
+            guess_Rs = [ss_star[2]; (1.0./(collect(range(0.5; stop=2.0, length=T-1))) .- 1.0/0.5).*(ss_starstar[2] - 2*ss_starstar[2])./(1.0/(2.0) - 1.0/0.5).+2*ss_starstar[2] ]
+            #guess_Ws = collect(range(ss_star[3]; stop=ss_starstar[3], length=T))
+        end
+        Rs = copy(guess_Rs)
+        Ws = copy(guess_Ws)
+        guess_Rs[end-2:end] .= guess_Rs[end-2]
+        guess_Ws = collect(range(ss_star[3]; stop=ss_starstar[3], length=T))
+        guess_Ws[end-2:end] .= guess_Ws[end-2]
+    end
+    plot_iter_results(Rs,Ws, guess_Rs,guess_Ws, Rs,Ws, zeros(T),zeros(T), zeros(T),zeros(T))
+
 
     println_sameline("Initiate the search for general equilibrium factor prices")
     # calculate len_Rs and len_Ws by running partial_equilibrium_transition
@@ -366,60 +400,69 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
 
     len_Rs = copy(res[1])
     len_Ws = copy(res[2])
-    total_len = sum(abs,len_Rs)+sum(abs,len_Ws)
+    len_r = sum(abs,len_Rs)
+    len_w = sum(abs,len_Ws)
+    total_len = len_r+len_w
     abs_len_r = maximum(abs,len_Rs)
     abs_len_w = maximum(abs,len_Ws)
 
     new_Rs = Rs.*(1.0.+len_Rs)./(1.0.-len_Rs) .+ 2.0.*(1.0-r_min).*len_Rs./(1.0.-len_Rs)
-    new_Rs = min.(max.(r_min, new_Rs), r_max).*relax_r .+ (1-relax_r).*Rs
-    new_Rs[3:end-1] = min.(max.(ss_starstar[2], new_Rs[3:end-1]), Rs[2])
-    new_Rs[end] = ss_starstar[2]
+    if relax_R.*r_border_width./maximum(abs,new_Rs.-Rs) < 1.0
+        new_Rs = Rs .+ (new_Rs.-Rs).*relax_R.*r_border_width./maximum(abs,new_Rs.-Rs)
+    end
+    new_Rs = min.(max.(r_min, new_Rs), r_max)#.*relax_r .+ (1-relax_r).*Rs
+    #new_Rs[3:end] = min.(max.(ss_starstar[2], new_Rs[3:end]), Rs[2])
+    #=for t = 3:T   # non-increasing zero-order derivative
+        new_Rs[t] = min(max(ss_starstar[2], new_Rs[t]), new_Rs[t-1])
+    end=#
+    new_Rs[3] = min(max(ss_starstar[2], new_Rs[3]), new_Rs[2])
+    for t = 4:T     # non-decreasing first-order derivative
+        new_Rs[t] = max(2*new_Rs[t-1]-new_Rs[t-2], min(new_Rs[t], new_Rs[t-1]))
+    end
+    new_Rs = min.(guess_Rs, new_Rs)
+    #new_Rs[end] = ss_starstar[2]
+
     new_Ws = Ws.*(1.0.+len_Ws)./(1.0.-len_Ws)
-    new_Ws = min.(max.(w_min, new_Ws), w_max).*relax_w .+ (1-relax_w).*Ws
-    new_Ws[2:end-1] = min.(max.(ss_star[3], new_Ws[2:end-1]), ss_starstar[3])
-    new_Ws[end] = ss_starstar[3]
+    if relax_W.*w_border_width./maximum(abs,new_Ws.-Ws) < 1.0
+        new_Ws = Ws .+ (new_Ws.-Ws).*relax_W.*w_border_width./maximum(abs,new_Ws.-Ws)
+    end
+    new_Ws = min.(max.(w_min, new_Ws), w_max)#.*relax_w .+ (1-relax_w).*Ws
+    #new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
+    #=for t = 2:T
+        new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), ss_starstar[3])
+    end=#
+    new_Ws[2] = min(max(new_Ws[1], new_Ws[2]), ss_starstar[3])
+    for t = 3:T
+        new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), 2*new_Ws[t-1]-new_Ws[t-2])
+    end
+    new_Ws = max.(new_Ws, guess_Ws)
+    #new_Ws[end] = ss_starstar[3]
 
     best_Rs = copy(Rs)
     best_Ws = copy(Ws)
     best_res = copy(res)
     best_len_Rs = copy(len_Rs)
     best_len_Ws = copy(len_Ws)
+    best_len_r = len_r
+    best_len_w = len_w
     best_total_len = total_len
     best_abs_len_r = abs_len_r
     best_abs_len_w = abs_len_w
 
-
     println_sameline("#0 - total_len:$(round(total_len;digits=6)) - total_len_Rs:$(round(sum(abs,len_Rs);digits=6)) - total_len_Ws:$(round(sum(abs,len_Ws);digits=6)) - abs_len_r:$(round(abs_len_r;digits=6)) - abs_len_w:$(round(abs_len_w;digits=6))")
     plot_iter_results(Rs,Ws, new_Rs,new_Ws, best_Rs,best_Ws, len_Rs,len_Ws, best_len_Rs,best_len_Ws)
 
+    println_sameline("#$(rw_iters) - New r_border_width: $(relax_R*r_border_width)")
+    println_sameline("#$(rw_iters) - New w_border_width: $(relax_W*w_border_width)")
     println_sameline("#$(rw_iters) - New best Rs and Ws")
-
-    #=
-    past_Rs = []
-    past_Ws = []
-    past_len_Rs = []
-    past_len_Ws = []
-    push!(past_Rs,Rs)
-    push!(past_Ws,Ws)
-    push!(past_len_Rs, len_Rs)
-    push!(past_len_Ws, len_Ws)
-    =#
-    old_old_res = copy(res)
-    old_old_Rs = copy(Rs)
-    old_old_len_Rs = copy(len_Rs)
-    old_old_Ws = copy(Ws)
-    old_old_len_Ws = copy(len_Ws)
-    old_old_total_len = total_len
-    old_old_abs_len_r = abs_len_r
-    old_old_abs_len_w = abs_len_w
-    old_old_new_Rs = new_Rs
-    old_old_new_Ws = new_Ws
 
     old_res = copy(res)
     old_Rs = copy(Rs)
     old_len_Rs = copy(len_Rs)
     old_Ws = copy(Ws)
     old_len_Ws = copy(len_Ws)
+    old_len_r = len_r
+    old_len_w = len_w
     old_total_len = total_len
     old_abs_len_r = abs_len_r
     old_abs_len_w = abs_len_w
@@ -427,22 +470,14 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
     old_new_Ws = new_Ws
 
     while rw_iters <= rw_maxiters && total_len>gen_tol_f*2*T
-        old_old_res = copy(old_res)
-        old_old_Rs = copy(old_Rs)
-        old_old_len_Rs = copy(old_len_Rs)
-        old_old_Ws = copy(old_Ws)
-        old_old_len_Ws = copy(old_len_Ws)
-        old_old_total_len = old_total_len
-        old_old_abs_len_r = old_abs_len_r
-        old_old_abs_len_w = old_abs_len_w
-        old_old_new_Rs = copy(old_new_Rs)
-        old_old_new_Ws = copy(old_new_Ws)
 
         old_res = copy(res)
         old_Rs = copy(Rs)
         old_len_Rs = copy(len_Rs)
         old_Ws = copy(Ws)
         old_len_Ws = copy(len_Ws)
+        old_len_r = len_r
+        old_len_w = len_w
         old_total_len = total_len
         old_abs_len_r = abs_len_r
         old_abs_len_w = abs_len_w
@@ -469,53 +504,88 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
             res = partial_equilibrium_transition(Rs, Ws)
             len_Rs = copy(res[1])
             len_Ws = copy(res[2])
-            total_len = sum(abs,len_Rs)+sum(abs,len_Ws)
+            len_r = sum(abs,len_Rs)
+            len_w = sum(abs,len_Ws)
+            total_len = len_r+len_w
             abs_len_r = maximum(abs,len_Rs)
             abs_len_w = maximum(abs,len_Ws)
-            #=
-            push!(past_Rs,Rs)
-            push!(past_Ws,Ws)
-            push!(past_len_Rs, len_Rs)
-            push!(past_len_Ws, len_Ws)
-            =#
-
-            # get new_Rs and new_Ws from len_Rs and len_Ws
-
-            ##_new_Rs =     Rs .- len_Rs.*(Rs.-old_Rs) ./(len_Rs.-old_len_Rs)
-            #best_new_Rs = Rs .- len_Rs.*(Rs.-best_Rs)./(len_Rs.-best_len_Rs)
-            ##new_Rs = (_new_Rs.+best_new_Rs)./2.0
-            #new_Rs = best_new_Rs
-            new_Rs = Rs.*(1.0.+len_Rs)./(1.0.-len_Rs) .+ 2.0.*(1.0-r_min).*len_Rs./(1.0.-len_Rs)
-            #relax_R = relax_r*(1.0-rw_iters/(rw_maxiters+1))
-            if old_total_len < total_len
-                relax_R /= 2.0
-            end
-            if maximum(abs,new_Rs.-Rs)*relax_R < gen_tol_x
-                relax_R = relax_r
-                new_Rs = best_Rs.*(1.0.+best_len_Rs)./(1.0.-best_len_Rs) .+ 2.0.*(1.0-r_min).*best_len_Rs./(1.0.-best_len_Rs)
-            end
-            new_Rs = min.(max.(r_min, new_Rs), r_max).*relax_R .+ (1-relax_R).*Rs
-            new_Rs[3:end-1] = min.(max.(ss_starstar[2], new_Rs[3:end-1]), best_Rs[2])
-            new_Rs[end] = ss_starstar[2]
-
-            ##_new_Ws =     Ws .- len_Ws.*(Ws.-old_Ws) ./(len_Ws.-old_len_Ws)
-            #best_new_Ws = Ws .- len_Ws.*(Ws.-best_Ws)./(len_Ws.-best_len_Ws)
-            ##new_Ws = (_new_Ws.+best_new_Ws)./2.0
-            #new_Ws = best_new_Ws
-            new_Ws = Ws.*(1.0.+len_Ws)./(1.0.-len_Ws)
-            #relax_W = relax_w*(1.0-rw_iters/(rw_maxiters+1))
-            if old_total_len < total_len
-                relax_W /= 2.0
-            end
-            if maximum(abs,new_Ws.-Ws)*relax_W < gen_tol_x
-                relax_W = relax_w
-                new_Ws = best_Ws.*(1.0.+best_len_Ws)./(1.0.-best_len_Ws)
-            end
-            new_Ws = min.(max.(w_min, new_Ws), w_max).*relax_W .+ (1-relax_W).*Ws
-            new_Ws[2:end-1] = min.(max.(ss_star[3], new_Ws[2:end-1]), ss_starstar[3])
-            new_Ws[end] = ss_starstar[3]
 
             println_sameline("#$(rw_iters) - total_len:$(round(total_len;digits=6)) - total_len_Rs:$(round(sum(abs,len_Rs);digits=6)) - total_len_Ws:$(round(sum(abs,len_Ws);digits=6)) - abs_len_r:$(round(abs_len_r;digits=6)) - abs_len_w:$(round(abs_len_w;digits=6))")
+
+            # get new_Rs and new_Ws from len_Rs and len_Ws
+            #=if old_total_len <= total_len
+                Rs = copy(old_Rs)
+                len_Rs = copy(old_len_Rs)
+                Ws = copy(old_Ws)
+                len_Ws = copy(old_len_Ws)
+
+                if old_len_r < len_r
+                    if relax_R*r_border_width < gen_tol_x
+                        relax_R = relax_r
+                    else
+                        relax_R *= 0.5
+                    end
+                    println_sameline("#$(rw_iters) - New r_border_width: $(relax_R*r_border_width)")
+                end
+                if old_len_w < len_w
+                    if relax_W*w_border_width < gen_tol_x
+                        relax_W = relax_w
+                    else
+                        relax_W *= 0.5
+                    end
+                    println_sameline("#$(rw_iters) - New w_border_width: $(relax_W*w_border_width)")
+                end
+
+                res = copy(old_res)
+                len_r = sum(abs,len_Rs)
+                len_w = sum(abs,len_Ws)
+                total_len = len_r+len_w
+                abs_len_r = maximum(abs,len_Rs)
+                abs_len_w = maximum(abs,len_Ws)
+                #rw_iters -= 1
+            end=#
+
+            new_Rs = Rs.*(1.0.+len_Rs)./(1.0.-len_Rs) .+ 2.0.*(1.0-r_min).*len_Rs./(1.0.-len_Rs)
+            #=if maximum(abs,new_Rs.-Rs)*relax_R < gen_tol_x
+                relax_R = relax_r
+                new_Rs = best_Rs.*(1.0.+best_len_Rs)./(1.0.-best_len_Rs) .+ 2.0.*(1.0-r_min).*best_len_Rs./(1.0.-best_len_Rs)
+            end=#
+            if relax_R.*r_border_width./maximum(abs,new_Rs.-Rs) < 1.0
+                new_Rs = Rs .+ (new_Rs.-Rs).*relax_R.*r_border_width./maximum(abs,new_Rs.-Rs)
+            end
+
+            new_Rs = min.(max.(r_min, new_Rs), r_max)#.*relax_R .+ (1-relax_R).*Rs
+            #new_Rs[3:end] = min.(max.(ss_starstar[2], new_Rs[3:end]), Rs[2])
+            #=for t = 3:T
+                new_Rs[t] = min(max(ss_starstar[2], new_Rs[t]), new_Rs[t-1])
+            end=#
+            new_Rs[3] = min(max(ss_starstar[2], new_Rs[3]), new_Rs[2])
+            for t = 4:T     # non-decreasing first-order derivative
+                new_Rs[t] = max(2*new_Rs[t-1]-new_Rs[t-2], min(new_Rs[t], new_Rs[t-1]))
+            end
+            new_Rs = min.(guess_Rs, new_Rs)
+            #new_Rs[end] = ss_starstar[2]
+
+            new_Ws = Ws.*(1.0.+len_Ws)./(1.0.-len_Ws)
+            #=if maximum(abs,new_Ws.-Ws)*relax_W < gen_tol_x
+                relax_W = relax_w
+                new_Ws = best_Ws.*(1.0.+best_len_Ws)./(1.0.-best_len_Ws)
+            end=#
+            if relax_W.*w_border_width./maximum(abs,new_Ws.-Ws) < 1.0
+                new_Ws = Ws .+ (new_Ws.-Ws).*relax_W.*w_border_width./maximum(abs,new_Ws.-Ws)
+            end
+            new_Ws = min.(max.(w_min, new_Ws), w_max)#.*relax_W .+ (1-relax_W).*Ws
+            #new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
+            #=for t = 2:T
+                new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), ss_starstar[3])
+            end=#
+            new_Ws[2] = min(max(new_Ws[1], new_Ws[2]), ss_starstar[3])
+            for t = 3:T
+                new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), 2*new_Ws[t-1]-new_Ws[t-2])
+            end
+            new_Ws = max.(new_Ws, guess_Ws)
+            #new_Ws[end] = ss_starstar[3]
+
             plot_iter_results(Rs,Ws, new_Rs,new_Ws, best_Rs,best_Ws, len_Rs,len_Ws, best_len_Rs,best_len_Ws)
             # save best candidates according to different metrics
 
@@ -525,18 +595,23 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                 best_res = copy(res)
                 best_len_Rs = copy(len_Rs)
                 best_len_Ws = copy(len_Ws)
+                best_len_r = len_r
+                best_len_w = len_w
                 best_total_len = total_len
                 best_abs_len_r = abs_len_r
                 best_abs_len_w = abs_len_w
                 println_sameline("#$(rw_iters) - New best Rs and Ws")
             #end
             else
+            #if false
                 is_best_updated = false
                 cand_best_Rs = copy(best_Rs)
                 cand_best_Ws = copy(best_Ws)
                 cand_best_res = copy(best_res)
                 cand_best_len_Rs = copy(best_len_Rs)
                 cand_best_len_Ws = copy(best_len_Ws)
+                cand_best_len_r = best_len_r
+                cand_best_len_w = best_len_w
                 cand_best_total_len = best_total_len
                 cand_best_abs_len_r = best_abs_len_r
                 cand_best_abs_len_w = best_abs_len_w
@@ -551,40 +626,82 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                         is_best_updated = true
                     end
                 end
+
+                #=for t = 3:T
+                    cand_best_Rs[t] = min(max(ss_starstar[2], cand_best_Rs[t]), cand_best_Rs[t-1])
+                end=#
+                cand_best_Rs[3] = min(max(ss_starstar[2], cand_best_Rs[3]), cand_best_Rs[2])
+                for t = 4:T     # non-decreasing first-order derivative
+                    cand_best_Rs[t] = max(2*cand_best_Rs[t-1]-cand_best_Rs[t-2], min(cand_best_Rs[t], cand_best_Rs[t-1]))
+                end
+                cand_best_Rs = min.(guess_Rs, cand_best_Rs)
+
+                #=for t = 2:T
+                    cand_best_Ws[t] = min(max(cand_best_Ws[t-1], cand_best_Ws[t]), ss_starstar[3])
+                end=#
+                cand_best_Ws[2] = min(max(cand_best_Ws[1], cand_best_Ws[2]), ss_starstar[3])
+                for t = 3:T
+                    cand_best_Ws[t] = min(max(cand_best_Ws[t-1], cand_best_Ws[t]), 2*cand_best_Ws[t-1]-cand_best_Ws[t-2])
+                end
+                cand_best_Ws = max.(cand_best_Ws, guess_Ws)
+
                 if is_best_updated
                     #println_sameline("#$(rw_iters) - update the candidate for the best")
                     cand_best_res = partial_equilibrium_transition(cand_best_Rs, cand_best_Ws)
                     cand_best_len_Rs = copy(cand_best_res[1])
                     cand_best_len_Ws = copy(cand_best_res[2])
-                    cand_best_total_len = sum(abs,cand_best_len_Rs)+sum(abs,cand_best_len_Ws)
+                    cand_best_len_r = sum(abs,cand_best_len_Rs)
+                    cand_best_len_w = sum(abs,cand_best_len_Ws)
+                    cand_best_total_len = cand_best_len_r+cand_best_len_w
                     cand_best_abs_len_r = maximum(abs,cand_best_len_Rs)
                     cand_best_abs_len_w = maximum(abs,cand_best_len_Ws)
-                    #=
-                    push!(past_Rs,cand_best_Rs)
-                    push!(past_Ws,cand_best_Ws)
-                    push!(past_len_Rs, cand_best_len_Rs)
-                    push!(past_len_Ws, cand_best_len_Ws)
-                    =#
                     println_sameline("#$(rw_iters) - cand_total_len:$(round(cand_best_total_len;digits=6)) - cand_total_len_Rs:$(round(sum(abs,cand_best_len_Rs);digits=6)) - cand_total_len_Ws:$(round(sum(abs,cand_best_len_Ws);digits=6)) - cand_abs_len_r:$(round(cand_best_abs_len_r;digits=6)) - cand_abs_len_w:$(round(cand_best_abs_len_w;digits=6))")
                     plot_iter_results(cand_best_Rs,cand_best_Ws, new_Rs,new_Ws, best_Rs,best_Ws, cand_best_len_Rs,cand_best_len_Ws, best_len_Rs,best_len_Ws)
                     if cand_best_total_len < total_len
-                        new_Rs = best_Rs.*(1.0.+best_len_Rs)./(1.0.-best_len_Rs) .+ 2.0.*(1.0-r_min).*best_len_Rs./(1.0.-best_len_Rs)
-                        if maximum(abs,new_Rs.-best_Rs)*relax_R < gen_tol_x
-                            relax_R = relax_r
-                            new_Rs = Rs.*(1.0.+len_Rs)./(1.0.-len_Rs) .+ 2.0.*(1.0-r_min).*len_Rs./(1.0.-len_Rs)
-                        end
-                        new_Rs = min.(max.(r_min, new_Rs), r_max).*relax_R .+ (1-relax_R).*best_Rs
-                        new_Rs[3:end-1] = min.(max.(ss_starstar[2], new_Rs[3:end-1]), best_Rs[2])
-                        new_Rs[end] = ss_starstar[2]
+                        Rs = copy(cand_best_Rs)
+                        len_Rs = copy(cand_best_len_Rs)
+                        Ws = copy(cand_best_Ws)
+                        len_Ws = copy(cand_best_len_Ws)
 
-                        new_Ws = best_Ws.*(1.0.+best_len_Ws)./(1.0.-best_len_Ws)
-                        if maximum(abs,new_Ws.-Ws)*relax_W < gen_tol_x
-                            relax_W = relax_w
-                            new_Ws = Ws.*(1.0.+len_Ws)./(1.0.-len_Ws)
+                        res = copy(cand_best_res)
+                        len_r = sum(abs,len_Rs)
+                        len_w = sum(abs,len_Ws)
+                        total_len = len_r+len_w
+                        abs_len_r = maximum(abs,len_Rs)
+                        abs_len_w = maximum(abs,len_Ws)
+
+                        new_Rs = cand_best_Rs.*(1.0.+cand_best_len_Rs)./(1.0.-cand_best_len_Rs) .+ 2.0.*(1.0-r_min).*cand_best_len_Rs./(1.0.-cand_best_len_Rs)
+                        if relax_R.*r_border_width./maximum(abs,new_Rs.-cand_best_Rs) < 1.0
+                            new_Rs = cand_best_Rs .+ (new_Rs.-cand_best_Rs).*relax_R.*r_border_width./maximum(abs,new_Rs.-cand_best_Rs)
                         end
-                        new_Ws = min.(max.(w_min, new_Ws), w_max).*relax_W .+ (1-relax_W).*best_Ws
-                        new_Ws[2:end-1] = min.(max.(ss_star[3], new_Ws[2:end-1]), ss_starstar[3])
-                        new_Ws[end] = ss_starstar[3]
+                        new_Rs = min.(max.(r_min, new_Rs), r_max)#.*relax_R .+ (1-relax_R).*best_Rs
+                        #new_Rs[3:end] = min.(max.(ss_starstar[2], new_Rs[3:end]), Rs[2])
+                        #=for t = 3:T
+                            new_Rs[t] = min(max(ss_starstar[2], new_Rs[t]), new_Rs[t-1])
+                        end=#
+                        new_Rs[3] = min(max(ss_starstar[2], new_Rs[3]), new_Rs[2])
+                        for t = 4:T     # non-decreasing first-order derivative
+                            new_Rs[t] = max(2*new_Rs[t-1]-new_Rs[t-2], min(new_Rs[t], new_Rs[t-1]))
+                        end
+                        new_Rs = min.(guess_Rs, new_Rs)
+                        #new_Rs[end] = ss_starstar[2]
+
+                        new_Ws = cand_best_Ws.*(1.0.+cand_best_len_Ws)./(1.0.-cand_best_len_Ws)
+                        if relax_W.*w_border_width./maximum(abs,new_Ws.-cand_best_Ws) < 1.0
+                            new_Ws = cand_best_Ws .+ (new_Ws.-cand_best_Ws).*relax_W.*w_border_width./maximum(abs,new_Ws.-cand_best_Ws)
+                        end
+                        new_Ws = min.(max.(w_min, new_Ws), w_max)#.*relax_W .+ (1-relax_W).*best_Ws
+                        #new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
+                        #=for t = 2:T
+                            new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), ss_starstar[3])
+                        end=#
+                        new_Ws[2] = min(max(new_Ws[1], new_Ws[2]), ss_starstar[3])
+                        for t = 3:T
+                            new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), 2*new_Ws[t-1]-new_Ws[t-2])
+                        end
+                        new_Ws = max.(new_Ws, guess_Ws)
+                        #new_Ws[end] = ss_starstar[3]
+
                     end
                     if cand_best_total_len < best_total_len
                         best_Rs = copy(cand_best_Rs)
@@ -592,13 +709,147 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                         best_res = copy(cand_best_res)
                         best_len_Rs = copy(cand_best_len_Rs)
                         best_len_Ws = copy(cand_best_len_Ws)
+                        best_len_r = cand_best_len_r
+                        best_len_w = cand_best_len_w
                         best_total_len = cand_best_total_len
                         best_abs_len_r = cand_best_abs_len_r
                         best_abs_len_w = cand_best_abs_len_w
                         println_sameline("#$(rw_iters) - New best Rs and Ws")
+                    else
+                        Rs = copy(old_Rs)
+                        len_Rs = copy(old_len_Rs)
+                        Ws = copy(old_Ws)
+                        len_Ws = copy(old_len_Ws)
+
+                        if old_len_r < len_r
+                            if relax_R*r_border_width < gen_tol_x
+                                relax_R = relax_r
+                                relax_r_mult = (1.0+relax_r_mult)*0.5
+                            else
+                                relax_R *= relax_r_mult
+                            end
+                            println_sameline("#$(rw_iters) - New r_border_width: $(relax_R*r_border_width)")
+                        end
+                        if old_len_w < len_w
+                            if relax_W*w_border_width < gen_tol_x
+                                relax_W = relax_w
+                                relax_w_mult = (1.0+relax_w_mult)*0.5
+                            else
+                                relax_W *= relax_w_mult
+                            end
+                            println_sameline("#$(rw_iters) - New w_border_width: $(relax_W*w_border_width)")
+                        end
+
+                        res = copy(old_res)
+                        len_r = sum(abs,len_Rs)
+                        len_w = sum(abs,len_Ws)
+                        total_len = len_r+len_w
+                        abs_len_r = maximum(abs,len_Rs)
+                        abs_len_w = maximum(abs,len_Ws)
+                        #rw_iters -= 1
+
+                        new_Rs = Rs.*(1.0.+len_Rs)./(1.0.-len_Rs) .+ 2.0.*(1.0-r_min).*len_Rs./(1.0.-len_Rs)
+                        if relax_R.*r_border_width./maximum(abs,new_Rs.-Rs) < 1.0
+                            new_Rs = Rs .+ (new_Rs.-Rs).*relax_R.*r_border_width./maximum(abs,new_Rs.-Rs)
+                        end
+
+                        new_Rs = min.(max.(r_min, new_Rs), r_max)#.*relax_R .+ (1-relax_R).*Rs
+                        #new_Rs[3:end] = min.(max.(ss_starstar[2], new_Rs[3:end]), Rs[2])
+                        #=for t = 3:T
+                            new_Rs[t] = min(max(ss_starstar[2], new_Rs[t]), new_Rs[t-1])
+                        end=#
+                        new_Rs[3] = min(max(ss_starstar[2], new_Rs[3]), new_Rs[2])
+                        for t = 4:T     # non-decreasing first-order derivative
+                            new_Rs[t] = max(2*new_Rs[t-1]-new_Rs[t-2], min(new_Rs[t], new_Rs[t-1]))
+                        end
+                        new_Rs = min.(guess_Rs, new_Rs)
+                        #new_Rs[end] = ss_starstar[2]
+
+                        new_Ws = Ws.*(1.0.+len_Ws)./(1.0.-len_Ws)
+                        if relax_W.*w_border_width./maximum(abs,new_Ws.-Ws) < 1.0
+                            new_Ws = Ws .+ (new_Ws.-Ws).*relax_W.*w_border_width./maximum(abs,new_Ws.-Ws)
+                        end
+                        new_Ws = min.(max.(w_min, new_Ws), w_max)#.*relax_W .+ (1-relax_W).*Ws
+                        #new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
+                        #=for t = 2:T
+                            new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), ss_starstar[3])
+                        end=#
+                        new_Ws[2] = min(max(new_Ws[1], new_Ws[2]), ss_starstar[3])
+                        for t = 3:T
+                            new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), 2*new_Ws[t-1]-new_Ws[t-2])
+                        end
+                        new_Ws = max.(new_Ws, guess_Ws)
+                        #new_Ws[end] = ss_starstar[3]
 
                     end
                     is_best_updated = false
+                else
+                    Rs = copy(old_Rs)
+                    len_Rs = copy(old_len_Rs)
+                    Ws = copy(old_Ws)
+                    len_Ws = copy(old_len_Ws)
+
+                    if old_len_r < len_r
+                        if relax_R*r_border_width < gen_tol_x
+                            relax_R = relax_r
+                            relax_r_mult = (1.0+relax_r_mult)*0.5
+                        else
+                            relax_R *= relax_r_mult
+                        end
+                        println_sameline("#$(rw_iters) - New r_border_width: $(relax_R*r_border_width)")
+                    end
+                    if old_len_w < len_w
+                        if relax_W*w_border_width < gen_tol_x
+                            relax_W = relax_w
+                            relax_w_mult = (1.0+relax_w_mult)*0.5
+                        else
+                            relax_W *= relax_w_mult
+                        end
+                        println_sameline("#$(rw_iters) - New w_border_width: $(relax_W*w_border_width)")
+                    end
+
+                    res = copy(old_res)
+                    len_r = sum(abs,len_Rs)
+                    len_w = sum(abs,len_Ws)
+                    total_len = len_r+len_w
+                    abs_len_r = maximum(abs,len_Rs)
+                    abs_len_w = maximum(abs,len_Ws)
+                    #rw_iters -= 1
+
+                    new_Rs = Rs.*(1.0.+len_Rs)./(1.0.-len_Rs) .+ 2.0.*(1.0-r_min).*len_Rs./(1.0.-len_Rs)
+                    if relax_R.*r_border_width./maximum(abs,new_Rs.-Rs) < 1.0
+                        new_Rs = Rs .+ (new_Rs.-Rs).*relax_R.*r_border_width./maximum(abs,new_Rs.-Rs)
+                    end
+
+                    new_Rs = min.(max.(r_min, new_Rs), r_max)#.*relax_R .+ (1-relax_R).*Rs
+                    #new_Rs[3:end] = min.(max.(ss_starstar[2], new_Rs[3:end]), Rs[2])
+                    #=for t = 3:T
+                        new_Rs[t] = min(max(ss_starstar[2], new_Rs[t]), new_Rs[t-1])
+                    end=#
+                    new_Rs[3] = min(max(ss_starstar[2], new_Rs[3]), new_Rs[2])
+                    for t = 4:T     # non-decreasing first-order derivative
+                        new_Rs[t] = max(2*new_Rs[t-1]-new_Rs[t-2], min(new_Rs[t], new_Rs[t-1]))
+                    end
+                    new_Rs = min.(guess_Rs, new_Rs)
+                    #new_Rs[end] = ss_starstar[2]
+
+                    new_Ws = Ws.*(1.0.+len_Ws)./(1.0.-len_Ws)
+                    if relax_W.*w_border_width./maximum(abs,new_Ws.-Ws) < 1.0
+                        new_Ws = Ws .+ (new_Ws.-Ws).*relax_W.*w_border_width./maximum(abs,new_Ws.-Ws)
+                    end
+                    new_Ws = min.(max.(w_min, new_Ws), w_max)#.*relax_W .+ (1-relax_W).*Ws
+                    #new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
+                    #=for t = 2:T
+                        new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), ss_starstar[3])
+                    end=#
+                    new_Ws[2] = min(max(new_Ws[1], new_Ws[2]), ss_starstar[3])
+                    for t = 3:T
+                        new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), 2*new_Ws[t-1]-new_Ws[t-2])
+                    end
+                    new_Ws = max.(new_Ws, guess_Ws)
+                    #new_Ws[end] = ss_starstar[3]
+
+                    #rw_iters -= 1
                 end
             end
             # update Rs and Ws with the best candidate
@@ -606,9 +857,11 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
             println_sameline(("#$(rw_iters) - half the Rs and Ws", e))
 
             new_Rs = (old_Rs.+new_Rs.+best_Rs)./3.0
-            new_Rs[end] = ss_starstar[2]
+            #new_Rs[end] = ss_starstar[2]
             new_Ws = (old_Ws.+new_Ws.+best_Ws)./3.0
-            new_Ws[end] = ss_starstar[3]
+            #new_Ws[end] = ss_starstar[3]
+            len_r = old_len_r
+            len_w = old_len_w
             total_len = old_total_len
             println_sameline("#$(rw_iters) - total_len:-.------ - total_len_Rs:-.------ - total_len_Ws:-.------ - abs_len_r:-.------ - abs_len_w:-.------")
 
@@ -626,19 +879,53 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
 
         if maximum([abs.(new_Rs.-Rs) abs.(new_Ws.-Ws)]) < gen_tol_x
             println_sameline("#$(rw_iters) - Paths has converged (gen_tol_x=$(gen_tol_x)), but markets are still not clear, so restart from random deviation to paths (relax_conv=$(relax_conv))")
+
+            relax_R = relax_r
+            relax_r_mult = (1.0+relax_r_mult)*0.5
+            println_sameline("#$(rw_iters) - New r_border_width: $(relax_R*r_border_width)")
+
+            relax_W = relax_w
+            relax_w_mult = (1.0+relax_w_mult)*0.5
+            println_sameline("#$(rw_iters) - New w_border_width: $(relax_W*w_border_width)")
+
             new_Rs = Rs .+ relax_conv.*len_Rs
+            if relax_R.*r_border_width./maximum(abs,new_Rs.-Rs) < 1.0
+                new_Rs = Rs .+ (new_Rs.-Rs).*relax_R.*r_border_width./maximum(abs,new_Rs.-Rs)
+            end
             new_Rs = min.(max.(r_min, new_Rs), r_max)
-            new_Rs[end] = ss_starstar[2]
+            #new_Rs[3:end] = min.(max.(ss_starstar[2], new_Rs[3:end]), Rs[2])
+            #=for t = 3:T
+                new_Rs[t] = min(max(ss_starstar[2], new_Rs[t]), new_Rs[t-1])
+            end=#
+            new_Rs[3] = min(max(ss_starstar[2], new_Rs[3]), new_Rs[2])
+            for t = 4:T     # non-decreasing first-order derivative
+                new_Rs[t] = max(2*new_Rs[t-1]-new_Rs[t-2], min(new_Rs[t], new_Rs[t-1]))
+            end
+            new_Rs = min.(guess_Rs, new_Rs)
+            #new_Rs[end] = ss_starstar[2]
 
             new_Ws = Ws .+ relax_conv.*len_Ws
             #new_Ws = min.(max.(w_min, new_Ws), w_max)
-            new_Ws = min.(max.(min(ss_star[3],ss_starstar[3]), new_Ws), max(ss_star[3],ss_starstar[3]))
-            new_Ws[end] = ss_starstar[3]
+            if relax_W.*w_border_width./maximum(abs,new_Ws.-Ws) < 1.0
+                new_Ws = Ws .+ (new_Ws.-Ws).*relax_W.*w_border_width./maximum(abs,new_Ws.-Ws)
+            end
+            #new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
+            #=for t = 2:T
+                new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), ss_starstar[3])
+            end=#
+            new_Ws[2] = min(max(new_Ws[1], new_Ws[2]), ss_starstar[3])
+            for t = 3:T
+                new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), 2*new_Ws[t-1]-new_Ws[t-2])
+            end
+            new_Ws = max.(new_Ws, guess_Ws)
+            #new_Ws[end] = ss_starstar[3]
 
             plot_iter_results(Rs,Ws, new_Rs,new_Ws, best_Rs,best_Ws, len_Rs,len_Ws, best_len_Rs,best_len_Ws)
 
-            gen_tol_x /= 2.0
-            relax_conv /= 2.0
+            gen_tol_x *= 0.5
+            relax_conv *= 0.5
+
+            #rw_iters = rw_maxiters
         end
 
         rw_iters += 1

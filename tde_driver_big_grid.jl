@@ -89,9 +89,9 @@ lambda_3 = SS[5][1]
 ss_3 = copy(SS)
 #@time ss_starstar = steady_state(lambda_2)
 =#
-MAXITERS = 50#75#111#500#100#
+MAXITERS = 100#50#75#111#500#100#
 ############ change to 100
-TIME_PERIODS = 30#
+TIME_PERIODS = 50#
 ############
 SMOOTHING = false#true
 RUNWAY = 0# Int64(round(TIME_PERIODS/2; digits=0))
@@ -117,8 +117,8 @@ MODEL_PARAMS = [lambda_1, BETA, DELTA, GAMMA, ETA, THETA, C_E, RHO_M, RHO_W, SIG
 trans_res = open("$(LOCAL_DIR)trans_$(TIME_PERIODS)_results.txt", "w") do F
     #1         2        3            4              5                     6             7          8         9
     #lambda_s, ss_star, ss_starstar, GLOBAL_PARAMS, GLOBAL_APPROX_PARAMS, model_params, file_name, GUESS_RS, maxiters
-    #                                 1         2    3         4             5                     6             7  8     9
-    @time res = transitional_dynamics(LAMBDA_S, ss_1,ss_local, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS, F, true, MAXITERS)
+    #                                 1         2    3         4             5                     6             7  8     9         10
+    @time res = transitional_dynamics(LAMBDA_S, ss_1,ss_local, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS, F, true, MAXITERS, LOCAL_DIR)
     (res)
 end
 
