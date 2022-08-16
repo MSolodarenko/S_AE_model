@@ -44,7 +44,7 @@ function new_val_and_a1(value,aprime_nodes, income, value_tran_rhs,expectation_v
             return -res
         end
 
-        aprime_max = min(income[a_i],aprime_max)
+        aprime_max = max(aprime_min, min(income[a_i],aprime_max) )
         res = optimize(f, aprime_min, aprime_max)
 
         new_aprime_nodes[a_i] = Optim.minimizer(res)[1]
