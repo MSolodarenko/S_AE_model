@@ -3,6 +3,7 @@ using Plots
 
 using ProgressMeter
 using SchumakerSpline
+using BasicInterpolators: LinearInterpolator
 
 include("Functions/profit.jl")
 
@@ -141,6 +142,50 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::B
         end
         annotate!([X[end]], POS, text(TEXT2, COLOR, :right, 7))
     end
+    return plt
+end
+
+function create_plot(X,XLABEL::String,Y,YLABEL::String, IS_Y_PERCENTAGE::Bool=false, OCCUPATION::String="H")
+    COLOR="blue"
+    if OCCUPATION=="W"
+        COLOR="purple"
+    elseif OCCUPATION=="SP"
+        COLOR="red"
+    elseif OCCUPATION=="EMP"
+        COLOR="green"
+    elseif OCCUPATION=="ENT"
+        COLOR="brown"
+    end
+
+    YLIMS1 = minimum([Y; 0.0])
+    YLIMS2 = maximum([Y; 0.0])
+    #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
+    YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
+    YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
+    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=10))
+    #=
+    YPOS = mean(YTICKS[end-1:end])
+    if maximum(Y[calibrated_lambda:calibrated_lambda+4]) > YTICKS[end-1]
+        YPOS = mean(YTICKS[1:2])
+    end
+    =#
+    if IS_Y_PERCENTAGE
+        DIGITS = Int(max(2, round(log10(0.01/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
+        YTICKS = (YTICKS, ["$(round(100*y;digits=DIGITS))%" for y in YTICKS])
+    else
+        DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
+        YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
+    end
+    plt = plot(collect([0; X]), collect.([[0.0; Y],ones(length(Y)+1).*0.0]),
+                    #color=[COLOR "green" "red"],
+                    color=[COLOR COLOR],
+                    linestyle=[:solid :dash],
+                    legend=false,
+                    xlabel=XLABEL,
+                    ylabel=YLABEL,
+                    yticks = YTICKS,
+                    ylims = YLIMS )
+
     return plt
 end
 
@@ -318,9 +363,164 @@ varlogs_s = zeros(4,5,T)
 avgs_s = zeros(4,5,T)
 vars_s = zeros(4,5,T)
 
-quantile_mean_wealth = zeros(5,5,2)
+##########################
+calc_mean_quantile = false
+##########################
 
-quantile_mean_wealth_s = zeros(5,5,T)
+quantile_mean_wealth = zeros(5,4,2)
+quantile_mean_consumption = zeros(5,4,2)
+quantile_mean_earnings = zeros(5,4,2)
+quantile_mean_income = zeros(5,4,2)
+
+quantile_mean_wealth_s = zeros(5,4,T)
+quantile_mean_consumption_s = zeros(5,4,T)
+quantile_mean_earnings_s = zeros(5,4,T)
+quantile_mean_income_s = zeros(5,4,T)
+
+function quantile_mean(stat, distr)
+    distr ./= sum(distr)
+
+    ud_stat_grid = vec(stat)
+    ud_stat_distr = vec(distr)
+    stat_grid = exp.(collect(range(log(minimum(ud_stat_grid)+1); stop=log(maximum(ud_stat_grid)+1), length=length(stat[:,1,1,1,1,1])))).-1
+    stat_distr = zeros(length(stat_grid))
+    Threads.@threads for i in 1:length(stat_grid)
+        iters1 = []
+        iters2 = []
+        if i == 1
+            iters2 = findall(x->stat_grid[i]<=x<=stat_grid[i+1],ud_stat_grid)
+        elseif i == length(stat_grid)
+            iters1 = findall(x->stat_grid[i-1]<=x<=stat_grid[i],ud_stat_grid)
+        else
+            iters1 = findall(x->stat_grid[i-1]<x<=stat_grid[i],ud_stat_grid)
+            iters2 = findall(x->stat_grid[i]<x<stat_grid[i+1],ud_stat_grid)
+        end
+        if !isempty(iters1)
+            cand1 = ud_stat_grid[iters1]
+            lottery_prob1 = (cand1 .- stat_grid[i-1])./(stat_grid[i]-stat_grid[i-1])
+            cand_distr1 = ud_stat_distr[iters1]
+            stat_distr[i] += sum(cand_distr1.*lottery_prob1)
+        end
+        if !isempty(iters2)
+            cand2 = ud_stat_grid[iters2]
+            lottery_prob2 = (stat_grid[i+1] .- cand2)./(stat_grid[i+1]-stat_grid[i])
+            cand_distr2 = ud_stat_distr[iters2]
+            stat_distr[i] += sum(cand_distr2.*lottery_prob2)
+        end
+        next!(p)
+    end
+    # grid = collect(1:length(ud_stat_grid))
+    # stat_grid = []
+    # stat_distr = []
+    # while !isempty(grid)
+    #     i = grid[1]
+    #     #iters = findall(x->(ud_stat_grid[i]-1e-5<=x<=ud_stat_grid[i]+1e-5),ud_stat_grid)
+    #     iters = findall(x->(x==ud_stat_grid[i]),ud_stat_grid)
+    #     if isempty(stat_grid)
+    #         push!(stat_grid,ud_stat_grid[i])
+    #         push!(stat_distr,sum(ud_stat_distr[iters]))
+    #     elseif stat_grid[end] < ud_stat_grid[i]
+    #         push!(stat_grid,ud_stat_grid[i])
+    #         push!(stat_distr,sum(ud_stat_distr[iters]))
+    #     else
+    #         ii = findfirst(x->ud_stat_grid[i]<x,stat_grid)
+    #         insert!(stat_grid,ii,ud_stat_grid[i])
+    #         insert!(stat_distr,ii,sum(ud_stat_distr[iters]))
+    #     end
+    #     splice!(ud_stat_grid,iters)
+    #     splice!(ud_stat_distr,iters)
+    #
+    #     grid = collect(1:length(ud_stat_grid))
+    #
+    #     p1 = plot(ud_stat_grid,legend=false)
+    #     p2 = plot(ud_stat_distr,legend=false)
+    #     p3 = plot(stat_grid,legend=false)
+    #     p4 = plot(stat_distr,legend=false)
+    #     display(plot(p1,p2,p3,p4,layout=(2,2),legend=false))
+    #
+    # end
+
+    # unsorted_stat_grid = vec(stat)
+    # unsorted_stat_distr = vec(distr)
+    #
+    # perm = sortperm(unsorted_stat_grid)
+    #
+    # dirty_stat_grid = copy(unsorted_stat_grid[perm])
+    # dirty_stat_distr = copy(unsorted_stat_distr[perm])
+    #
+    # stat_grid = []
+    # stat_distr = []
+    # i = 1
+    # while i < length(dirty_stat_grid)
+    #     iters = findall(x->x==dirty_stat_grid[i], dirty_stat_grid)
+    #     push!(stat_grid,dirty_stat_grid[i])
+    #     push!(stat_distr,sum(dirty_stat_distr[iters]))
+    #     i = iters[end]+1
+    # end
+    cdf = cumsum(stat_distr)
+
+    idx = unique(z -> cdf[z], 1:length(cdf))
+    cdf = cdf[idx]
+    stat_grid = stat_grid[idx]
+    stat_distr = stat_distr[idx]
+
+    p0 = plot(stat_distr)
+    max_a_i = findlast(x->x<1.0-1e-4, cdf)
+    cdf = cdf[1:max_a_i]./cdf[max_a_i]
+    stat_grid = stat_grid[1:max_a_i]
+    stat_distr = stat_distr[1:max_a_i]
+
+    idx = unique(z -> cdf[z], 1:length(cdf))
+    cdf = cdf[idx]
+    stat_grid = stat_grid[idx]
+    stat_distr = stat_distr[idx]
+
+    p0 = plot(stat_distr)
+    max_a_i = length(cdf)#findlast(x->x<1.0-1e-4, cdf)
+
+    p1 = plot(cdf[1:max_a_i]./cdf[max_a_i])
+
+    cdf_1 = []
+    try
+        #cdf_1 = Schumaker(cdf[1:max_a_i]./cdf[max_a_i],1:max_a_i; extrapolation=(Constant,Constant))
+        cdf_1 = LinearInterpolator(collect(cdf[1:max_a_i]./cdf[max_a_i]), collect(1:max_a_i));
+        p2 = plot(collect(range(0.0;stop=1.0,length=120)),cdf_1.(collect(range(0.0;stop=1.0,length=120))))
+    catch e1
+        try
+            #cdf_1 = Schumaker(cdf[1:max_a_i]./cdf[max_a_i],1:max_a_i; extrapolation=(Constant,Constant))
+            cdf_1 = LinearInterpolator([0.0; collect(cdf[1:max_a_i]./cdf[max_a_i])], [1; collect(1:max_a_i)]);
+            p2 = plot(collect(range(0.0;stop=1.0,length=120)),cdf_1.(collect(range(0.0;stop=1.0,length=120))))
+        catch e2
+            display(plot(p0,p1,legend=false))
+            throw(e)
+        end
+    end
+
+    quantiles = collect(range(0.0;stop=1.0,length=6))
+    #qwb = evaluate.(cdf_1,quantiles)    #quantile_wealth_bounds
+    qwb = cdf_1.(quantiles)
+
+    quantile_mean = zeros(5)
+    for q = 1:5
+        if qwb[q] > qwb[q+1]
+            display(plot(p0,p1,p2,layout=(1,3),legend=false))
+            display(qwb)
+            throw(error)
+        end
+        _q = Int32(max(1,min(floor(qwb[q]),max_a_i)))
+        q_ = Int32(max(1,min(ceil(qwb[q]),max_a_i)))
+        _q1 = Int32(max(1,min(floor(qwb[q+1]),max_a_i)))
+        q1_ = Int32(max(1,min(ceil(qwb[q+1]),max_a_i)))
+
+        m_w_down_down = sum(stat_grid[_q:_q1] .* stat_distr[_q:_q1] / sum(stat_distr[_q:_q1]) )
+        m_w_down_up = sum(stat_grid[_q:q1_] .* stat_distr[_q:q1_] / sum(stat_distr[_q:q1_]) )
+        m_w_up_down = sum(stat_grid[q_:_q1] .* stat_distr[q_:_q1] / sum(stat_distr[q_:_q1]) )
+        m_w_up_up = sum(stat_grid[q_:q1_] .* stat_distr[q_:q1_] / sum(stat_distr[q_:q1_]) )
+
+        quantile_mean[q] = (m_w_down_down+m_w_down_up+m_w_up_down+m_w_up_up)/4
+    end
+    return quantile_mean
+end
 
 #productivity
 # SP, EMP, ENT
@@ -351,11 +551,36 @@ avg_m_skill_s = zeros(4,T)
 var_w_skill_s = zeros(4,T)
 var_m_skill_s = zeros(4,T)
 
+# Distribution of output to different channels of earnigs/income to occupations
+share_W_earnings_in_output = zeros(2)
+share_SP_earnings_in_output = zeros(2)
+share_EMP_earnings_in_output = zeros(2)
+share_W_capital_income_in_output = zeros(2)
+share_SP_capital_income_in_output = zeros(2)
+share_EMP_capital_income_in_output = zeros(2)
+
+share_W_earnings_in_output_s = zeros(T)
+share_SP_earnings_in_output_s = zeros(T)
+share_EMP_earnings_in_output_s = zeros(T)
+share_W_capital_income_in_output_s = zeros(T)
+share_SP_capital_income_in_output_s = zeros(T)
+share_EMP_capital_income_in_output_s = zeros(T)
+
 # loop for _1 and _2
+p = Progress(2*(5*(1+4)+4*4*number_asset_grid+3+4), dt=0.5,
+             barglyphs=BarGlyphs('|','█', ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇'],' ','|',),
+             barlen=25)
+if !calc_mean_quantile
+    p = Progress(2*(5*(1+4)+3+4), dt=0.5,
+                 barglyphs=BarGlyphs('|','█', ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇'],' ','|',),
+                 barlen=25)
+end
 for i = 1:2
     ss = ss_1
+    Output = Output_1
     if i == 2
         ss = ss_2
+        Output = Output_2
     end
 
     lambda = ss[5][1]
@@ -396,6 +621,8 @@ for i = 1:2
             Credit[h-1,i] /= sum(density_distr.*choice)
         end
 
+        next!(p)
+
         for s = 1:4 # [1] = income, earnings, wealth, consumption
             # if s == 1
             stat_distr = ss[1][23] .- ones(size(ss[1][5])).*ss[1][3]
@@ -433,6 +660,8 @@ for i = 1:2
             avgs[s,h,i] = sum(density_distr.*choice.*max.(1e-12,stat_distr)   )
             vars[s,h,i] = sum(density_distr.*choice.*(max.(1e-12,stat_distr).- avgs[s,h,i]).^2)/sum(density_distr.*choice)
             avgs[s,h,i] /= sum(density_distr.*choice)
+
+            next!(p)
         end
 
         if h>2
@@ -454,6 +683,8 @@ for i = 1:2
             var_MPL[h-2,i] = sum(choice.*density_distr.*(theta.*output.*l_1 .- mean_MPL[h-2,i]*denumerator).^2)/denumerator
 
             share_unbound[h-2,i] = sum(choice.*density_distr.*unlimited_capital_choice)/sum(choice.*density_distr)
+
+            next!(p)
         end
 
         if h>1
@@ -468,35 +699,38 @@ for i = 1:2
 
             var_m_skill[h-1,i] = sum(m_skill_distr.*(z_m_nodes .- avg_m_skill[h-1,i]*sum(density_distr.*choice)).^2)/sum(density_distr.*choice)
             var_w_skill[h-1,i] = sum(w_skill_distr.*(z_w_nodes .- avg_w_skill[h-1,i]*sum(density_distr.*choice)).^2)/sum(density_distr.*choice)
+
+            next!(p)
         end
-
-        ad = sum(density_distr.*choice, dims=2:5)[:,1,1,1,1]
-        ad ./= sum(ad)  #asset_distr
-
-        cdf = cumsum(ad)
-
-        max_a_i = findlast(x->x<1.0-1e-5, cdf)
-
-        cdf_1 = Schumaker(cdf[1:max_a_i]./cdf[max_a_i],1:max_a_i; extrapolation=(Constant,Constant))
-
-        quantiles = collect(range(0.0;stop=1.0,length=6))
-        qwb = evaluate.(cdf_1,quantiles)    #quantile_wealth_bounds
-
-        for q = 1:5
-            m_w_down_down = sum(asset_grid[Int32(floor(qwb[q])):Int32(floor(qwb[q+1]))] .* ad[Int32(floor(qwb[q])):Int32(floor(qwb[q+1]))] / sum(ad[Int32(floor(qwb[q])):Int32(floor(qwb[q+1]))]) )
-            m_w_down_up = sum(asset_grid[Int32(floor(qwb[q])):Int32(ceil(qwb[q+1]))] .* ad[Int32(floor(qwb[q])):Int32(ceil(qwb[q+1]))] / sum(ad[Int32(floor(qwb[q])):Int32(ceil(qwb[q+1]))]) )
-            m_w_up_down = sum(asset_grid[Int32(ceil(qwb[q])):Int32(floor(qwb[q+1]))] .* ad[Int32(ceil(qwb[q])):Int32(floor(qwb[q+1]))] / sum(ad[Int32(ceil(qwb[q])):Int32(floor(qwb[q+1]))]) )
-            m_w_up_up = sum(asset_grid[Int32(ceil(qwb[q])):Int32(ceil(qwb[q+1]))] .* ad[Int32(ceil(qwb[q])):Int32(ceil(qwb[q+1]))] / sum(ad[Int32(ceil(qwb[q])):Int32(ceil(qwb[q+1]))]) )
-
-            quantile_mean_wealth[q,h,i] = (m_w_down_down+m_w_down_up+m_w_up_down+m_w_up_up)/4
+        if h!=5 && calc_mean_quantile
+            quantile_mean_wealth[:,h,i] .= quantile_mean(ones(size(ss[1][5])).*ss[1][3], density_distr.*choice)
+            next!(p)
+            quantile_mean_income[:,h,i] .= quantile_mean(ss[1][23] .- ones(size(ss[1][5])).*ss[1][3], density_distr.*choice)
+            next!(p)
+            quantile_mean_earnings[:,h,i] .= quantile_mean(ss[1][24], density_distr.*choice)
+            next!(p)
+            quantile_mean_consumption[:,h,i] .= quantile_mean(ss[1][23] .- ss[1][4], density_distr.*choice)
+            next!(p)
         end
     end
+    agg_c_e = ss[5][7]*sum(density_distr.*Float64.(ss[1][22].==3.0))
+    share_W_earnings_in_output[i] = sum(ss[1][24] .* density_distr.*Float64.(ss[1][22].==1.0))/(Output-agg_c_e)
+    share_SP_earnings_in_output[i] = sum(ss[1][24] .* density_distr.*Float64.(ss[1][22].==2.0))/(Output-agg_c_e)
+    share_EMP_earnings_in_output[i] = sum(ss[1][24] .* density_distr.*Float64.(ss[1][22].==3.0))/(Output-agg_c_e)
+    share_W_capital_income_in_output[i] = (ss[5][3]+ss[1][44])*sum(ones(size(ss[1][5])).*ss[1][3] .* density_distr.*Float64.(ss[1][22].==1.0))/(Output-agg_c_e)
+    share_SP_capital_income_in_output[i] = (ss[5][3]+ss[1][44])*sum(ones(size(ss[1][5])).*ss[1][3] .* density_distr.*Float64.(ss[1][22].==2.0))/(Output-agg_c_e)
+    share_EMP_capital_income_in_output[i] = (ss[5][3]+ss[1][44])*sum(ones(size(ss[1][5])).*ss[1][3] .* density_distr.*Float64.(ss[1][22].==3.0))/(Output-agg_c_e)
 end
 
 #main computation loop
-p = Progress(T, dt=0.5,
+p = Progress(T*(9+5*5+4*4*number_asset_grid+3+4), dt=0.5,
              barglyphs=BarGlyphs('|','█', ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇'],' ','|',),
-             barlen=10)
+             barlen=25)
+if !calc_mean_quantile
+    p = Progress(T*(9+5*5+3+4), dt=0.5,
+                 barglyphs=BarGlyphs('|','█', ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇'],' ','|',),
+                 barlen=25)
+end
 Threads.@threads for t=1:T
     number_zeta_nodes = global_approx_params[4]
     number_alpha_m_nodes = global_approx_params[5]
@@ -526,28 +760,35 @@ Threads.@threads for t=1:T
     occ_choice, income, earnings, capital_excess, capital_d, credit, labour_excess, labour_d, labour_s, deposit, output, cost_of_employing, managerial_input = compute_income_profile(asset_grid,number_asset_grid,r_s[t], w_s[t], number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes, lambda_s[t], delta, gamma, eta, theta, c_e, z_m_nodes, z_w_nodes, number_u_nodes)
 
     Output_s[t] = sum(output .* capital_s_distr_s[t,:,:,:,:,:])
+    next!(p)
 
     Capital_s[t]= sum(asset_grid .* capital_s_distr_s[t,:,:,:,:,:])
+    next!(p)
 
     agg_credit = sum(credit .* capital_s_distr_s[t,:,:,:,:,:])
 
     Credit_to_Output_s[t] = agg_credit/Output_s[t]
+    next!(p)
 
     Income_s[t] = sum((income.- ones(size(capital_s_distr_s[t,:,:,:,:,:])).*asset_grid) .* capital_s_distr_s[t,:,:,:,:,:])
+    next!(p)
 
     Consumption_s[t] = sum((income.-policy_s[t,:,:,:,:,:]) .* capital_s_distr_s[t,:,:,:,:,:] )
+    next!(p)
 
     #occupation
     occ_Ws_s[t] = sum( capital_s_distr_s[t,:,:,:,:,:] .* Float64.(occ_choice.==1.0) )
     occ_SPs_s[t] = sum( capital_s_distr_s[t,:,:,:,:,:] .* Float64.(occ_choice.==2.0) )
     occ_EMPs_s[t] = sum( capital_s_distr_s[t,:,:,:,:,:] .* Float64.(occ_choice.==3.0) )
     occ_ENTs_s[t] = occ_SPs_s[t]+occ_EMPs_s[t]
+    next!(p)
 
     #share of unconstrained ENT, SP,EMP
     unlimited_capital_choice_s[t,:,:,:,:,:] = capital_d.<(lambda_s[t].*(asset_grid.*ones(size(capital_d))))
     share_ENT_unbound_s[t] = sum( Float64.(occ_choice.!=1.0) .* capital_s_distr_s[t,:,:,:,:,:] .* unlimited_capital_choice_s[t,:,:,:,:,:] )/occ_ENTs_s[t]
     share_SP_unbound_s[t] = sum( Float64.(occ_choice.==2.0) .* capital_s_distr_s[t,:,:,:,:,:] .* unlimited_capital_choice_s[t,:,:,:,:,:] )/occ_SPs_s[t]
     share_EMP_unbound_s[t] = sum( Float64.(occ_choice.==3.0) .* capital_s_distr_s[t,:,:,:,:,:] .* unlimited_capital_choice_s[t,:,:,:,:,:] )/occ_EMPs_s[t]
+    next!(p)
 
     #Variances of log-consumption and log-earnings, Gini for W and ENT income
     logcs_s[t] = sum( capital_s_distr_s[t,:,:,:,:,:].*log.(max.(1e-12,income.-policy_s[t,:,:,:,:,:])).^2 ) .- sum( capital_s_distr_s[t,:,:,:,:,:].*log.(max.(1e-12,income.-policy_s[t,:,:,:,:,:])) )^2
@@ -579,6 +820,7 @@ Threads.@threads for t=1:T
     S_ent_income = cumsum(ddevs.*ievs)./sum(ddevs.*ievs)
     giniEnts_s[t] = 1.0 - ( S_ent_income[1]*ddevs[1] + sum((S_ent_income[2:end] .+ S_ent_income[1:end-1]).*ddevs[2:end]) )
 
+    next!(p)
     # income, earnings, wealth, consumption
     # All, W, SP, EMP, ENT
     # Time
@@ -618,6 +860,7 @@ Threads.@threads for t=1:T
             var_Credit_s[h-1,t] = sum(capital_s_distr_s[t,:,:,:,:,:].*choice .* (credit .- Credit_s[h-1,t]).^2)/sum(capital_s_distr_s[t,:,:,:,:,:].*choice)
             Credit_s[h-1,t] /= sum(capital_s_distr_s[t,:,:,:,:,:].*choice)
         end
+        next!(p)
 
         for s = 1:4 # [1] = income, earnings, wealth, consumption
             # if s == 1
@@ -656,6 +899,7 @@ Threads.@threads for t=1:T
             avgs_s[s,h,t] = sum(density_distr.*choice.*max.(1e-12,stat_distr)   )
             vars_s[s,h,t] = sum(density_distr.*choice.*(max.(1e-12,stat_distr).- avgs_s[s,h,t]).^2)/sum(density_distr.*choice)
             avgs_s[s,h,t] /= sum(density_distr.*choice)
+            next!(p)
         end
 
         if h>2
@@ -677,6 +921,7 @@ Threads.@threads for t=1:T
             var_MPL_s[h-2,t] = sum(choice.*density_distr.*(theta.*output.*l_1 .- mean_MPL_s[h-2,t]*denumerator).^2)/denumerator
 
             share_unbound_s[h-2,t] = sum(choice.*density_distr.*unlimited_capital_choice)/sum(choice.*density_distr)
+            next!(p)
         end
 
         if h>1
@@ -691,29 +936,28 @@ Threads.@threads for t=1:T
 
             var_m_skill_s[h-1,t] = sum(m_skill_distr.*(z_m_nodes .- avg_m_skill_s[h-1,t]*sum(density_distr.*choice)).^2)/sum(density_distr.*choice)
             var_w_skill_s[h-1,t] = sum(w_skill_distr.*(z_w_nodes .- avg_w_skill_s[h-1,t]*sum(density_distr.*choice)).^2)/sum(density_distr.*choice)
+            next!(p)
         end
 
-        ad = sum(density_distr.*choice, dims=2:5)[:,1,1,1,1]
-        ad ./= sum(ad)  #asset_distr
-
-        cdf = cumsum(ad)
-
-        max_a_i = findlast(x->x<1.0-1e-5, cdf)
-
-        cdf_1 = Schumaker(cdf[1:max_a_i]./cdf[max_a_i],1:max_a_i; extrapolation=(Constant,Constant))
-
-        quantiles = collect(range(0.0;stop=1.0,length=6))
-        qwb = evaluate.(cdf_1,quantiles)    #quantile_wealth_bounds
-
-        for q = 1:5
-            m_w_down_down = sum(asset_grid[Int32(floor(qwb[q])):Int32(floor(qwb[q+1]))] .* ad[Int32(floor(qwb[q])):Int32(floor(qwb[q+1]))] / sum(ad[Int32(floor(qwb[q])):Int32(floor(qwb[q+1]))]) )
-            m_w_down_up = sum(asset_grid[Int32(floor(qwb[q])):Int32(ceil(qwb[q+1]))] .* ad[Int32(floor(qwb[q])):Int32(ceil(qwb[q+1]))] / sum(ad[Int32(floor(qwb[q])):Int32(ceil(qwb[q+1]))]) )
-            m_w_up_down = sum(asset_grid[Int32(ceil(qwb[q])):Int32(floor(qwb[q+1]))] .* ad[Int32(ceil(qwb[q])):Int32(floor(qwb[q+1]))] / sum(ad[Int32(ceil(qwb[q])):Int32(floor(qwb[q+1]))]) )
-            m_w_up_up = sum(asset_grid[Int32(ceil(qwb[q])):Int32(ceil(qwb[q+1]))] .* ad[Int32(ceil(qwb[q])):Int32(ceil(qwb[q+1]))] / sum(ad[Int32(ceil(qwb[q])):Int32(ceil(qwb[q+1]))]) )
-
-            quantile_mean_wealth_s[q,h,t] = (m_w_down_down+m_w_down_up+m_w_up_down+m_w_up_up)/4
+        if h!=5 && calc_mean_quantile
+            quantile_mean_wealth_s[:,h,t] .= quantile_mean(asset_grid.*ones(size(density_distr)), density_distr.*choice)
+            next!(p)
+            quantile_mean_income_s[:,h,t] .= quantile_mean(income .- ones(size(capital_s_distr_s[t,:,:,:,:,:])).*asset_grid, density_distr.*choice)
+            next!(p)
+            quantile_mean_earnings_s[:,h,t] .= quantile_mean(earnings, density_distr.*choice)
+            next!(p)
+            quantile_mean_consumption_s[:,h,t] .= quantile_mean(income .- policy_s[t,:,:,:,:,:], density_distr.*choice)
+            next!(p)
         end
     end
+
+    agg_c_e = c_e*sum(density_distr.*Float64.(occ_choice.==3.0))
+    share_W_earnings_in_output_s[t] = sum(earnings .* density_distr.*Float64.(occ_choice.==1.0))/(Output_s[t]-agg_c_e)
+    share_SP_earnings_in_output_s[t] = sum(earnings .* density_distr.*Float64.(occ_choice.==2.0))/(Output_s[t]-agg_c_e)
+    share_EMP_earnings_in_output_s[t] = sum(earnings .* density_distr.*Float64.(occ_choice.==3.0))/(Output_s[t]-agg_c_e)
+    share_W_capital_income_in_output_s[t] = (delta+r_s[t])*sum(ones(size(density_distr)).*asset_grid .* density_distr.*Float64.(occ_choice.==1.0))/(Output_s[t]-agg_c_e)
+    share_SP_capital_income_in_output_s[t] = (delta+r_s[t])*sum(ones(size(density_distr)).*asset_grid .* density_distr.*Float64.(occ_choice.==2.0))/(Output_s[t]-agg_c_e)
+    share_EMP_capital_income_in_output_s[t] = (delta+r_s[t])*sum(ones(size(density_distr)).*asset_grid .* density_distr.*Float64.(occ_choice.==3.0))/(Output_s[t]-agg_c_e)
 
     next!(p)
 end
@@ -722,19 +966,19 @@ Output_growth_rate_s = zeros(T)
 Capital_growth_rate_s = zeros(T)
 Income_growth_rate_s = zeros(T)
 Consumption_growth_rate_s = zeros(T)
-# SP, EMP, ENT
-mean_MPL_s = zeros(3,T)
-var_MPL_s = zeros(3,T)
-mean_MPK_s = zeros(3,T)
-var_MPK_s = zeros(3,T)
-# W, SP,EMP, ENT
-avg_w_skill_s = zeros(4,T)
-avg_m_skill_s = zeros(4,T)
-var_w_skill_s = zeros(4,T)
-var_m_skill_s = zeros(4,T)
+# # SP, EMP, ENT
+# mean_MPL_s = zeros(3,T)
+# var_MPL_s = zeros(3,T)
+# mean_MPK_s = zeros(3,T)
+# var_MPK_s = zeros(3,T)
+# # W, SP,EMP, ENT
+# avg_w_skill_s = zeros(4,T)
+# avg_m_skill_s = zeros(4,T)
+# var_w_skill_s = zeros(4,T)
+# var_m_skill_s = zeros(4,T)
 
 #additional computation loop (for non-parallel computations)
-for t=1:T
+@showprogress for t=1:T
     if t > 1
         Output_growth_rate_s[t] = (Output_s[t]/Output_s[t-1])-1.0
         Capital_growth_rate_s[t] = (Capital_s[t]/Capital_s[t-1])-1.0
@@ -758,7 +1002,7 @@ savefig(plt,"$(LOCAL_DIR_GENERAL)time_output_growth_rate.png")
 plt = create_plot(collect(1:T),"Time (Years)", Capital_s,"Capital", Capital_1, Capital_2, false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_capitals.png")
-plt = create_plot(collect(1:T),"Time (Years)", Capital_growth_rate_s,"Capital growth rate", Capital_growth_rate_1, Capital_growth_rate_2, true)
+plt = create_plot(collect(1:T),"Time (Years)", Capital_growth_rate_s,"Capital growth rate", true)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_capital_growth_rate.png")
 plt = create_plot(collect(1:T),"Time (Years)", Credit_s[1,:],"Credit", Credit[1,1], Credit[1,2], false)
@@ -770,13 +1014,13 @@ savefig(plt,"$(LOCAL_DIR_GENERAL)time_credit_to_outputs.png")
 plt = create_plot(collect(1:T),"Time (Years)", Income_s,"Income", Income_1, Income_2, false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_incomes.png")
-plt = create_plot(collect(1:T),"Time (Years)", Income_growth_rate_s,"Income growth rate", Income_growth_rate_1, Income_growth_rate_2, true)
+plt = create_plot(collect(1:T),"Time (Years)", Income_growth_rate_s,"Income growth rate", true)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_income_growth_rate.png")
 plt = create_plot(collect(1:T),"Time (Years)", Consumption_s,"Consumption", Consumption_1, Consumption_2, false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_consumptions.png")
-plt = create_plot(collect(1:T),"Time (Years)", Consumption_growth_rate_s,"Consumption growth rate", Consumption_growth_rate_1, Consumption_growth_rate_2, true)
+plt = create_plot(collect(1:T),"Time (Years)", Consumption_growth_rate_s,"Consumption growth rate", true)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_consumption_growth_rate.png")
 
@@ -886,21 +1130,54 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
 
     end
 
+    # calculate mean
+    #means[s,h,i]
+    plt = create_combined_plot(collect(1:T),"Time (Years)",[means_s[s,2,:],means_s[s,3,:],means_s[s,4,:]],["W","SP","EMP"],"Mean of $stat_name (occupations)",[means[s,2,1],means[s,3,1],means[s,4,1]],[means[s,2,2],means[s,3,2],means[s,4,2]], false, ["W","SP","EMP"])
+    display(plt)
+    savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_mean_occupations_$(stat_name).png")
+
+    # calculate gini coefficent
+    #ginis[s,h,i]
+    plt = create_combined_plot(collect(1:T),"Time (Years)",[ginis_s[s,2,:],ginis_s[s,3,:],ginis_s[s,4,:]],["W","SP","EMP"],"Gini of $stat_name (occupations)",[ginis[s,2,1],ginis[s,3,1],ginis[s,4,1]],[ginis[s,2,2],ginis[s,3,2],ginis[s,4,2]], false, ["W","SP","EMP"])
+    display(plt)
+    savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_gini_occupations_$(stat_name).png")
+
 end
 
-LABELS=["1st","2nd","3rd","4th","5th"]
-plt = create_combined_plot(collect(1:T),"Time (Years)", [quantile_mean_wealth_s[1,1,:],quantile_mean_wealth_s[2,1,:],quantile_mean_wealth_s[3,1,:],quantile_mean_wealth_s[4,1,:],quantile_mean_wealth_s[5,1,:]],LABELS,"Mean of Wealth (quantiles)", [quantile_mean_wealth[1,1,1],quantile_mean_wealth[2,1,1],quantile_mean_wealth[3,1,1],quantile_mean_wealth[4,1,1],quantile_mean_wealth[5,1,1]], [quantile_mean_wealth[1,1,2],quantile_mean_wealth[2,1,2],quantile_mean_wealth[3,1,2],quantile_mean_wealth[4,1,2],quantile_mean_wealth[5,1,2]], false,["H","W","SP","EMP","ENT"])
-display(plt)
-savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_wealth_quantiles.png")
-plt = create_combined_plot(collect(1:T),"Time (Years)", [quantile_mean_wealth_s[1,2,:],quantile_mean_wealth_s[2,2,:],quantile_mean_wealth_s[3,2,:],quantile_mean_wealth_s[4,2,:],quantile_mean_wealth_s[5,2,:]],LABELS,"Mean of Workers' Wealth (quantiles)", [quantile_mean_wealth[1,2,1],quantile_mean_wealth[2,2,1],quantile_mean_wealth[3,2,1],quantile_mean_wealth[4,2,1],quantile_mean_wealth[5,2,1]], [quantile_mean_wealth[1,2,2],quantile_mean_wealth[2,2,2],quantile_mean_wealth[3,2,2],quantile_mean_wealth[4,2,2],quantile_mean_wealth[5,2,2]], false,["H","W","SP","EMP","ENT"])
-display(plt)
-savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_wealth_w_quantiles.png")
-plt = create_combined_plot(collect(1:T),"Time (Years)", [quantile_mean_wealth_s[1,3,:],quantile_mean_wealth_s[2,3,:],quantile_mean_wealth_s[3,3,:],quantile_mean_wealth_s[4,3,:],quantile_mean_wealth_s[5,3,:]],LABELS,"Mean of Sole Proprietors' Wealth (quantiles)", [quantile_mean_wealth[1,3,1],quantile_mean_wealth[2,3,1],quantile_mean_wealth[3,3,1],quantile_mean_wealth[4,3,1],quantile_mean_wealth[5,3,1]], [quantile_mean_wealth[1,3,2],quantile_mean_wealth[2,3,2],quantile_mean_wealth[3,3,2],quantile_mean_wealth[4,3,2],quantile_mean_wealth[5,3,2]], false,["H","W","SP","EMP","ENT"])
-display(plt)
-savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_wealth_sp_quantiles.png")
-plt = create_combined_plot(collect(1:T),"Time (Years)", [quantile_mean_wealth_s[1,4,:],quantile_mean_wealth_s[2,4,:],quantile_mean_wealth_s[3,4,:],quantile_mean_wealth_s[4,4,:],quantile_mean_wealth_s[5,4,:]],LABELS,"Mean of Employers' Wealth (quantiles)", [quantile_mean_wealth[1,4,1],quantile_mean_wealth[2,4,1],quantile_mean_wealth[3,4,1],quantile_mean_wealth[4,4,1],quantile_mean_wealth[5,4,1]], [quantile_mean_wealth[1,4,2],quantile_mean_wealth[2,4,2],quantile_mean_wealth[3,4,2],quantile_mean_wealth[4,4,2],quantile_mean_wealth[5,4,2]], false,["H","W","SP","EMP","ENT"])
-display(plt)
-savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_wealth_emp_quantiles.png")
+if calc_mean_quantile
+    LABELS=["1st","2nd","3rd","4th","5th"]
+    for stat = 1:4 # wealth, income, earnings, consumption
+        stat_name = "Wealth"
+        qm = quantile_mean_wealth
+        qm_s = quantile_mean_wealth_s
+        if stat == 2
+            stat_name = "Income"
+            qm = quantile_mean_income
+            qm_s = quantile_mean_income_s
+        elseif stat == 3
+            stat_name = "Earnings"
+            qm = quantile_mean_earnings
+            qm_s = quantile_mean_earnings_s
+        elseif stat == 4
+            stat_name = "Consumption"
+            qm = quantile_mean_consumption
+            qm_s = quantile_mean_consumption_s
+        end
+
+        plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,1,:],qm_s[2,1,:],qm_s[3,1,:],qm_s[4,1,:],qm_s[5,1,:]],LABELS,"Mean of $(stat_name) (quantiles)", [qm[1,1,1],qm[2,1,1],qm[3,1,1],qm[4,1,1],qm[5,1,1]], [qm[1,1,2],qm[2,1,2],qm[3,1,2],qm[4,1,2],qm[5,1,2]], false,["H","W","SP","EMP","ENT"])
+        display(plt)
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_quantiles.png")
+        plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,2,:],qm_s[2,2,:],qm_s[3,2,:],qm_s[4,2,:],qm_s[5,2,:]],LABELS,"Mean of Workers' $(stat_name) (quantiles)", [qm[1,2,1],qm[2,2,1],qm[3,2,1],qm[4,2,1],qm[5,2,1]], [qm[1,2,2],qm[2,2,2],qm[3,2,2],qm[4,2,2],qm[5,2,2]], false,["H","W","SP","EMP","ENT"])
+        display(plt)
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_w_quantiles.png")
+        plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,3,:],qm_s[2,3,:],qm_s[3,3,:],qm_s[4,3,:],qm_s[5,3,:]],LABELS,"Mean of Sole Proprietors' $(stat_name) (quantiles)", [qm[1,3,1],qm[2,3,1],qm[3,3,1],qm[4,3,1],qm[5,3,1]], [qm[1,3,2],qm[2,3,2],qm[3,3,2],qm[4,3,2],qm[5,3,2]], false,["H","W","SP","EMP","ENT"])
+        display(plt)
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_sp_quantiles.png")
+        plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,4,:],qm_s[2,4,:],qm_s[3,4,:],qm_s[4,4,:],qm_s[5,4,:]],LABELS,"Mean of Employers' $(stat_name) (quantiles)", [qm[1,4,1],qm[2,4,1],qm[3,4,1],qm[4,4,1],qm[5,4,1]], [qm[1,4,2],qm[2,4,2],qm[3,4,2],qm[4,4,2],qm[5,4,2]], false,["H","W","SP","EMP","ENT"])
+        display(plt)
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_emp_quantiles.png")
+    end
+end
 
 # productivity
 LOCAL_DIR_PRODUCTIVITY = "$(LOCAL_DIR)/Productivity/"
@@ -1035,5 +1312,23 @@ for h = 1:4
 
 end
 
+plt = create_plot(collect(1:T),"Time (Years)", share_W_earnings_in_output_s,"Share of output as Workers' Earnings", share_W_earnings_in_output[1], share_W_earnings_in_output[2], true,"W")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_W_earnings.png")
+plt = create_plot(collect(1:T),"Time (Years)", share_SP_earnings_in_output_s,"Share of output as Sole Proprietors' Earnings", share_SP_earnings_in_output[1], share_SP_earnings_in_output[2], true,"SP")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_SP_earnings.png")
+plt = create_plot(collect(1:T),"Time (Years)", share_EMP_earnings_in_output_s,"Share of output as Employers' Earnings", share_EMP_earnings_in_output[1], share_EMP_earnings_in_output[2], true,"EMP")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_EMP_earnings.png")
+plt = create_plot(collect(1:T),"Time (Years)", share_W_capital_income_in_output_s,"Share of output as Workers' Capital Income", share_W_capital_income_in_output[1], share_W_capital_income_in_output[2], true,"W")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_W_capital_income.png")
+plt = create_plot(collect(1:T),"Time (Years)", share_SP_capital_income_in_output_s,"Share of output as Sole Proprietors' Capital Income", share_SP_capital_income_in_output[1], share_SP_capital_income_in_output[2], true,"SP")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_SP_capital_income.png")
+plt = create_plot(collect(1:T),"Time (Years)", share_EMP_capital_income_in_output_s,"Share of output as Employers' Capital Income", share_EMP_capital_income_in_output[1], share_EMP_capital_income_in_output[2], true,"EMP")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_EMP_capital_income.png")
 
 #end

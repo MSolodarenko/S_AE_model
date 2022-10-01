@@ -10,12 +10,22 @@ using Statistics
 using JLD2
 using ProgressMeter
 
+# global parameters of the approximation objects
+#                               1               2               3               4                       5                   6
+#                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
+GLOBAL_APPROX_PARAMS = [69,3,3,3,6,3]#[35,3,3,3,6,3]
+
+CODENAME = #="SS_2642"#"SS_2065"=#"SS_2092"
+CODENAME = "$(CODENAME)_$(GLOBAL_APPROX_PARAMS[1])"
+# parameters of the model's economy (Italy)
+                    #SS_2642 #SS_2065 #SS_2092 #prev.calibration
+LAMBDA =            #=1.633951#1.405096=#1.665907 #1.513028
 country = "Italy"
-LOCAL_DIR = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/$(country)/"
+LOCAL_DIR = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/$(country)_$(CODENAME)/"
 if Sys.iswindows()
-    LOCAL_DIR = "\\Results\\Fixed_occ_shares\\Lambda_grid\\$(country)\\"
+    LOCAL_DIR = "\\Results\\Fixed_occ_shares\\Lambda_grid\\$(country)_$(CODENAME)\\"
 end
-global_approx_params = [15,3,3,3,6,3]
+global_approx_params = copy(GLOBAL_APPROX_PARAMS)
 
 print_sameline("Loading data from Fixed_occ_shares/Lambda_grid")
 #@load "$(LOCAL_DIR)SSS.jld2" SSS
@@ -32,8 +42,8 @@ temp_is = sortperm(lambdas)
 lambdas = lambdas[temp_is]
 SSS = SSS[temp_is]
 
-num_lambdas = 20#length(lambda) #instead of length(lambda)
-calibrated_lambda = findfirst(x -> x==1.513028, lambdas)
+num_lambdas = length(lambda)#20# #instead of length(lambda)
+calibrated_lambda = findfirst(x -> x==LAMBDA, lambdas)
 
 Rs = zeros(num_lambdas)
 Ws = zeros(num_lambdas)
@@ -54,14 +64,19 @@ Consumptions = zeros(num_lambdas)
 Income_to_outputs = zeros(num_lambdas)
 
 # income, earnings, wealth, consumption
-# All, W, SP, EMP
+# All, W, SP, EMP, ENT
 # lambdas
-means = zeros(4,4,num_lambdas)
-ginis = zeros(4,4,num_lambdas)
-avglogs = zeros(4,4,num_lambdas)
-varlogs = zeros(4,4,num_lambdas)
-avgs = zeros(4,4,num_lambdas)
-vars = zeros(4,4,num_lambdas)
+means = zeros(4,5,num_lambdas)
+ginis = zeros(4,5,num_lambdas)
+avglogs = zeros(4,5,num_lambdas)
+varlogs = zeros(4,5,num_lambdas)
+avgs = zeros(4,5,num_lambdas)
+vars = zeros(4,5,num_lambdas)
+
+quantile_mean_wealth = zeros(5,num_lambdas)
+quantile_mean_wealth_w = zeros(5,num_lambdas)
+quantile_mean_wealth_sp = zeros(5,num_lambdas)
+quantile_mean_wealth_emp = zeros(5,num_lambdas)
 
 interquartile_wealth = zeros(num_lambdas)
 interquintile_wealth = zeros(num_lambdas)
@@ -112,6 +127,9 @@ avg_m_skill = zeros(4,num_lambdas)
 var_w_skill = zeros(4,num_lambdas)
 var_m_skill = zeros(4,num_lambdas)
 
+sum_w_skill = zeros(4,num_lambdas)
+sum_m_skill = zeros(4,num_lambdas)
+
 output_SPs  = zeros(num_lambdas)
 output_EMPs = zeros(num_lambdas)
 
@@ -128,8 +146,8 @@ Capital_productivity_s = zeros(num_lambdas)
 Investment_productivity_s = zeros(num_lambdas)
 
 #throw(error)
-p = Progress(num_lambdas*(3+1+4*4+1+1+4) )
-for i = 1:num_lambdas
+
+@showprogress for i = 1:num_lambdas
     #println("\n$(country) - $(i)/$(num_lambdas)")
     # ss_star = [res, r, w, approx_object, params]
     ss_star = copy(SSS[i])
@@ -156,6 +174,7 @@ for i = 1:num_lambdas
     asset_grid = ss_star[1][3]
     density_distr = ss_star[1][5]
     policy = ss_star[1][4]
+    income = ss_star[1][23] .- wealth
     earnings = ss_star[1][24]
     capital_d = ss_star[1][26]
     labour_d = ss_star[1][29]
@@ -192,13 +211,13 @@ for i = 1:num_lambdas
     # = means, ginis, varlogs
     for s = 1:4 # [1] = income, earnings, wealth, consumption
         # if s == 1
-        stat_distr = income
+        stat_distr = copy(income)
         if s == 2
-            stat_distr = earnings
+            stat_distr = copy(earnings)
         elseif s == 3
-            stat_distr = wealth
+            stat_distr = copy(wealth)
         elseif s == 4
-            stat_distr = consumption
+            stat_distr = copy(consumption)
         end
 
         for h = 1:4 # [2] = All, W, SP, EMP
@@ -300,10 +319,48 @@ for i = 1:num_lambdas
 
     max_a_i = findlast(x->x<1.0-1e-5, cdf)
 
-    cdf_1 = Schumaker(cdf[1:max_a_i]./cdf[max_a_i], asset_grid[1:max_a_i]; extrapolation = (Constant,Linear))
-    cdf_w_1 = Schumaker(cdf_w[1:max_a_i]./cdf_w[max_a_i], asset_grid[1:max_a_i]; extrapolation = (Constant,Linear))
-    cdf_se_1 = Schumaker(cdf_se[1:max_a_i]./cdf_se[max_a_i], asset_grid[1:max_a_i]; extrapolation = (Constant,Linear))
-    cdf_emp_1 = Schumaker(cdf_emp[1:max_a_i]./cdf_emp[max_a_i], asset_grid[1:max_a_i]; extrapolation = (Constant,Linear))
+    cdf_1 = Schumaker(cdf[1:max_a_i]./cdf[max_a_i], asset_grid[1:max_a_i]; extrapolation = (Constant,Constant))
+    cdf_w_1 = Schumaker(cdf_w[1:max_a_i]./cdf_w[max_a_i], asset_grid[1:max_a_i]; extrapolation = (Constant,Constant))
+    cdf_se_1 = Schumaker(cdf_se[1:max_a_i]./cdf_se[max_a_i], asset_grid[1:max_a_i]; extrapolation = (Constant,Constant))
+    cdf_emp_1 = Schumaker(cdf_emp[1:max_a_i]./cdf_emp[max_a_i], asset_grid[1:max_a_i]; extrapolation = (Constant,Constant))
+
+    quantiles = collect(range(0.0;stop=1.0,length=6))
+    quantile_wealth_bounds = evaluate.(cdf_1,quantiles)
+    quantile_wealth_bounds_w = evaluate.(cdf_w_1,quantiles)
+    quantile_wealth_bounds_sp = evaluate.(cdf_se_1,quantiles)
+    quantile_wealth_bounds_emp = evaluate.(cdf_emp_1,quantiles)
+
+    for occ = 1:4
+        if occ==1
+            qwb = quantile_wealth_bounds
+            ad = asset_distr
+        elseif occ==2
+            qwb = quantile_wealth_bounds_w
+            ad = asset_distr_w
+        elseif occ==3
+            qwb = quantile_wealth_bounds_sp
+            ad = asset_distr_se
+        else#if occ==4
+            qwb = quantile_wealth_bounds_emp
+            ad = asset_distr_emp
+        end
+        for q in 1:5
+            m_w_down_down = sum(asset_grid[Int32(floor(qwb[q])):Int32(floor(qwb[q+1]))] .* ad[Int32(floor(qwb[q])):Int32(floor(qwb[q+1]))]) / sum(ad[Int32(floor(qwb[q])):Int32(floor(qwb[q+1]))])
+            m_w_down_up = sum(asset_grid[Int32(floor(qwb[q])):Int32(ceil(qwb[q+1]))] .* ad[Int32(floor(qwb[q])):Int32(ceil(qwb[q+1]))]) / sum(ad[Int32(floor(qwb[q])):Int32(ceil(qwb[q+1]))])
+            m_w_up_down = sum(asset_grid[Int32(ceil(qwb[q])):Int32(floor(qwb[q+1]))] .* ad[Int32(ceil(qwb[q])):Int32(floor(qwb[q+1]))]) / sum(ad[Int32(ceil(qwb[q])):Int32(floor(qwb[q+1]))])
+            m_w_up_up = sum(asset_grid[Int32(ceil(qwb[q])):Int32(ceil(qwb[q+1]))] .* ad[Int32(ceil(qwb[q])):Int32(ceil(qwb[q+1]))]) / sum(ad[Int32(ceil(qwb[q])):Int32(ceil(qwb[q+1]))])
+            qmw = (m_w_down_down+m_w_down_up+m_w_up_down+m_w_up_up)/4
+            if occ==1
+                quantile_mean_wealth[q,i] = qmw
+            elseif occ==2
+                quantile_mean_wealth_w[q,i] = qmw
+            elseif occ==3
+                quantile_mean_wealth_sp[q,i] = qmw
+            else#if occ==4
+                quantile_mean_wealth_emp[q,i] = qmw
+            end
+        end
+    end
 
     #Q3-Q1
     interquartile_wealth[i] = evaluate(cdf_1,0.75) - evaluate(cdf_1,0.25)
@@ -320,8 +377,6 @@ for i = 1:num_lambdas
     interquartile_wealth_emp[i] = evaluate(cdf_emp_1,0.75) - evaluate(cdf_emp_1,0.25)
     interquintile_wealth_emp[i] = evaluate(cdf_emp_1,0.8) - evaluate(cdf_emp_1,0.2)
     interdecile_wealth_emp[i] = evaluate(cdf_emp_1,0.9) - evaluate(cdf_emp_1,0.1)
-
-    next!(p)
 
     findnearest(A::AbstractArray,t) = findmin(abs.(A.-t))[2]
 
@@ -353,7 +408,7 @@ for i = 1:num_lambdas
     gini_wealth_w[i] = sum([ asset_distr_w[y_i]*asset_distr_w[y_j]*abs(asset_grid[y_i]-asset_grid[y_j]) for y_i=1:max_a_i, y_j=1:max_a_i ]) / (2*sum(asset_grid[1:max_a_i].*asset_distr_w[1:max_a_i]))
     gini_wealth_se[i] = sum([ asset_distr_se[y_i]*asset_distr_se[y_j]*abs(asset_grid[y_i]-asset_grid[y_j]) for y_i=1:max_a_i, y_j=1:max_a_i ]) / (2*sum(asset_grid[1:max_a_i].*asset_distr_se[1:max_a_i]))
     gini_wealth_emp[i] = sum([ asset_distr_emp[y_i]*asset_distr_emp[y_j]*abs(asset_grid[y_i]-asset_grid[y_j]) for y_i=1:max_a_i, y_j=1:max_a_i ]) / (2*sum(asset_grid[1:max_a_i].*asset_distr_emp[1:max_a_i]))
-    next!(p)
+
     unlimited_capital_choice = Array{Any}(undef,3)
     for occ in 1:3
         unlimited_capital_choice[occ] = capital_d[occ].<(lambdas[i].*(asset_grid.*ones(size(capital_d[occ]))))
@@ -394,6 +449,9 @@ for i = 1:num_lambdas
 
             var_m_skill[c,i] = sum(m_skill_distr.*(z_m_nodes .- avg_m_skill[c,i]*denumerator).^2)/denumerator
             var_w_skill[c,i] = sum(w_skill_distr.*(z_w_nodes .- avg_w_skill[c,i]*denumerator).^2)/denumerator
+
+            sum_m_skill[c,i] = sum(m_skill_distr.*z_m_nodes)
+            sum_w_skill[c,i] = sum(w_skill_distr.*z_w_nodes)
 
         elseif c==3
             temp_occ = 2
@@ -601,6 +659,8 @@ function create_combined_plot(X::Vector{Float64},XLABEL::String,Ys,YLABELs,YLABE
             push!(COLORS,"red")
         elseif OCCUPATION[y_i]=="EMP"
             push!(COLORS,"green")
+        elseif OCCUPATION[y_i]=="EMP"
+            push!(COLORS,"yellow")
         else
             push!(COLORS,"blue")
         end
@@ -707,6 +767,19 @@ plt = create_plot(C_Ys,"Credit/Output", loges,"Variance of log-earnings", false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_log_earnings.png")
 
+#mean quantiles of wealth
+plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_mean_wealth[1,:], quantile_mean_wealth[2,:], quantile_mean_wealth[3,:], quantile_mean_wealth[4,:], quantile_mean_wealth[5,:]],["1st","2nd","3rd","4th","5th"],"Mean of Wealth (quantiles)",false,["H","W","SP","EMP","ENT"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_combined_credit_to_gdp_mean_wealth_quantiles.png")
+plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_mean_wealth_w[1,:], quantile_mean_wealth_w[2,:], quantile_mean_wealth_w[3,:], quantile_mean_wealth_w[4,:], quantile_mean_wealth_w[5,:]],["1st","2nd","3rd","4th","5th"],"Mean of Workers' Wealth (quantiles)",false,["H","W","SP","EMP","ENT"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_combined_credit_to_gdp_mean_wealth_w_quantiles.png")
+plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_mean_wealth_sp[1,:], quantile_mean_wealth_sp[2,:], quantile_mean_wealth_sp[3,:], quantile_mean_wealth_sp[4,:], quantile_mean_wealth_sp[5,:]],["1st","2nd","3rd","4th","5th"],"Mean of Sole Proprietors' Wealth (quantiles)",false,["H","W","SP","EMP","ENT"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_combined_credit_to_gdp_mean_wealth_sp_quantiles.png")
+plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_mean_wealth_emp[1,:], quantile_mean_wealth_emp[2,:], quantile_mean_wealth_emp[3,:], quantile_mean_wealth_emp[4,:], quantile_mean_wealth_emp[5,:]],["1st","2nd","3rd","4th","5th"],"Mean of Employers' Wealth (quantiles)",false,["H","W","SP","EMP","ENT"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_combined_credit_to_gdp_mean_wealth_emp_quantiles.png")
 
 #Crdit/Output to Gini Workers and Entrepreneurs
 plts = create_plots(C_Ys,"Credit/Output", [giniWs, giniEnts],["Gini for workers' income","Gini for entrepreneurs' income"],false,["W","ENT"])
@@ -743,11 +816,13 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         stat_name = "Consumption"
     end
 
-    CHOICE_NAMES = ["Households","Workers","Sole Proprietors","Employers"]
+    CHOICE_NAMES = ["Households","Workers","Sole Proprietors","Employers","Entrepreneurs"]
 
     # calculate mean
     #means[s,h,i]
     LABELS = ["Mean of $cn' $stat_name" for cn in CHOICE_NAMES]
+    OCCS = ["H","W","SP","EMP","ENT"]
+    #=
     ms = [means[s,3,1:num_lambdas][1:num_lambdas_sp];  fill(NaN, num_lambdas-num_lambdas_sp)]
     plts = create_plots(C_Ys,"Credit/Output", [means[s,1,:], means[s,2,:], ms, means[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:length(plts)
@@ -758,6 +833,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_mean_$(choice_name)_$(stat_name).png")
     end
+    =#
     plts = create_plots(C_Ys,"Credit/Output", [means[s,1,:], means[s,2,:], means[s,3,:], means[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:length(plts)
         display(plts[h])
@@ -766,12 +842,15 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
             choice_name = "SoleProprietors"
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_mean_$(choice_name)_$(stat_name)_full.png")
-    end
 
+        plt = create_plot(C_Ys,"Credit/Output", means[s,h,:],LABELS[h],false,OCCS[h])
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_mean_$(choice_name)_$(stat_name).png")
+    end
 
     # calculate gini coefficent
     #ginis[s,h,i]
     LABELS = ["Gini of $cn' $stat_name" for cn in CHOICE_NAMES]
+    #=
     gs = [ginis[s,3,1:num_lambdas][1:num_lambdas_sp];  fill(NaN, num_lambdas-num_lambdas_sp)]
     plts = create_plots(C_Ys,"Credit/Output", [ginis[s,1,:], ginis[s,2,:], gs, ginis[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:length(plts)
@@ -782,6 +861,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_gini_$(choice_name)_$(stat_name).png")
     end
+    =#
     plts = create_plots(C_Ys,"Credit/Output", [ginis[s,1,:], ginis[s,2,:], ginis[s,3,:], ginis[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:length(plts)
         display(plts[h])
@@ -790,12 +870,26 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
             choice_name = "SoleProprietors"
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_gini_$(choice_name)_$(stat_name)_full.png")
+
+        plt = create_plot(C_Ys,"Credit/Output", ginis[s,h,:],LABELS[h],false,OCCS[h])
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_gini_$(choice_name)_$(stat_name).png")
+    end
+    plts = create_plots(C_Ys,"Credit/Output", [ginis[s,1,:], ginis[s,2,:], ginis[s,3,:], ginis[s,4,:], ginis[s,5,:]],LABELS,false,["H","W","SP","EMP","ENT"])
+    for h = 5
+        display(plts[h])
+        choice_name = CHOICE_NAMES[h]
+        savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_gini_$(choice_name)_$(stat_name)_full.png")
+
+        plt = create_plot(C_Ys,"Credit/Output", ginis[s,h,:],LABELS[h],false,OCCS[h])
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_gini_$(choice_name)_$(stat_name).png")
+
     end
 
 
     # calculate variance of log-s
-    #avglogs[s,h,i]
-    LABELS = ["Average of $cn' Log-$stat_name" for cn in CHOICE_NAMES]
+    #avgs[s,h,i]
+    LABELS = ["Average of $cn' $stat_name" for cn in CHOICE_NAMES]
+    #=
     als = [avglogs[s,3,1:num_lambdas][1:num_lambdas_sp];  fill(NaN, num_lambdas-num_lambdas_sp)]
     plts = create_plots(C_Ys,"Credit/Output", [avglogs[s,1,:], avglogs[s,2,:], als, avglogs[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:length(plts)
@@ -806,23 +900,32 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_log$(stat_name).png")
     end
-    plts = create_plots(C_Ys,"Credit/Output", [avglogs[s,1,:], avglogs[s,2,:], avglogs[s,3,:], avglogs[s,4,:]],LABELS,false,["H","W","SP","EMP"])
+    =#
+    plts = create_plots(C_Ys,"Credit/Output", [avgs[s,1,:], avgs[s,2,:], avgs[s,3,:], avgs[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:length(plts)
         display(plts[h])
         choice_name = CHOICE_NAMES[h]
         if h==3
             choice_name = "SoleProprietors"
         end
-        savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_log$(stat_name)_full.png")
+        savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_$(stat_name)_full.png")
+
+        plt = create_plot(C_Ys,"Credit/Output", avgs[s,h,:],LABELS[h],false,OCCS[h])
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_$(stat_name).png")
+    end
+    plts = create_plots(C_Ys,"Credit/Output", [avgs[s,1,:], avgs[s,2,:], avgs[s,3,:], avgs[s,4,:], avgs[s,5,:]],LABELS,false,["H","W","SP","EMP","ENT"])
+    for h in 5
+        display(plts[h])
+        choice_name = CHOICE_NAMES[h]
+        savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_$(stat_name)_full.png")
+
+        plt = create_plot(C_Ys,"Credit/Output", avgs[s,h,:],LABELS[h],false,OCCS[h])
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_$(stat_name).png")
     end
 
-
-    #varlogs[s,h,i]
-    if s!=3
-        LABELS = ["Variance of $cn' Log-$stat_name" for cn in CHOICE_NAMES]
-    else
-        LABELS = ["Variance of $cn' $stat_name" for cn in CHOICE_NAMES]
-    end
+    #vars[s,h,i]
+    LABELS = ["Variance of $cn' $stat_name" for cn in CHOICE_NAMES]
+    #=
     vls = [varlogs[s,3,1:num_lambdas][1:num_lambdas_sp];  fill(NaN, num_lambdas-num_lambdas_sp)]
     plts = create_plots(C_Ys,"Credit/Output", [varlogs[s,1,:], varlogs[s,2,:], vls, varlogs[s,4,:]],LABELS,false,["H","W","SP","EMP"], 0.0)
     for h in 1:length(plts)
@@ -833,6 +936,84 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_log$(stat_name).png")
     end
+    =#
+    plts = create_plots(C_Ys,"Credit/Output", [vars[s,1,:], vars[s,2,:], vars[s,3,:], vars[s,4,:]],LABELS,false,["H","W","SP","EMP"], 0.0)
+    for h in 1:length(plts)
+        display(plts[h])
+        choice_name = CHOICE_NAMES[h]
+        if h==3
+            choice_name = "SoleProprietors"
+        end
+        savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_$(stat_name)_full.png")
+
+        plt = create_plot(C_Ys,"Credit/Output", vars[s,h,:],LABELS[h],false,OCCS[h])
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_$(stat_name).png")
+    end
+    plts = create_plots(C_Ys,"Credit/Output", [vars[s,1,:], vars[s,2,:], vars[s,3,:], vars[s,4,:], vars[s,5,:]],LABELS,false,["H","W","SP","EMP","ENT"], 0.0)
+    for h in 5
+        display(plts[h])
+        choice_name = CHOICE_NAMES[h]
+        savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_$(stat_name)_full.png")
+
+        plt = create_plot(C_Ys,"Credit/Output", vars[s,h,:],LABELS[h],false,OCCS[h])
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_$(stat_name).png")
+    end
+
+    # calculate variance of log-s
+    #avglogs[s,h,i]
+    LABELS = ["Average of $cn' Log-$stat_name" for cn in CHOICE_NAMES]
+    #=
+    als = [avglogs[s,3,1:num_lambdas][1:num_lambdas_sp];  fill(NaN, num_lambdas-num_lambdas_sp)]
+    plts = create_plots(C_Ys,"Credit/Output", [avglogs[s,1,:], avglogs[s,2,:], als, avglogs[s,4,:]],LABELS,false,["H","W","SP","EMP"])
+    for h in 1:length(plts)
+        display(plts[h])
+        choice_name = CHOICE_NAMES[h]
+        if h==3
+            choice_name = "SoleProprietors"
+        end
+        savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_log$(stat_name).png")
+    end
+    =#
+    plts = create_plots(C_Ys,"Credit/Output", [avglogs[s,1,:], avglogs[s,2,:], avglogs[s,3,:], avglogs[s,4,:]],LABELS,false,["H","W","SP","EMP"])
+    for h in 1:length(plts)
+        display(plts[h])
+        choice_name = CHOICE_NAMES[h]
+        if h==3
+            choice_name = "SoleProprietors"
+        end
+        savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_log$(stat_name)_full.png")
+
+        plt = create_plot(C_Ys,"Credit/Output", avglogs[s,h,:],LABELS[h],false,OCCS[h])
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_log$(stat_name).png")
+    end
+    plts = create_plots(C_Ys,"Credit/Output", [avglogs[s,1,:], avglogs[s,2,:], avglogs[s,3,:], avglogs[s,4,:], avglogs[s,5,:]],LABELS,false,["H","W","SP","EMP","ENT"])
+    for h in 5
+        display(plts[h])
+        choice_name = CHOICE_NAMES[h]
+        savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_log$(stat_name)_full.png")
+
+        plt = create_plot(C_Ys,"Credit/Output", avglogs[s,h,:],LABELS[h],false,OCCS[h])
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_log$(stat_name).png")
+    end
+
+    #varlogs[s,h,i]
+    if s!=3
+        LABELS = ["Variance of $cn' Log-$stat_name" for cn in CHOICE_NAMES]
+    else
+        LABELS = ["Variance of $cn' $stat_name" for cn in CHOICE_NAMES]
+    end
+    #=
+    vls = [varlogs[s,3,1:num_lambdas][1:num_lambdas_sp];  fill(NaN, num_lambdas-num_lambdas_sp)]
+    plts = create_plots(C_Ys,"Credit/Output", [varlogs[s,1,:], varlogs[s,2,:], vls, varlogs[s,4,:]],LABELS,false,["H","W","SP","EMP"], 0.0)
+    for h in 1:length(plts)
+        display(plts[h])
+        choice_name = CHOICE_NAMES[h]
+        if h==3
+            choice_name = "SoleProprietors"
+        end
+        savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_log$(stat_name).png")
+    end
+    =#
     plts = create_plots(C_Ys,"Credit/Output", [varlogs[s,1,:], varlogs[s,2,:], varlogs[s,3,:], varlogs[s,4,:]],LABELS,false,["H","W","SP","EMP"], 0.0)
     for h in 1:length(plts)
         display(plts[h])
@@ -841,6 +1022,18 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
             choice_name = "SoleProprietors"
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_log$(stat_name)_full.png")
+
+        plt = create_plot(C_Ys,"Credit/Output", varlogs[s,h,:],LABELS[h],false,OCCS[h])
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_log$(stat_name).png")
+    end
+    plts = create_plots(C_Ys,"Credit/Output", [varlogs[s,1,:], varlogs[s,2,:], varlogs[s,3,:], varlogs[s,4,:], varlogs[s,5,:]],LABELS,false,["H","W","SP","EMP","ENT"], 0.0)
+    for h in 5
+        display(plts[h])
+        choice_name = CHOICE_NAMES[h]
+        savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_log$(stat_name)_full.png")
+
+        plt = create_plot(C_Ys,"Credit/Output", varlogs[s,h,:],LABELS[h],false,OCCS[h])
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_log$(stat_name).png")
     end
 end
 
@@ -1062,6 +1255,45 @@ plt = create_combined_plot(C_Ys,"Credit/Output", [var_w_skill[1,:], var_w_skill[
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_var_w_skill.png")
 
+LABELS = ["Sum of Managerial Skill across $(occup)" for occup in CHOICE_NAMES]
+plts = create_plots(C_Ys,"Credit/Output", [sum_m_skill[1,:], sum_m_skill[2,:], sum_m_skill[3,:], sum_m_skill[4,:]],LABELS,false,["W","ENT","SP","EMP"])
+for h in 1:length(plts)
+    display(plts[h])
+    occup = CHOICE_NAMES[h]
+    if h==3
+        occup = "SoleProprietors"
+    end
+    savefig(plts[h],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_sum_m_skill_$(occup).png")
+end
+LABELS = ["W","ENT","SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [sum_m_skill[1,:], sum_m_skill[2,:], sum_m_skill[3,:], sum_m_skill[4,:]],LABELS,"Sum of Managerial Skill",false,["W","ENT","SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_sum_m_skill_with_ENT.png")
+LABELS = ["W","SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [sum_m_skill[1,:], sum_m_skill[3,:], sum_m_skill[4,:]],LABELS,"Sum of Managerial Skill",false,["W","SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_sum_m_skill.png")
+
+
+LABELS = ["Sum of Working Skill across $(occup)" for occup in CHOICE_NAMES]
+plts = create_plots(C_Ys,"Credit/Output", [sum_w_skill[1,:], sum_w_skill[2,:], sum_w_skill[3,:], sum_w_skill[4,:]],LABELS,false,["W","ENT","SP","EMP"])
+for h in 1:length(plts)
+    display(plts[h])
+    occup = CHOICE_NAMES[h]
+    if h==3
+        occup = "SoleProprietors"
+    end
+    savefig(plts[h],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_sum_w_skill_$(occup).png")
+end
+LABELS = ["W","ENT","SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [sum_w_skill[1,:], sum_w_skill[2,:], sum_w_skill[3,:], sum_w_skill[4,:]],LABELS,"Sum of Working Skill",false,["W","ENT","SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_sum_w_skill_with_ENT.png")
+LABELS = ["W","SP","EMP"]
+plt = create_combined_plot(C_Ys,"Credit/Output", [sum_w_skill[1,:], sum_w_skill[3,:], sum_w_skill[4,:]],LABELS,"Sum of Working Skill",false,["W","SP","EMP"])
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_sum_w_skill.png")
+
 
 # output by SP
 plt = create_plot(C_Ys,"Credit/Output", output_SPs,"Aggregate output by Sole Proprietors", false, "SP")
@@ -1130,8 +1362,150 @@ for i=1:4
         stat_name="consumption"
     end
 
-    println("Mean of $(stat_name) for H,W,SP,EMP: $(round.(means[i,:,calibrated_lambda];digits=2))")
-    println("Variance of $(stat_name) for H,W,SP,EMP: $(round.(vars[i,:,calibrated_lambda];digits=2))")
-    println("Varlog of $(stat_name) for H,W,SP,EMP: $(round.(varlogs[i,:,calibrated_lambda];digits=2))")
-    println("Gini of $(stat_name) for H,W,SP,EMP: $(round.(ginis[i,:,calibrated_lambda];digits=2))")
+    for j=[4]#1:4
+        if j==1
+            stat_type_name="Mean"
+            stat_type = means
+        elseif j==2
+            stat_type_name="Variance"
+            stat_type = vars
+        elseif j==3
+            stat_type_name="Varlog"
+            stat_type = varlogs
+        else  #i==4
+            stat_type_name="Gini"
+            stat_type = ginis
+        end
+        println("$(stat_type_name) of $(stat_name) for H,W,SP,EMP: $(round.(stat_type[i,:,calibrated_lambda];digits=2))")
+    end
 end
+
+ss_star = SSS[10]
+asset_grid = ss_star[1][3]
+density_distr = ss_star[1][5]
+policy = ss_star[1][4]
+earnings = ss_star[1][24]
+
+wealth = Array{Any}(undef,3)
+income = Array{Any}(undef,3)
+consumpation = Array{Any}(undef,3)
+for occ in 1:3
+    wealth[occ] = ones(size(density_distr[occ])).*asset_grid
+    income[occ] = ss_star[1][23][occ] .- wealth[occ]
+    consumption[occ] = income[occ] .+ wealth[occ] .- policy[occ]
+end
+
+num_of_occs = 4
+
+mean_consumption_to_income_wealth = Array{Any}(undef,num_of_occs)
+var_consumption_to_income_wealth = Array{Any}(undef,num_of_occs)
+std_consumption_to_income_wealth = Array{Any}(undef,num_of_occs)
+
+mean_income_to_income_wealth = Array{Any}(undef,num_of_occs)
+var_income_to_income_wealth = Array{Any}(undef,num_of_occs)
+std_income_to_income_wealth = Array{Any}(undef,num_of_occs)
+
+mean_consumption_to_income = Array{Any}(undef,num_of_occs)
+var_consumption_to_income = Array{Any}(undef,num_of_occs)
+std_consumption_to_income = Array{Any}(undef,num_of_occs)
+
+mean_savings_to_income = Array{Any}(undef,num_of_occs)
+var_savings_to_income = Array{Any}(undef,num_of_occs)
+std_savings_to_income = Array{Any}(undef,num_of_occs)
+
+mean_consumption_to_earnings = Array{Any}(undef,num_of_occs)
+var_consumption_to_earnings = Array{Any}(undef,num_of_occs)
+std_consumption_to_earnings = Array{Any}(undef,num_of_occs)
+
+mean_savings_to_earnings = Array{Any}(undef,num_of_occs)
+var_savings_to_earnings = Array{Any}(undef,num_of_occs)
+std_savings_to_earnings = Array{Any}(undef,num_of_occs)
+
+for i = 1:num_of_occs # H. W, SP, EMP
+    if i == 1
+        mean_consumption_to_income_wealth[i] = sum( [sum((consumption[occ]./ss_star[1][23][occ]).*density_distr[occ]) for occ=1:3])
+        var_consumption_to_income_wealth[i] = sum( [sum((consumption[occ]./ss_star[1][23][occ] .- mean_consumption_to_income_wealth[i]).^2 .*density_distr[occ]) for occ=1:3])
+        std_consumption_to_income_wealth[i] = sqrt(var_consumption_to_income_wealth[i])
+
+
+        mean_income_to_income_wealth[i] = sum( [sum((income[occ]./ss_star[1][23][occ]).*density_distr[occ]) for occ=1:3])
+        var_income_to_income_wealth[i] = sum( [sum((income[occ]./ss_star[1][23][occ] .- mean_income_to_income_wealth[i]).^2 .*density_distr[occ]) for occ=1:3])
+        std_income_to_income_wealth[i] = sqrt(var_income_to_income_wealth[i])
+
+
+        mean_consumption_to_income[i] = sum( [sum((consumption[occ]./income[occ]).*density_distr[occ]) for occ=1:3])
+        var_consumption_to_income[i] = sum( [sum((consumption[occ]./income[occ] .- mean_consumption_to_income[i]).^2 .*density_distr[occ]) for occ=1:3])
+        std_consumption_to_income[i] = sqrt(var_consumption_to_income[i])
+
+        mean_savings_to_income[i] = sum( [sum(((policy[occ].-wealth[occ])./income[occ]).*density_distr[occ]) for occ=1:3])
+        var_savings_to_income[i] = sum( [sum(((policy[occ].-wealth[occ])./income[occ] .- mean_savings_to_income[i]).^2 .*density_distr[occ]) for occ=1:3])
+        std_savings_to_income[i] = sqrt(var_savings_to_income[i])
+
+        mean_consumption_to_earnings[i] = sum( [sum((consumption[occ]./earnings[occ]).*density_distr[occ]) for occ=1:3])
+        var_consumption_to_earnings[i] = sum( [sum((consumption[occ]./earnings[occ] .- mean_consumption_to_earnings[i]).^2 .*density_distr[occ]) for occ=1:3])
+        std_consumption_to_earnings[i] = sqrt(var_consumption_to_earnings[i])
+
+        mean_savings_to_earnings[i] = sum( [sum(((policy[occ].-wealth[occ])./earnings[occ]).*density_distr[occ]) for occ=1:3])
+        var_savings_to_earnings[i] = sum( [sum(((policy[occ].-wealth[occ])./earnings[occ] .- mean_savings_to_earnings[i]).^2 .*density_distr[occ]) for occ=1:3])
+        std_savings_to_earnings[i] = sqrt(var_savings_to_earnings[i])
+    else
+
+        if i==2
+            choice = 1
+        elseif i==3
+            choice = 2
+        elseif i==4
+            choice = 3
+        end
+
+        mean_consumption_to_income_wealth[i] = sum((consumption[choice]./ss_star[1][23][choice]).*density_distr[choice])
+        var_consumption_to_income_wealth[i] = sum((consumption[choice]./ss_star[1][23][choice] .- mean_consumption_to_income_wealth[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
+        mean_consumption_to_income_wealth[i] /= sum(density_distr[choice])
+        std_consumption_to_income_wealth[i] = sqrt(var_consumption_to_income_wealth[i])
+
+
+        mean_income_to_income_wealth[i] = sum((income[choice]./ss_star[1][23][choice]).*density_distr[choice])
+        var_income_to_income_wealth[i] = sum((income[choice]./ss_star[1][23][choice] .- mean_income_to_income_wealth[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
+        mean_income_to_income_wealth[i] /= sum(density_distr[choice])
+        std_income_to_income_wealth[i] = sqrt(var_income_to_income_wealth[i])
+
+
+        mean_consumption_to_income[i] = sum((consumption[choice]./income[choice]).*density_distr[choice])
+        var_consumption_to_income[i] = sum((consumption[choice]./income[choice] .- mean_consumption_to_income[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
+        mean_consumption_to_income[i] /= sum(density_distr[choice])
+        std_consumption_to_income[i] = sqrt(var_consumption_to_income[i])
+
+        mean_savings_to_income[i] = sum(((policy[choice].-wealth[choice])./income[choice]).*density_distr[choice])
+        var_savings_to_income[i] = sum(((policy[choice].-wealth[choice])./income[choice] .- mean_savings_to_income[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
+        mean_savings_to_income[i] /= sum(density_distr[choice])
+        std_savings_to_income[i] = sqrt(var_savings_to_income[i])
+
+        mean_consumption_to_earnings[i] = sum((consumption[choice]./earnings[choice]).*density_distr[choice])
+        var_consumption_to_earnings[i] = sum((consumption[choice]./earnings[choice] .- mean_consumption_to_earnings[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
+        mean_consumption_to_earnings[i] /= sum(density_distr[choice])
+        std_consumption_to_earnings[i] = sqrt(var_consumption_to_earnings[i])
+
+        mean_savings_to_earnings[i] = sum(((policy[choice].-wealth[choice])./earnings[choice]).*density_distr[choice])
+        var_savings_to_earnings[i] = sum(((policy[choice].-wealth[choice])./earnings[choice] .- mean_savings_to_earnings[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
+        mean_savings_to_earnings[i] /= sum(density_distr[choice])
+        std_savings_to_earnings[i] = sqrt(var_savings_to_earnings[i])
+    end
+end
+
+println("Mean of the ratio of C/(Income+Wealth) for H,W,SP,EMP: $(round.(mean_consumption_to_income_wealth;digits=2))")
+println("Std of the ratio of C/(Income+Wealth) for H,W,SP,EMP: $(round.(std_consumption_to_income_wealth;digits=2))")
+
+println("Mean of the ratio of Income/(Income+Wealth) for H,W,SP,EMP: $(round.(mean_income_to_income_wealth;digits=2))")
+println("Std of the ratio of Income/(Income+Wealth) for H,W,SP,EMP: $(round.(std_income_to_income_wealth;digits=2))")
+
+println("Mean of the ratio of C/Income for H,W,SP,EMP: $(round.(mean_consumption_to_income;digits=2))")
+println("Std of the ratio of C/Income for H,W,SP,EMP: $(round.(std_consumption_to_income;digits=2))")
+
+println("Mean of the ratio of Savings/Income for H,W,SP,EMP: $(round.(mean_savings_to_income;digits=2))")
+println("Std of the ratio of Savings/Income for H,W,SP,EMP: $(round.(std_savings_to_income;digits=2))")
+
+println("Mean of the ratio of C/Earnings for H,W,SP,EMP: $(round.(mean_consumption_to_earnings;digits=2))")
+println("Std of the ratio of C/Earnings for H,W,SP,EMP: $(round.(std_consumption_to_earnings;digits=2))")
+
+println("Mean of the ratio of Savings/Earnings for H,W,SP,EMP: $(round.(mean_savings_to_earnings;digits=2))")
+println("Std of the ratio of Savings/Earnings for H,W,SP,EMP: $(round.(std_savings_to_earnings;digits=2))")
