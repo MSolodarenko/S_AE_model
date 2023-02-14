@@ -22,6 +22,232 @@ if Sys.iswindows()
     LOCAL_DIR = "$(@__DIR__)\\Results\\Transitional_dynamics_big_grid\\$(country)_$(CODENAME)\\"
 end
 
+function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::Bool=false, OCCUPATION::String="H", TICKSFONTSIZE::Int64=9)
+    COLOR="blue"
+    if OCCUPATION=="W"
+        COLOR="purple"
+    elseif OCCUPATION=="SP"
+        COLOR="red"
+    elseif OCCUPATION=="EMP"
+        COLOR="green"
+    elseif OCCUPATION=="ENT"
+        COLOR="brown"
+    end
+
+    NUM_YTICKS = 7
+    NUM_XTICKS = 6
+    XTICKS = Int64.(round.(collect(range(0;stop=T,length=NUM_XTICKS))))
+
+    if length(X) <= 10
+        XTICKS = Int64.(round.(collect(range(0;stop=T,step=1))))
+    end
+
+    YLIMS1 = minimum([Y; Y1; Y2])
+    YLIMS2 = maximum([Y; Y1; Y2])
+    #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
+    Y12low = minimum([Y1; Y2])
+    Y12high = maximum([Y1; Y2])
+    SHARElow = (Y12low-YLIMS1)/(YLIMS2-YLIMS1)
+    SHAREmid = (Y12high-Y12low)/(YLIMS2-YLIMS1)
+    SHAREup = (YLIMS2-Y12high)/(YLIMS2-YLIMS1)
+    #display([SHAREup; SHAREmid; SHARElow])
+
+    LOWLENGTH = Int64(round(NUM_YTICKS*SHARElow))
+    YTICKSlow = [YLIMS1]
+    if LOWLENGTH>1
+        YTICKSlow = collect(range(YLIMS1; stop=Y12low, length=LOWLENGTH))
+        STEP = abs(YTICKSlow[2]-YTICKSlow[1])
+        YTICKSlow = YTICKSlow[1:end-1]
+    end
+
+    MIDLENGTH = Int64(round(NUM_YTICKS*SHAREmid))
+    YTICKSmid = []
+    if MIDLENGTH>1
+        YTICKSmid = collect(range(Y12low; stop=Y12high, length=MIDLENGTH))
+        STEP = abs(YTICKSmid[2]-YTICKSmid[1])
+        YTICKSmid = YTICKSmid[2:end-1]
+        YLIMS1 = Y12low-LOWLENGTH*STEP
+        YTICKSlow = collect(range(Y12low; stop=YLIMS1, step=-STEP))[end:-1:1]
+    end
+
+    HIGHLENGTH = Int64(round(NUM_YTICKS*SHAREup))
+    YTICKShigh = []
+    if LOWLENGTH+MIDLENGTH<3
+        YTICKShigh = collect(range(Y12high; stop=YLIMS2, length=HIGHLENGTH))
+    else
+        if HIGHLENGTH==0 && YLIMS2!=Y12high
+            YTICKShigh = [YLIMS2]
+        else
+            YLIMS2 = Y12high+HIGHLENGTH*STEP
+            YTICKShigh = collect(range(Y12high; stop=YLIMS2, step=STEP))
+        end
+    end
+    #YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUM_YTICKS))
+    YTICKS = [YTICKSlow; YTICKSmid; YTICKShigh]
+
+    YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
+    YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
+    #=
+    YPOS = mean(YTICKS[end-1:end])
+    if maximum(Y[calibrated_lambda:calibrated_lambda+4]) > YTICKS[end-1]
+        YPOS = mean(YTICKS[1:2])
+    end
+    =#
+    if IS_Y_PERCENTAGE
+        DIGITS = Int(max(2, round(log10(0.01/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
+        YTICKS = (YTICKS, ["$(round(100*y;digits=DIGITS))%" for y in YTICKS])
+    else
+        DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
+        YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
+    end
+    Y1line = ones(length(Y)+1).*Y1
+    Y2line = ones(length(Y)+1).*Y2
+    if length(Y) == 50
+        Y1line[10+2:end] .= NaN
+        Y2line[1:40] .= NaN
+    elseif length(Y) == 10
+        Y1line[3+2:end] .= NaN
+        Y2line[1:7] .= NaN
+    end
+    plt = plot(collect([0; X]), collect.([[Y1; Y],Y1line,Y2line]),
+                    #color=[COLOR "green" "red"],
+                    color=[COLOR COLOR COLOR],
+                    linestyle=[:solid :dot :dash],
+                    legend=false,
+                    xlabel=XLABEL,
+                    ylabel=YLABEL,
+                    xtickfontsize=TICKSFONTSIZE,
+                    ytickfontsize=TICKSFONTSIZE,
+                    xticks=XTICKS,
+                    yticks = YTICKS,
+                    ylims = YLIMS )
+    # text annotation
+    #=if Y1 != Y2
+        if IS_Y_PERCENTAGE
+            TEXT1 = "Economy at λ=$(round(lambda_1;digits=2)) ($(round(Y1*100;digits=DIGITS+1))%)"
+        else
+            TEXT1 = "Economy at λ=$(round(lambda_1;digits=2)) ($(round(Y1;digits=DIGITS+1)))"
+        end
+        POS = Y1+YLIMMARGIN*1.25
+        if Y1 < Y2
+            POS = Y1-YLIMMARGIN*1.25
+            if POS < YLIMS1-YLIMMARGIN
+                POS = Y1+YLIMMARGIN*1.25
+            end
+        end
+        annotate!([X[end]], POS, text(TEXT1, COLOR, :right, 7))
+
+        if IS_Y_PERCENTAGE
+            TEXT2 = "Economy at λ=$(round(lambda_2;digits=2)) ($(round(Y2*100;digits=DIGITS+1))%)"
+        else
+            TEXT2 = "Economy at λ=$(round(lambda_2;digits=2)) ($(round(Y2;digits=DIGITS+1)))"
+        end
+        POS = Y2-YLIMMARGIN*1.25
+        if POS < YLIMS1-YLIMMARGIN || Y1 < Y2
+            POS = Y2+YLIMMARGIN*1.25
+        end
+        annotate!([X[end]], POS, text(TEXT2, COLOR, :right, 7))
+    end=#
+    return plt
+end
+function create_combined_plot(X,XLABEL::String,Ys,YLABELs,YLABEL,Y1s,Y2s, IS_Y_PERCENTAGE::Bool=false, OCCUPATION=["SP","EMP"], LEGENDPOS=false)
+    NUMYTICKS = 10
+
+    YLIMS1 = minimum([minimum.(Ys); minimum.(Y1s); minimum.(Y2s)])
+    YLIMS2 = maximum([maximum.(Ys); maximum.(Y1s); maximum.(Y2s)])
+
+    YTICKSlow = []
+    YTICKShigh = []
+    try
+        YTICKSlow = collect(range(YLIMS1; stop=0.0, length=Int64(round(NUMYTICKS*(0.0-YLIMS1)/(YLIMS2-YLIMS1)))))
+        STEP = YTICKSlow[2]-YTICKSlow[1]
+        YTICKShigh = collect(range(0.0; stop=YLIMS2+STEP, step=STEP))[2:end]
+        YLIMS2 = YTICKShigh[end]
+    catch e
+        YTICKShigh = collect(range(0.0; stop=YLIMS2, length=Int64(round(NUMYTICKS*(YLIMS2-0.0)/(YLIMS2-YLIMS1)))))
+        STEP = YTICKShigh[2]-YTICKShigh[1]
+        YTICKSlow = collect(range(0.0; stop=YLIMS1-STEP, step=-STEP))[end:-1:2]
+    end
+    YTICKS = [YTICKSlow; YTICKShigh]
+    #YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUMYTICKS))
+    #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
+    YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
+    YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
+
+    COLORS=[]
+    for y_i = 1:length(Ys)
+        if OCCUPATION[y_i]=="W"
+            push!(COLORS,"purple")
+        elseif OCCUPATION[y_i]=="SP"
+            push!(COLORS,"red")
+        elseif OCCUPATION[y_i]=="EMP"
+            push!(COLORS,"green")
+        elseif OCCUPATION[y_i]=="ENT"
+            push!(COLORS,"brown")
+        else
+            push!(COLORS,"blue")
+        end
+
+    end
+
+    if IS_Y_PERCENTAGE
+        DIGITS = Int(max(2, round(log10(0.01/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
+        YTICKS = (YTICKS, ["$(round(100*y;digits=DIGITS))%" for y in YTICKS])
+    else
+        DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
+        YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
+    end
+    plt = plot()
+    for y_i = 1:length(Ys)
+        if YLABELs[y_i] == "W"
+            YLABELs[y_i] = "Workers"
+        elseif YLABELs[y_i] == "SP"
+            YLABELs[y_i] = "Sole Prop."
+        elseif YLABELs[y_i] == "EMP"
+            YLABELs[y_i] = "Employers"
+        elseif YLABELs[y_i] == "ENT"
+            YLABELs[y_i] = "Entrepreneurs"
+        end
+        plot!(plt,collect([0; X]), collect.([[Y1s[y_i]; Ys[y_i]], zeros(length(Ys[y_i])+1)]),
+                        #color=[COLORS[y_i] "green" "red"],
+                        color=[COLORS[y_i] "black"],
+                        linestyle=[:solid :dot],
+                        legend=LEGENDPOS,
+                        xlabel=XLABEL,
+                        label=[YLABELs[y_i] ""],
+                        ylabel = YLABEL,
+                        yticks = YTICKS,
+                        ylims = YLIMS )
+        # text annotation
+        #=if Y1s[y_i] != Y2s[y_i]
+            if IS_Y_PERCENTAGE
+                TEXT1 = "Economy at λ=$(round(lambda_1;digits=2)) ($(round(Y1s[y_i]*100;digits=DIGITS+1))%)"
+            else
+                TEXT1 = "Economy at λ=$(round(lambda_1;digits=2)) ($(round(Y1s[y_i];digits=DIGITS+1)))"
+            end
+            POS = Y1s[y_i]+YLIMMARGIN*1.25
+            if Y1s[y_i] < Y2s[y_i]
+                POS = Y1s[y_i]-YLIMMARGIN*1.25
+                if POS < YLIMS1-YLIMMARGIN
+                    POS = Y1s[y_i]+YLIMMARGIN*1.25
+                end
+            end
+            annotate!([X[end]], POS, text(TEXT1, COLORS[y_i], :right, 7))
+
+            if IS_Y_PERCENTAGE
+                TEXT2 = "Economy at λ=$(round(lambda_2;digits=2)) ($(round(Y2s[y_i]*100;digits=DIGITS+1))%)"
+            else
+                TEXT2 = "Economy at λ=$(round(lambda_2;digits=2)) ($(round(Y2s[y_i];digits=DIGITS+1)))"
+            end
+            POS = Y2s[y_i]-YLIMMARGIN*1.25
+            if POS < YLIMS1-YLIMMARGIN || Y1s[y_i] < Y2s[y_i]
+                POS = Y2s[y_i]+YLIMMARGIN*1.25
+            end
+            annotate!([X[end]], POS, text(TEXT2, COLORS[y_i], :right, 7))
+        end=#
+    end
+    return plt
+end
 # analytical part
 function f()
 
@@ -120,20 +346,39 @@ function f()
 
         occ_choice, income, earnings, = compute_income_profile(a_grid,number_asset_grid,r, w, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes, lambda, delta, gamma, eta, theta, c_e, z_m_nodes, z_w_nodes, number_u_nodes)
 
-        consumption = (income.-policy)
-        wealth = ones(size(init_density_distr)).*asset_grid
-        income = income .- wealth
+        consumption = income .- policy
+        wealth = ones(size(init_density_distr)).*a_grid
+        capital_income = wealth.*r
+        income = income .- wealth#earnings.+capital_income#
+        savings = policy .- wealth
+        #consumption = income.+wealth .- policy
 
         w_choice = Float64.(occ_choice.==1.0)
         sp_choice = Float64.(occ_choice.==2.0)
         emp_choice = Float64.(occ_choice.==3.0)
 
-        return consumption, earnings, income, wealth, occ_choice,w_choice,sp_choice,emp_choice
+        return consumption, earnings, income, wealth, capital_income, savings, occ_choice,w_choice,sp_choice,emp_choice
     end
-    # time periods, [consumption, earnings, income, wealth], [W,SP,EMP]
-    cum_mean_household_measures = zeros(T+1,4,3)
-    # time periods, [consumption, earnings, income, wealth], [W,SP,EMP]*[W,SP,EMP]
-    cum_mean_trans_household_measures = zeros(T+1,4,3,3)
+    function compute_inequality_measures(measure, distr)
+        mean = sum(measure.*distr)
+
+        #variance = sum(((measure.-mean).^2).*distr)/sum(distr)
+        mean /= sum(distr)
+        #=
+        ddc = distr./sum(distr)
+        ddc_vec = vec(ddc)
+        measure_vec = vec(measure)
+        index_non_zero = findall(x-> x>1e-5,ddc_vec)
+        ddc_vec_non_zero = ddc_vec[index_non_zero]
+        measure_vec_non_zero = measure_vec[index_non_zero]
+        gini = sum([ ddc_vec_non_zero[y_i]*ddc_vec_non_zero[y_j]*abs(measure_vec_non_zero[y_i]-measure_vec_non_zero[y_j]) for y_i=1:length(ddc_vec_non_zero), y_j=1:length(ddc_vec_non_zero) ]) / (2*sum(measure_vec_non_zero.*ddc_vec_non_zero))
+        =#
+        return [mean, 0.0,0.0]#variance, gini]
+    end
+    # time periods, [consumption, earnings, income, wealth, capital_income, savings], [W,SP,EMP], [mean, var, gini]
+    cum_household_measures = zeros(T+1,6,3, 3)
+    # time periods, [consumption, earnings, income, wealth, capital_income, savings], [W,SP,EMP]*[W,SP,EMP], [mean, var, gini]
+    cum_trans_household_measures = zeros(T+1,6,3,3, 3)
 
     # compute conditional occupational choice probability after reform
     density_distr_w = copy(init_density_distr_w)
@@ -160,18 +405,18 @@ function f()
     ss_cum_density_distr_emp = copy(ss_init_density_distr_emp)
     ss_cum_occ_trans_matrix = zeros(T+1,3,3)
 
-    ss_consumption, ss_earnings, ss_income, ss_wealth,  = compute_household_measures(ss_policy, ss_1[1][44], ss_1[1][45], lambda_s[1], ss_1[1][3])
-    # time periods, [consumption, earnings, income, wealth], [W,SP,EMP]
-    ss_cum_mean_household_measures = zeros(T+1,4,3)
-    # time periods, [consumption, earnings, income, wealth], [W,SP,EMP]*[W,SP,EMP]
-    ss_cum_mean_trans_household_measures = zeros(T+1,4,3,3)
+    ss_consumption, ss_earnings, ss_income, ss_wealth, ss_capital_income, ss_savings,  = compute_household_measures(ss_policy, ss_1[1][44], ss_1[1][45], lambda_s[1], ss_1[1][3])
+    # time periods, [consumption, earnings, income, wealth, savings], [W,SP,EMP], [mean, var, gini]
+    ss_cum_household_measures = zeros(T+1,6,3, 3)
+    # time periods, [consumption, earnings, income, wealth, savings], [W,SP,EMP]*[W,SP,EMP], [mean, var, gini]
+    ss_cum_trans_household_measures = zeros(T+1,6,3,3, 3)
 
     # t = 0 & iterator = 1
     ss_cum_occ_trans_matrix[1,1,1] = 1.0
     ss_cum_occ_trans_matrix[1,2,2] = 1.0
     ss_cum_occ_trans_matrix[1,3,3] = 1.0
 
-    for (m,o) = collect(Iterators.product(1:4,1:3))
+    Threads.@threads for (m,o) = collect(Iterators.product(1:6,1:3))
         dd = ss_cum_density_distr_w
         if o == 2
             dd = ss_cum_density_distr_sp
@@ -185,8 +430,12 @@ function f()
             measure = ss_income
         elseif m==4
             measure = ss_wealth
+        elseif m==5
+            measure = ss_capital_income
+        elseif m==6
+            measure = ss_savings
         end
-        ss_cum_mean_household_measures[1,m,o] = sum(measure.*dd)/sum(dd)
+        ss_cum_household_measures[1,m,o,:] .= compute_inequality_measures(measure, dd)
         for o2 = 1:3
             occ2 = ss_w_choice
             if o2 == 2
@@ -195,9 +444,9 @@ function f()
                 occ2 = ss_emp_choice
             end
             if sum(dd.*occ2) == 0.0
-                ss_cum_mean_trans_household_measures[1,m,o,o2] = 0.0
+                ss_cum_trans_household_measures[1,m,o,o2,:] .= 0.0
             else
-                ss_cum_mean_trans_household_measures[1,m,o,o2] = sum(measure.*dd.*occ2)/sum(dd.*occ2)
+                ss_cum_trans_household_measures[1,m,o,o2,:] .= compute_inequality_measures(measure.*occ2,dd.*occ2)
             end
             #println_sameline(sum(dd.*occ2))
         end
@@ -207,8 +456,8 @@ function f()
     cum_occ_trans_matrix[1,2,2] = 1.0
     cum_occ_trans_matrix[1,3,3] = 1.0
 
-    cum_mean_household_measures[1,:,:] = copy(ss_cum_mean_household_measures[1,:,:])
-    cum_mean_trans_household_measures[1,:,:,:] = copy(ss_cum_mean_trans_household_measures[1,:,:,:])
+    cum_household_measures[1,:,:,:,:] = copy(ss_cum_household_measures[1,:,:,:,:])
+    cum_trans_household_measures[1,:,:,:,:] = copy(ss_cum_trans_household_measures[1,:,:,:,:])
 
     occ_trans_matrix[1,:,:] = copy(ss_1[1][18])
 
@@ -277,7 +526,7 @@ function f()
     ss_cum_density_distr_sp = copy(ss_cum_density_distr_sp_pr)
     ss_cum_density_distr_emp = copy(ss_cum_density_distr_emp_pr)
 
-    for (m,o) = collect(Iterators.product(1:4,1:3))
+    Threads.@threads for (m,o) = collect(Iterators.product(1:6,1:3))
         dd = ss_cum_density_distr_w
         if o == 2
             dd = ss_cum_density_distr_sp
@@ -291,8 +540,12 @@ function f()
             measure = ss_income
         elseif m==4
             measure = ss_wealth
+        elseif m==5
+            measure = ss_capital_income
+        elseif m==6
+            measure = ss_savings
         end
-        ss_cum_mean_household_measures[2,m,o] = sum(measure.*dd)/sum(dd)
+        ss_cum_household_measures[2,m,o,:] .= compute_inequality_measures(measure, dd)
         for o2 = 1:3
             occ2 = ss_w_choice
             if o2 == 2
@@ -300,29 +553,29 @@ function f()
             elseif o2 == 3
                 occ2 = ss_emp_choice
             end
-            ss_cum_mean_trans_household_measures[2,m,o,o2] = sum(measure.*dd.*occ2)/sum(dd.*occ2)
+            ss_cum_trans_household_measures[2,m,o,o2,:] .= compute_inequality_measures(measure.*occ2,dd.*occ2)
         end
     end
 
     cum_occ_trans_matrix[2,:,:] = copy(ss_cum_occ_trans_matrix[2,:,:])
 
     Threads.@threads for (u_i,(zeta_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes))))
-        temp_d_w = Schumaker(ss_1[1][3], cumsum(ss_cum_density_distr_w[:,u_i,zeta_i,alpha_m_i,alpha_w_i]); extrapolation=(Linear,Linear))
+        temp_d_w = Schumaker(ss_1[1][3], cumsum(ss_cum_density_distr_w[:,u_i,zeta_i,alpha_m_i,alpha_w_i]); extrapolation=(Constant,Constant))
         cum_density_distr_w[:,u_i,zeta_i,alpha_m_i,alpha_w_i] = diff([0.0;evaluate.(temp_d_w, asset_grid)])
         cum_density_distr_w[:,u_i,zeta_i,alpha_m_i,alpha_w_i] .*= sum(ss_cum_density_distr_w[:,u_i,zeta_i,alpha_m_i,alpha_w_i])/sum(cum_density_distr_w[:,u_i,zeta_i,alpha_m_i,alpha_w_i])
 
-        temp_d_sp = Schumaker(ss_1[1][3], cumsum(ss_cum_density_distr_sp[:,u_i,zeta_i,alpha_m_i,alpha_w_i]); extrapolation=(Linear,Linear))
+        temp_d_sp = Schumaker(ss_1[1][3], cumsum(ss_cum_density_distr_sp[:,u_i,zeta_i,alpha_m_i,alpha_w_i]); extrapolation=(Constant,Constant))
         cum_density_distr_sp[:,u_i,zeta_i,alpha_m_i,alpha_w_i] = diff([0.0;evaluate.(temp_d_sp, asset_grid)])
         cum_density_distr_sp[:,u_i,zeta_i,alpha_m_i,alpha_w_i] .*= sum(ss_cum_density_distr_sp[:,u_i,zeta_i,alpha_m_i,alpha_w_i])/sum(cum_density_distr_sp[:,u_i,zeta_i,alpha_m_i,alpha_w_i])
 
-        temp_d_emp = Schumaker(ss_1[1][3], cumsum(ss_cum_density_distr_emp[:,u_i,zeta_i,alpha_m_i,alpha_w_i]); extrapolation=(Linear,Linear))
+        temp_d_emp = Schumaker(ss_1[1][3], cumsum(ss_cum_density_distr_emp[:,u_i,zeta_i,alpha_m_i,alpha_w_i]); extrapolation=(Constant,Constant))
         cum_density_distr_emp[:,u_i,zeta_i,alpha_m_i,alpha_w_i] = diff([0.0;evaluate.(temp_d_emp, asset_grid)])
         cum_density_distr_emp[:,u_i,zeta_i,alpha_m_i,alpha_w_i] .*= sum(ss_cum_density_distr_emp[:,u_i,zeta_i,alpha_m_i,alpha_w_i])/sum(cum_density_distr_emp[:,u_i,zeta_i,alpha_m_i,alpha_w_i])
 
     end
 
-    cum_consumption, cum_earnings, cum_income, cum_wealth, cum_occ_choice,cum_w_choice,cum_sp_choice,cum_emp_choice = compute_household_measures(policy_s[1,:,:,:,:,:], r_s[1], w_s[1], lambda_s[1], asset_grid)
-    for (m,o) = collect(Iterators.product(1:4,1:3))
+    cum_consumption, cum_earnings, cum_income, cum_wealth, cum_capital_income, cum_savings, cum_occ_choice,cum_w_choice,cum_sp_choice,cum_emp_choice = compute_household_measures(policy_s[1,:,:,:,:,:], r_s[1], w_s[1], lambda_s[1], asset_grid)
+    Threads.@threads for (m,o) = collect(Iterators.product(1:6,1:3))
         dd = cum_density_distr_w
         if o == 2
             dd = cum_density_distr_sp
@@ -336,8 +589,12 @@ function f()
             measure = cum_income
         elseif m==4
             measure = cum_wealth
+        elseif m==5
+            measure = cum_capital_income
+        elseif m==6
+            measure = cum_savings
         end
-        cum_mean_household_measures[2,m,o] = sum(measure.*dd)/sum(dd)
+        cum_household_measures[2,m,o,:] .= compute_inequality_measures(measure,dd)
         for o2 = 1:3
             occ2 = cum_w_choice
             if o2 == 2
@@ -345,7 +602,7 @@ function f()
             elseif o2 == 3
                 occ2 = cum_emp_choice
             end
-            cum_mean_trans_household_measures[2,m,o,o2] = sum(measure.*dd.*occ2)/sum(dd.*occ2)
+            cum_trans_household_measures[2,m,o,o2,:] .= compute_inequality_measures(measure.*occ2,dd.*occ2)
         end
     end
 
@@ -477,8 +734,8 @@ function f()
         end
 
         # compute inequality measures
-        cum_consumption, cum_earnings, cum_income, cum_wealth, occ_choice,cum_w_choice,cum_sp_choice,cum_emp_choice = compute_household_measures(policy_s[t+1,:,:,:,:,:], r_s[t+1], w_s[t+1], lambda_s[t+1], asset_grid)
-        for (m,o) = collect(Iterators.product(1:4,1:3))
+        cum_consumption, cum_earnings, cum_income, cum_wealth, cum_capital_income, cum_savings, occ_choice,cum_w_choice,cum_sp_choice,cum_emp_choice = compute_household_measures(policy_s[t+1,:,:,:,:,:], r_s[t+1], w_s[t+1], lambda_s[t+1], asset_grid)
+        Threads.@threads for (m,o) = collect(Iterators.product(1:6,1:3))
             dd = cum_density_distr_w_pr
             if o == 2
                 dd = cum_density_distr_sp_pr
@@ -492,8 +749,12 @@ function f()
                 measure = cum_income
             elseif m==4
                 measure = cum_wealth
+            elseif m==5
+                measure = cum_capital_income
+            elseif m==6
+                measure = cum_savings
             end
-            cum_mean_household_measures[i,m,o] = sum(measure.*dd)/sum(dd)
+            cum_household_measures[i,m,o,:] .= compute_inequality_measures(measure, dd)
             for o2 = 1:3
                 occ2 = cum_w_choice
                 if o2 == 2
@@ -501,7 +762,7 @@ function f()
                 elseif o2 == 3
                     occ2 = cum_emp_choice
                 end
-                cum_mean_trans_household_measures[i,m,o,o2] = sum(measure.*dd.*occ2)/sum(dd.*occ2)
+                cum_trans_household_measures[i,m,o,o2,:] .= compute_inequality_measures(measure.*occ2,dd.*occ2)
             end
         end
 
@@ -545,7 +806,7 @@ function f()
         ss_cum_occ_trans_matrix[i, 3,3] = sum(ss_emp_choice.*ss_cum_density_distr_emp_pr)/sum(ss_init_density_distr_emp)
 
         # inequality measures for steady state
-        for (m,o) = collect(Iterators.product(1:4,1:3))
+        Threads.@threads for (m,o) = collect(Iterators.product(1:6,1:3))
             dd = ss_cum_density_distr_w_pr
             if o == 2
                 dd = ss_cum_density_distr_sp_pr
@@ -559,8 +820,12 @@ function f()
                 measure = ss_income
             elseif m==4
                 measure = ss_wealth
+            elseif m==5
+                measure = ss_capital_income
+            elseif m==6
+                measure = ss_savings
             end
-            ss_cum_mean_household_measures[i,m,o] = sum(measure.*dd)/sum(dd)
+            ss_cum_household_measures[i,m,o,:] .= compute_inequality_measures(measure, dd)
             for o2 = 1:3
                 occ2 = ss_w_choice
                 if o2 == 2
@@ -568,7 +833,7 @@ function f()
                 elseif o2 == 3
                     occ2 = ss_emp_choice
                 end
-                ss_cum_mean_trans_household_measures[i,m,o,o2] = sum(measure.*dd.*occ2)/sum(dd.*occ2)
+                ss_cum_trans_household_measures[i,m,o,o2,:] .= compute_inequality_measures(measure.*occ2,dd.*occ2)
             end
         end
 
@@ -605,115 +870,170 @@ function f()
 
     println_sameline("Final cycle - Done")
 
-    return cum_occ_trans_matrix,ss_cum_occ_trans_matrix, occ_trans_matrix, cum_mean_household_measures,ss_cum_mean_household_measures, cum_mean_trans_household_measures,ss_cum_mean_trans_household_measures
+    return cum_occ_trans_matrix,ss_cum_occ_trans_matrix, occ_trans_matrix, cum_household_measures,ss_cum_household_measures, cum_trans_household_measures,ss_cum_trans_household_measures
 end
-cum_occ_trans_matrix,ss_cum_occ_trans_matrix, occ_trans_matrix, cum_mean_household_measures,ss_cum_mean_household_measures, cum_mean_trans_household_measures,ss_cum_mean_trans_household_measures = f()
+cum_occ_trans_matrix,ss_cum_occ_trans_matrix, occ_trans_matrix, cum_household_measures,ss_cum_household_measures, cum_trans_household_measures,ss_cum_trans_household_measures = f()
 
 # graphing part
-LOCAL_DIR_OCCUPATION = "$(LOCAL_DIR)/Occupation/"
+LOCAL_DIR_OCCUPATION = "$(LOCAL_DIR)/Occupation/Transition/"
 if Sys.iswindows()
-    LOCAL_DIR_OCCUPATION = "$(LOCAL_DIR)\\Occupation\\"
+    LOCAL_DIR_OCCUPATION = "$(LOCAL_DIR)\\Occupation\\Transition\\"
 end
+mkpath(LOCAL_DIR_OCCUPATION)
 
 occ_text = ["W","SP","EMP"]
 
 plts_cum_otm = Array{Any}(undef,3,3)
 plts_cum_ssotm = Array{Any}(undef,3,3)
+cum_diffotm = Array{Any}(undef,3,3)
 plts_cum_diffotm = Array{Any}(undef,3,3)
 plts_cum_wssotm = Array{Any}(undef,3,3)
 
 plts_otm = Array{Any}(undef,3,3)
+plts_otm_zoom = Array{Any}(undef,3,3)
 
 for (i,j) = collect(Iterators.product(1:3,1:3))
-    T = length(cum_occ_trans_matrix[:,i,j])-1
-    plts_cum_otm[i,j] = plot(0:T, cum_occ_trans_matrix[1:T+1,i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
-    plts_cum_ssotm[i,j] = plot(0:T, ss_cum_occ_trans_matrix[1:T+1,i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
-    plts_cum_diffotm[i,j] = plot(0:T, cum_occ_trans_matrix[1:T+1,i,j].-ss_cum_occ_trans_matrix[1:T+1,i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
-    plts_cum_wssotm[i,j] = plot(0:T, [cum_occ_trans_matrix[1:T+1,i,j] ss_cum_occ_trans_matrix[1:T+1,i,j]], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
+    global T = length(cum_occ_trans_matrix[:,i,j])-1
 
-    plts_otm[i,j] = plot(0:T, occ_trans_matrix[1:T+1,i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
+    cum_diffotm[i,j] = cum_occ_trans_matrix[1:T+1,i,j].-ss_cum_occ_trans_matrix[1:T+1,i,j]
+    plts_cum_diffotm[i,j] = plot(0:T, cum_diffotm[i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
+    plts_cum_wssotm[i,j] = plot(1:T, [cum_occ_trans_matrix[2:T+1,i,j] ss_cum_occ_trans_matrix[2:T+1,i,j]], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
+
+    #plts_otm[i,j] = plot(0:T, occ_trans_matrix[1:T+1,i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
+    OCC_ = "W"
+    if i==2
+        OCC_="SP"
+    elseif i==3
+        OCC_="EMP"
+    end
+    plts_otm[i,j] = create_plot(1:T, #="Time (Years)"=#"",occ_trans_matrix[2:T+1,i,j],"$(occ_text[i])->$(occ_text[j])",occ_trans_matrix[1,i,j],occ_trans_matrix[T+1,i,j], true,OCC_, 5)
+    plts_otm_zoom[i,j] = create_plot(1:10, #="Time (Years)"=#"",occ_trans_matrix[2:10+1#=T+1=#,i,j],"$(occ_text[i])->$(occ_text[j])",occ_trans_matrix[1,i,j],occ_trans_matrix[T+1,i,j], true,OCC_, 5)
 
 end
-#=
-# it shows the cumulative share of occupation1 at time 1 who become occupation2 at time t
-plt_cum_otm = plot(plts_cum_otm[1,1],plts_cum_otm[1,2],plts_cum_otm[1,3], plts_cum_otm[2,1],plts_cum_otm[2,2],plts_cum_otm[2,3], plts_cum_otm[3,1],plts_cum_otm[3,2],plts_cum_otm[3,3], layout=(3,3))
-display(plt_cum_otm)
-savefig(plt_cum_otm,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility.png")
-
-# it shows the cumulative share of occupation1 at time 1 who become occupation2 at time t for pre-reform steady state
-plt_cum_ssotm = plot(plts_cum_ssotm[1,1],plts_cum_ssotm[1,2],plts_cum_ssotm[1,3], plts_cum_ssotm[2,1],plts_cum_ssotm[2,2],plts_cum_ssotm[2,3], plts_cum_ssotm[3,1],plts_cum_ssotm[3,2],plts_cum_ssotm[3,3], layout=(3,3))
-display(plt_cum_ssotm)
-savefig(plt_cum_ssotm,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_ss.png")
 
 # it shows the difference between cumulative occupational mobility after reform and pre-reform
+#=
 plt_cum_diffotm = plot(plts_cum_diffotm[1,1],plts_cum_diffotm[1,2],plts_cum_diffotm[1,3], plts_cum_diffotm[2,1],plts_cum_diffotm[2,2],plts_cum_diffotm[2,3], plts_cum_diffotm[3,1],plts_cum_diffotm[3,2],plts_cum_diffotm[3,3], layout=(3,3))
 display(plt_cum_diffotm)
 savefig(plt_cum_diffotm,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_diff_with_ss.png")
 =#
+TT = length(cum_occ_trans_matrix[:,1,1])-1
+ii=1
+LEGENDPOS = :bottomright
+pltW = create_combined_plot(collect(1:TT), "Time (Years)", [cum_diffotm[ii,1][2:end],cum_diffotm[ii,2][2:end],cum_diffotm[ii,3][2:end]], ["W","SP","EMP"],"Occupational shares for Workers from t=0",[cum_diffotm[ii,1][1],cum_diffotm[ii,2][1],cum_diffotm[ii,3][1]],[cum_diffotm[ii,1][end],cum_diffotm[ii,2][end],cum_diffotm[ii,3][end]], true,["W","SP","EMP"],LEGENDPOS)
+display(pltW)
+savefig(pltW,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_W_diff.png")
+
+ii=2
+LEGENDPOS = false
+pltSP = create_combined_plot(collect(1:TT), "Time (Years)", [cum_diffotm[ii,1][2:end],cum_diffotm[ii,2][2:end],cum_diffotm[ii,3][2:end]], ["W","SP","EMP"],"Occupational shares for Sole Prop. from t=0",[cum_diffotm[ii,1][1],cum_diffotm[ii,2][1],cum_diffotm[ii,3][1]],[cum_diffotm[ii,1][end],cum_diffotm[ii,2][end],cum_diffotm[ii,3][end]], true,["W","SP","EMP"],LEGENDPOS)
+display(pltSP)
+savefig(pltSP,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_SP_diff.png")
+
+ii=3
+LEGENDPOS = false
+pltEMP = create_combined_plot(collect(1:TT), "Time (Years)", [cum_diffotm[ii,1][2:end],cum_diffotm[ii,2][2:end],cum_diffotm[ii,3][2:end]], ["W","SP","EMP"],"Occupational shares for Employers from t=0",[cum_diffotm[ii,1][1],cum_diffotm[ii,2][1],cum_diffotm[ii,3][1]],[cum_diffotm[ii,1][end],cum_diffotm[ii,2][end],cum_diffotm[ii,3][end]], true,["W","SP","EMP"],LEGENDPOS)
+display(pltEMP)
+savefig(pltEMP,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_EMP_diff.png")
+
+#plt = plot(pltW,pltSP,pltEMP, layout=(1,3))
+#display(plt)
+#savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_diff_with_ss.png")
+
 # it shows cumulative occupational mobilities after reform and pre-reform
+#=
 plt_cum_wssotm = plot(plts_cum_wssotm[1,1],plts_cum_wssotm[1,2],plts_cum_wssotm[1,3], plts_cum_wssotm[2,1],plts_cum_wssotm[2,2],plts_cum_wssotm[2,3], plts_cum_wssotm[3,1],plts_cum_wssotm[3,2],plts_cum_wssotm[3,3], layout=(3,3))
 display(plt_cum_wssotm)
 savefig(plt_cum_wssotm,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_with_ss.png")
+=#
 
 # it shows the transitional share of occupation1 at time 1 who become occupation2 at time t
 plt_otm = plot(plts_otm[1,1],plts_otm[1,2],plts_otm[1,3], plts_otm[2,1],plts_otm[2,2],plts_otm[2,3], plts_otm[3,1],plts_otm[3,2],plts_otm[3,3], layout=(3,3))
 display(plt_otm)
 savefig(plt_otm,"$(LOCAL_DIR_OCCUPATION)time_occupational_mobility.png")
+plt_otm_zoom = plot(plts_otm_zoom[1,1],plts_otm_zoom[1,2],plts_otm_zoom[1,3], plts_otm_zoom[2,1],plts_otm_zoom[2,2],plts_otm_zoom[2,3], plts_otm_zoom[3,1],plts_otm_zoom[3,2],plts_otm_zoom[3,3], layout=(3,3))
+display(plt_otm_zoom)
+savefig(plt_otm_zoom,"$(LOCAL_DIR_OCCUPATION)time_occupational_mobility_zoomed.png")
 
 # it shows the inequality measures for fixed occupation in time t=1
+#=
+LOCAL_DIR_INEQUALITY = "$(LOCAL_DIR)/Inequality/Transition/"
+if Sys.iswindows()
+    LOCAL_DIR_INEQUALITY = "$(LOCAL_DIR)\\Inequality\\Transition\\"
+end
+mkpath(LOCAL_DIR_INEQUALITY)
+#cum_household_measures
+inequality_measures = ["mean"#=,"variance","gini"=#]
+measures = ["consumption","earnings","income","wealth","capital income","savings"]
+for m = 1:6
+    for im = 1#:3
+        plts_cum_wsshm = Array{Any}(undef,3)
+        for o = 1:3
+            T = length(cum_household_measures[:,m,o,im])-1
+            plts_cum_wsshm[o] = plot(0:T, [cum_household_measures[1:T+1,m,o,im] ss_cum_household_measures[1:T+1,m,o,im]], legend=false,ylabel="$(occ_text[o])'s $(inequality_measures[im]) $(measures[m])")
+
+        end
+        plt_cum_wsshm = plot(plts_cum_wsshm[1],plts_cum_wsshm[2],plts_cum_wsshm[3], layout=(1,3))
+        display(plt_cum_wsshm)
+        savefig(plt_cum_wsshm,"$(LOCAL_DIR_INEQUALITY)time_$(inequality_measures[im])_$(measures[m])_with_ss.png")
+
+        plts_cum_wssmthm = Array{Any}(undef,3,3)
+        for (i,j) = collect(Iterators.product(1:3,1:3))
+            T = length(cum_trans_household_measures[:,m,i,j,im])-1
+            plts_cum_wssmthm[i,j] = plot(0:T, [cum_trans_household_measures[1:T+1,m,i,j,im] ss_cum_trans_household_measures[1:T+1,m,i,j,im]], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
+
+        end
+
+        plt_cum_wssmthm = plot(plts_cum_wssmthm[1,1],plts_cum_wssmthm[1,2],plts_cum_wssmthm[1,3], plts_cum_wssmthm[2,1],plts_cum_wssmthm[2,2],plts_cum_wssmthm[2,3], plts_cum_wssmthm[3,1],plts_cum_wssmthm[3,2],plts_cum_wssmthm[3,3], layout=(3,3))
+        display(plt_cum_wssmthm)
+        savefig(plt_cum_wssmthm,"$(LOCAL_DIR_INEQUALITY)time_cumulative_$(inequality_measures[im])_$(measures[m])_with_ss.png")
+    end
+end
+=#
 
 LOCAL_DIR_INEQUALITY = "$(LOCAL_DIR)/Inequality/Transition/"
 if Sys.iswindows()
     LOCAL_DIR_INEQUALITY = "$(LOCAL_DIR)\\Inequality\\Transition\\"
 end
 mkpath(LOCAL_DIR_INEQUALITY)
-#cum_mean_household_measures
-measures = ["consumption","earnings","income","wealth"]
-for m = 1:4
-    plts_cum_hm = Array{Any}(undef,3)
-    plts_cum_sshm = Array{Any}(undef,3)
-    plts_cum_diffhm = Array{Any}(undef,3)
-    plts_cum_wsshm = Array{Any}(undef,3)
-    for o = 1:3
-        T = length(cum_mean_household_measures[:,m,o])-1
-        plts_cum_hm[o] = plot(0:T, cum_mean_household_measures[1:T+1,m,o], legend=false,ylabel="$(occ_text[o])'s mean $(measures[m])")
-        plts_cum_sshm[o] = plot(0:T, ss_cum_mean_household_measures[1:T+1,m,o], legend=false,ylabel="$(occ_text[o])'s mean $(measures[m]) (pre-reform)")
+occ_text = ["W","SP","EMP"]
+inequality_measures = ["Mean"#=,"variance","gini"=#]
+measures = ["Consumption","Earnings","Income","Wealth","Capital Income","Savings"]
+for m = 1:6
+    for im = 1#:3
+        #=plts_cum_diff_in_diff_hm = Array{Any}(undef,3)
+        for o = 1:3
+            T = length(cum_household_measures[:,m,o,im])-1
 
-        plts_cum_diffhm[o] = plot(0:T, cum_mean_household_measures[1:T+1,m,o].-ss_cum_mean_household_measures[1:T+1,m,o], legend=false,ylabel="$(occ_text[o])'s mean $(measures[m]) (diff)")
-        plts_cum_wsshm[o] = plot(0:T, [cum_mean_household_measures[1:T+1,m,o] ss_cum_mean_household_measures[1:T+1,m,o]], legend=false,ylabel="$(occ_text[o])'s mean $(measures[m])")
+            plts_cum_diff_in_diff_hm[o] = plot(0:T, (cum_household_measures[1:T+1,m,o,im].-ss_cum_household_measures[1:T+1,m,o,im])./cum_household_measures[1,m,o,im], legend=false,ylabel="$(occ_text[o])'s $(inequality_measures[im]) $(measures[m]) (diff-in-diff%)")
 
+        end
+        plt_cum_diff_in_diff_hm = plot(plts_cum_diff_in_diff_hm[1],plts_cum_diff_in_diff_hm[2],plts_cum_diff_in_diff_hm[3], layout=(1,3))
+        display(plt_cum_diff_in_diff_hm)
+        savefig(plt_cum_diff_in_diff_hm,"$(LOCAL_DIR_INEQUALITY)time_$(inequality_measures[im])_$(measures[m])_diff_in_diff.png")
+        =#
+        T = 0
+        cum_diff_percent_hm = Array{Any}(undef,3)
+        cum_diff_hm = Array{Any}(undef,3)
+        for o = 1:3
+            T = length(cum_household_measures[:,m,o,im])-1
+            cum_diff_hm[o] = (cum_household_measures[1:T+1,m,o,im].-ss_cum_household_measures[1:T+1,m,o,im])
+            cum_diff_percent_hm[o] = cum_diff_hm[o]./ss_cum_household_measures[1:T+1,m,o,im]
+        end
+        LEGENDPOS = false
+        if m==1
+            LEGENDPOS = :bottomright
+        end
+        plt = create_combined_plot(collect(1:T),"Time (Years)", [cum_diff_percent_hm[1][2:end],cum_diff_percent_hm[2][2:end],cum_diff_percent_hm[3][2:end]], ["W","SP","EMP"], "$(inequality_measures[im]) $(measures[m]) (diff%)", [cum_diff_percent_hm[1][1],cum_diff_percent_hm[2][1],cum_diff_percent_hm[3][1]],[cum_diff_percent_hm[1][end],cum_diff_percent_hm[2][end],cum_diff_percent_hm[3][end]],true, ["W","SP","EMP"],LEGENDPOS)
+        display(plt)
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_$(inequality_measures[im])_$(measures[m])_diff_percent.png")
+
+        LEGENDPOS = false
+        if m==1
+            LEGENDPOS = :bottomright
+        end
+        plt = create_combined_plot(collect(1:T),"Time (Years)", [cum_diff_hm[1][2:end],cum_diff_hm[2][2:end],cum_diff_hm[3][2:end]], ["W","SP","EMP"], "$(inequality_measures[im]) $(measures[m]) (diff)", [cum_diff_hm[1][1],cum_diff_hm[2][1],cum_diff_hm[3][1]],[cum_diff_hm[1][end],cum_diff_hm[2][end],cum_diff_hm[3][end]],false, ["W","SP","EMP"],LEGENDPOS)
+        display(plt)
+        savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_$(inequality_measures[im])_$(measures[m])_diff.png")
     end
-    #=
-    plt_cum_hm = plot(plts_cum_hm[1],plts_cum_hm[2],plts_cum_hm[3], layout=(1,3))
-    display(plt_cum_hm)
-    savefig(plt_cum_hm,"$(LOCAL_DIR_INEQUALITY)time_mean_$(measures[m]).png")
-
-    plt_cum_sshm = plot(plts_cum_sshm[1],plts_cum_sshm[2],plts_cum_sshm[3], layout=(1,3))
-    display(plt_cum_sshm)
-    savefig(plt_cum_sshm,"$(LOCAL_DIR_INEQUALITY)time_mean_$(measures[m])_ss.png")
-
-    plt_cum_diffhm = plot(plts_cum_diffhm[1],plts_cum_diffhm[2],plts_cum_diffhm[3], layout=(1,3))
-    display(plt_cum_diffhm)
-    savefig(plt_cum_diffhm,"$(LOCAL_DIR_INEQUALITY)time_mean_$(measures[m])_diff.png")
-    =#
-    plt_cum_wsshm = plot(plts_cum_wsshm[1],plts_cum_wsshm[2],plts_cum_wsshm[3], layout=(1,3))
-    display(plt_cum_wsshm)
-    savefig(plt_cum_wsshm,"$(LOCAL_DIR_INEQUALITY)time_mean_$(measures[m])_with_ss.png")
-
-    plts_cum_mthm = Array{Any}(undef,3,3)
-    plts_cum_ssmthm = Array{Any}(undef,3,3)
-    plts_cum_diffmthm = Array{Any}(undef,3,3)
-    plts_cum_wssmthm = Array{Any}(undef,3,3)
-    for (i,j) = collect(Iterators.product(1:3,1:3))
-        T = length(cum_mean_trans_household_measures[:,m,i,j])-1
-        plts_cum_mthm[i,j] = plot(0:T, cum_mean_trans_household_measures[1:T+1,m,i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
-        plts_cum_ssmthm[i,j] = plot(0:T, ss_cum_mean_trans_household_measures[1:T+1,m,i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
-        plts_cum_diffmthm[i,j] = plot(0:T, cum_mean_trans_household_measures[1:T+1,m,i,j].-ss_cum_mean_trans_household_measures[1:T+1,m,i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
-        plts_cum_wssmthm[i,j] = plot(0:T, [cum_mean_trans_household_measures[1:T+1,m,i,j] ss_cum_mean_trans_household_measures[1:T+1,m,i,j]], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
-
-    end
-
-    plt_cum_wssmthm = plot(plts_cum_wssmthm[1,1],plts_cum_wssmthm[1,2],plts_cum_wssmthm[1,3], plts_cum_wssmthm[2,1],plts_cum_wssmthm[2,2],plts_cum_wssmthm[2,3], plts_cum_wssmthm[3,1],plts_cum_wssmthm[3,2],plts_cum_wssmthm[3,3], layout=(3,3))
-    display(plt_cum_wssmthm)
-    savefig(plt_cum_wssmthm,"$(LOCAL_DIR_OCCUPATION)time_cumulative_mean_$(measures[m])_with_ss.png")
 end
