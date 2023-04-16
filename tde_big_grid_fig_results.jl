@@ -90,15 +90,17 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::B
 
     NUM_YTICKS = 10
     NUM_XTICKS = 6
-    XTICKS = Int64.(round.(collect(range(0;stop=T,length=NUM_XTICKS))))
-
+    XTICKS = Int64.(round.(collect(range(0;stop=length(Y),length=NUM_XTICKS))))
     if length(X) <= 25
         if length(X) <= 10
-            XTICKS = Int64.(round.(collect(range(0;stop=T,step=1))))
+            #XTICKS = Int64.(round.(collect(range(0;stop=T,step=1))))
+            XTICKS = Int64.(round.(collect(range(1;stop=length(Y),step=1))))
         else
-            XTICKS = Int64.(round.(collect(range(0;stop=T,step=5))))
+            #XTICKS = Int64.(round.(collect(range(0;stop=length(Y),step=5))))
+            XTICKS = Int64.(round.(collect(range(0;stop=length(Y),step=5))))
         end
     end
+    XTICKS = [1; XTICKS[2:end]]
 
     YLIMS1 = minimum([Y; Y1; Y2])
     YLIMS2 = maximum([Y; Y1; Y2])
@@ -158,16 +160,23 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::B
         DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
         YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
     end
-    Y1line = ones(length(Y)+1).*Y1
-    Y2line = ones(length(Y)+1).*Y2
+    #Y1line = ones(length(Y)+1).*Y1
+    Y1line = ones(length(Y)).*Y1
+    #Y2line = ones(length(Y)+1).*Y2
+    Y2line = ones(length(Y)).*Y2
     if length(Y) == 50
-        Y1line[10+2:end] .= NaN
-        Y2line[1:40] .= NaN
+        #Y1line[10+2:end] .= NaN
+        Y1line[10+1:end] .= NaN
+        #Y2line[1:40] .= NaN
+        Y2line[1:40-1] .= NaN
     elseif length(Y) == 10
-        Y1line[3+2:end] .= NaN
-        Y2line[1:7] .= NaN
+        #Y1line[3+2:end] .= NaN
+        Y1line[3+1:end] .= NaN
+        #Y2line[1:7] .= NaN
+        Y2line[1:8-1] .= NaN
     end
-    plt = plot(collect([0; X]), collect.([[Y1; Y],Y1line,Y2line]),
+    #plt = plot(collect([0; X]), collect.([[Y1; Y],Y1line,Y2line]),
+    plt = plot(collect(X), collect.([Y,Y1line,Y2line]),
                     #color=[COLOR "green" "red"],
                     color=[COLOR COLOR COLOR],
                     linestyle=[:solid :dot :dash],
@@ -221,6 +230,19 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String, IS_Y_PERCENTAGE::Bool=fa
         COLOR="brown"
     end
 
+    NUM_XTICKS = 6
+    XTICKS = Int64.(round.(collect(range(0;stop=length(Y),length=NUM_XTICKS))))
+    if length(X) <= 25
+        if length(X) <= 10
+            #XTICKS = Int64.(round.(collect(range(0;stop=T,step=1))))
+            XTICKS = Int64.(round.(collect(range(1;stop=length(Y),step=1))))
+        else
+            #XTICKS = Int64.(round.(collect(range(0;stop=length(Y),step=5))))
+            XTICKS = Int64.(round.(collect(range(0;stop=length(Y),step=5))))
+        end
+    end
+    XTICKS = [1; XTICKS[2:end]]
+
     YLIMS1 = minimum([Y; 0.0])
     YLIMS2 = maximum([Y; 0.0])
     #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
@@ -240,13 +262,15 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String, IS_Y_PERCENTAGE::Bool=fa
         DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
         YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
     end
-    plt = plot(collect([0; X]), collect.([[0.0; Y],ones(length(Y)+1).*0.0]),
+    #plt = plot(collect([0; X]), collect.([[0.0; Y],ones(length(Y)+1).*0.0]),
+    plt = plot(collect(X), collect.([Y ,ones(length(Y)).*0.0]),
                     #color=[COLOR "green" "red"],
                     color=[COLOR COLOR],
                     linestyle=[:solid :dash],
                     legend=false,
                     xlabel=XLABEL,
                     ylabel=YLABEL,
+                    xticks = XTICKS,
                     yticks = YTICKS,
                     ylims = YLIMS )
 
@@ -254,7 +278,20 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String, IS_Y_PERCENTAGE::Bool=fa
 end
 
 function create_combined_plot(X,XLABEL::String,Ys,YLABELs,YLABEL,Y1s,Y2s, IS_Y_PERCENTAGE::Bool=false, OCCUPATION=["SP","EMP"], LEGENDPOS=false)
+    NUM_XTICKS = 6
+    XTICKS = Int64.(round.(collect(range(0;stop=length(Ys[1]),length=NUM_XTICKS))))
+    if length(X) <= 25
+        if length(X) <= 10
+            #XTICKS = Int64.(round.(collect(range(0;stop=T,step=1))))
+            XTICKS = Int64.(round.(collect(range(1;stop=length(Ys[1]),step=1))))
+        else
+            #XTICKS = Int64.(round.(collect(range(0;stop=length(Y),step=5))))
+            XTICKS = Int64.(round.(collect(range(0;stop=length(Ys[1]),step=5))))
+        end
+    end
+    XTICKS = [1; XTICKS[2:end]]
 
+    NUM_YTICKS = 10
     YLIMS1 = minimum([minimum.(Ys); minimum.(Y1s); minimum.(Y2s)])
     YLIMS2 = maximum([maximum.(Ys); maximum.(Y1s); maximum.(Y2s)])
     #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
@@ -296,11 +333,16 @@ function create_combined_plot(X,XLABEL::String,Ys,YLABELs,YLABEL,Y1s,Y2s, IS_Y_P
         elseif YLABELs[y_i] == "ENT"
             YLABELs[y_i] = "Entrepreneurs"
         end
-        Y1line = ones(length(Ys[y_i])+1).*Y1s[y_i]
-        Y2line = ones(length(Ys[y_i])+1).*Y2s[y_i]
-        Y1line[10+2:end] .= NaN
-        Y2line[1:40] .= NaN
-        plot!(plt,collect([0; X]), collect.([[Y1s[y_i]; Ys[y_i]],Y1line,Y2line]),
+        #Y1line = ones(length(Ys[y_i])+1).*Y1s[y_i]
+        Y1line = ones(length(Ys[y_i])).*Y1s[y_i]
+        #Y2line = ones(length(Ys[y_i])+1).*Y2s[y_i]
+        Y2line = ones(length(Ys[y_i])).*Y2s[y_i]
+        #Y1line[10+2:end] .= NaN
+        Y1line[10+1:end] .= NaN
+        #Y2line[1:40] .= NaN
+        Y2line[1:40-1] .= NaN
+        #plot!(plt,collect([0; X]), collect.([[Y1s[y_i]; Ys[y_i]],Y1line,Y2line]),
+        plot!(plt,collect(X), collect.([Ys[y_i] ,Y1line,Y2line]),
                         #color=[COLORS[y_i] "green" "red"],
                         color=[COLORS[y_i] COLORS[y_i] COLORS[y_i]],
                         linestyle=[:solid :dot :dash],
@@ -308,6 +350,7 @@ function create_combined_plot(X,XLABEL::String,Ys,YLABELs,YLABEL,Y1s,Y2s, IS_Y_P
                         xlabel=XLABEL,
                         label=[YLABELs[y_i] "" ""],
                         ylabel = YLABEL,
+                        xticks = XTICKS,
                         yticks = YTICKS,
                         ylims = YLIMS )
         # text annotation
@@ -351,14 +394,14 @@ r_s = trans_res[3]
 if length(r_s) != T
     r_s = r_s[1:T]
 end
-plt = create_plot(collect(1:T),"Time (Years)", r_s,"Interest rate", r_1, r_2, true)
+plt = create_plot(collect(1:T),"Time (Years)", r_s,""#="Interest rate"=#, r_1, r_2, true)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_interest_rates.png")
 
 w_1 = ss_1[3]
 w_2 = ss_2[3]
 w_s = trans_res[4]
-plt = create_plot(collect(1:T),"Time (Years)", w_s,"Wage", w_1, w_2, false)
+plt = create_plot(collect(1:T),"Time (Years)", w_s,""#="Wage"=#, w_1, w_2, false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_wages.png")
 
@@ -443,7 +486,7 @@ avgs_s = zeros(4,5,T)
 vars_s = zeros(4,5,T)
 
 ##########################
-calc_mean_quantile = false#true#
+calc_mean_quantile = true#false#
 ##########################
 
 quantile_mean_wealth = zeros(5,4,2)
@@ -1116,7 +1159,7 @@ end
 
 #create plots
 
-plt = create_plot(collect(1:T),"Time (Years)", Output_s,"Output", Output_1, Output_2, false)
+plt = create_plot(collect(1:T),"Time (Years)", Output_s,""#="Output"=#, Output_1, Output_2, false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_outputs.png")
 #=
@@ -1132,18 +1175,18 @@ plt = create_plot(collect(1:T),"Time (Years)", Capital_growth_rate_s,"Capital gr
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_capital_growth_rate.png")
 =#
-plt = create_plot(collect(1:T),"Time (Years)", Capital_s./Output_s,"Capital/Output", Capital_1/Output_1, Capital_2/Output_2, false)
+plt = create_plot(collect(1:T),"Time (Years)", Capital_s./Output_s,""#="Capital/Output"=#, Capital_1/Output_1, Capital_2/Output_2, false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_capital_to_outputs.png")
-plt = create_plot(collect(1:T),"Time (Years)", Credit_s[1,:],"Credit", Credit[1,1], Credit[1,2], false)
+plt = create_plot(collect(1:T),"Time (Years)", Credit_s[1,:],""#="Credit"=#, Credit[1,1], Credit[1,2], false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_credits.png")
-plt = create_plot(collect(1:T),"Time (Years)", Credit_to_Output_s,"Credit/Output", Credit_to_Output_1, Credit_to_Output_2, false)
+plt = create_plot(collect(1:T),"Time (Years)", Credit_to_Output_s,""#="Credit/Output"=#, Credit_to_Output_1, Credit_to_Output_2, false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_credit_to_outputs.png")
 
 #plt = create_plot(collect(1:T),"Time (Years)", Income_s,"Income", Income_1, Income_2, false)
-plt = create_plot(collect(1:T),"Time (Years)", means_s[1,1,:],"Income", means[1,1,1], means[1,1,2], false)
+plt = create_plot(collect(1:T),"Time (Years)", means_s[1,1,:],""#="Income"=#, means[1,1,1], means[1,1,2], false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_incomes.png")
 #=
@@ -1152,7 +1195,7 @@ display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_income_growth_rate.png")
 =#
 #plt = create_plot(collect(1:T),"Time (Years)", Consumption_s,"Consumption", Consumption_1, Consumption_2, false)
-plt = create_plot(collect(1:T),"Time (Years)", means_s[4,1,:],"Consumption", means[4,1,1], means[4,1,2], false)
+plt = create_plot(collect(1:T),"Time (Years)", means_s[4,1,:],""#="Consumption"=#, means[4,1,1], means[4,1,2], false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_consumptions.png")
 #=
@@ -1160,10 +1203,10 @@ plt = create_plot(collect(1:T),"Time (Years)", Consumption_growth_rate_s,"Consum
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_consumption_growth_rate.png")
 =#
-plt = create_plot(collect(1:T),"Time (Years)", means_s[2,1,:],"Earnings", means[2,1,1], means[2,1,2], false)
+plt = create_plot(collect(1:T),"Time (Years)", means_s[2,1,:],""#="Earnings"=#, means[2,1,1], means[2,1,2], false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_earnings.png")
-plt = create_plot(collect(1:T),"Time (Years)", means_s[3,1,:],"Wealth", means[3,1,1], means[3,1,2], false)
+plt = create_plot(collect(1:T),"Time (Years)", means_s[3,1,:],""#="Wealth"=#, means[3,1,1], means[3,1,2], false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_wealths.png")
 
@@ -1174,16 +1217,19 @@ if Sys.iswindows()
     LOCAL_DIR_OCCUPATION = "$(LOCAL_DIR)\\Occupation\\"
 end
 mkpath(LOCAL_DIR_OCCUPATION)
-plt = create_plot(collect(1:T),"Time (Years)", occ_Ws_s,"Share of Workers", occ_Ws_1, occ_Ws_2, true, "W")
+#plt = create_plot(collect(1:T),"Time (Years)", occ_Ws_s,"Share of Workers", occ_Ws_1, occ_Ws_2, true, "W")
+plt = create_plot(collect(1:25),"Time (Years)", occ_Ws_s[1:25],""#="Share of Workers"=#, occ_Ws_1, occ_Ws_2, true, "W")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_share_of_workers.png")
-plt = create_plot(collect(1:T),"Time (Years)", occ_ENTs_s,"Share of Entrepreneurs", occ_ENTs_1, occ_ENTs_2, true, "ENT")
-display(plt)
-savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_share_of_entrepreneurs.png")
-plt = create_plot(collect(1:T),"Time (Years)", occ_SPs_s,"Share of Sole Proprietors", occ_SPs_1, occ_SPs_2, true, "SP")
+# plt = create_plot(collect(1:T),"Time (Years)", occ_ENTs_s,"Share of Entrepreneurs", occ_ENTs_1, occ_ENTs_2, true, "ENT")
+# display(plt)
+# savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_share_of_entrepreneurs.png")
+#plt = create_plot(collect(1:T),"Time (Years)", occ_SPs_s,"Share of Sole Proprietors", occ_SPs_1, occ_SPs_2, true, "SP")
+plt = create_plot(collect(1:25),"Time (Years)", occ_SPs_s[1:25],""#="Share of Sole Proprietors"=#, occ_SPs_1, occ_SPs_2, true, "SP")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_share_of_sole_proprietors.png")
-plt = create_plot(collect(1:T),"Time (Years)", occ_EMPs_s,"Share of Employers", occ_EMPs_1, occ_EMPs_2, true, "EMP")
+#plt = create_plot(collect(1:T),"Time (Years)", occ_EMPs_s,"Share of Employers", occ_EMPs_1, occ_EMPs_2, true, "EMP")
+plt = create_plot(collect(1:25),"Time (Years)", occ_EMPs_s[1:25],""#="Share of Employers"=#, occ_EMPs_1, occ_EMPs_2, true, "EMP")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_share_of_employers.png")
 #=
@@ -1191,13 +1237,13 @@ plt = create_combined_plot(collect(1:T),"Time (Years)",[occ_Ws_s,occ_SPs_s,occ_E
 display(plt)
 savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_shares_of_occupations.png")
 =#
-plt1 = create_plot(collect(1:25),"Time (Years)", occ_Ws_s[1:25],"Share of Workers", occ_Ws_1, occ_Ws_2, true, "W", 5)
-plt2 = create_plot(collect(1:25),"Time (Years)", occ_SPs_s[1:25],"Share of Sole Proprietors", occ_SPs_1, occ_SPs_2, true, "SP", 5)
-plt3 = create_plot(collect(1:25),"Time (Years)", occ_EMPs_s[1:25],"Share of Employers", occ_EMPs_1, occ_EMPs_2, true, "EMP", 5)
-plt = plot(plt1,plt2,plt3, layout=(1,3))
-display(plt)
-savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_shares_of_occupations_zoomed_in.png")
-throw(error)
+# plt1 = create_plot(collect(1:25),"Time (Years)", occ_Ws_s[1:25],"Share of Workers", occ_Ws_1, occ_Ws_2, true, "W", 5)
+# plt2 = create_plot(collect(1:25),"Time (Years)", occ_SPs_s[1:25],"Share of Sole Proprietors", occ_SPs_1, occ_SPs_2, true, "SP", 5)
+# plt3 = create_plot(collect(1:25),"Time (Years)", occ_EMPs_s[1:25],"Share of Employers", occ_EMPs_1, occ_EMPs_2, true, "EMP", 5)
+# plt = plot(plt1,plt2,plt3, layout=(1,3))
+# display(plt)
+# savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_shares_of_occupations_zoomed_in.png")
+# throw(error)
 #Share of unconstrained ENT, SP,EMP
 #=
 plt = create_plot(collect(1:T),"Time (Years)", share_ENT_unbound_s,"Share of Unconstrained Entrepreneurs", share_ENT_unbound_1, share_ENT_unbound_2, true, "ENT")
@@ -1253,15 +1299,15 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
             choice_name = "SoleProprietors"
         end
 
-        # calculate mean
-        #means[s,h,i]
-        plt = create_plot(collect(1:T),"Time (Years)", means_s[s,h,:],"Mean of $(CHOICE_NAMES[h])' $stat_name", means[s,h,1], means[s,h,2], false,LOCAL_COLORS[h])
-        display(plt)
-        savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_mean_$(choice_name)_$(stat_name).png")
+        # # calculate mean
+        # #means[s,h,i]
+        # plt = create_plot(collect(1:T),"Time (Years)", means_s[s,h,:],"Mean of $(CHOICE_NAMES[h])' $stat_name", means[s,h,1], means[s,h,2], false,LOCAL_COLORS[h])
+        # display(plt)
+        # savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_mean_$(choice_name)_$(stat_name).png")
 
         # calculate gini coefficent
         #ginis[s,h,i]
-        plt = create_plot(collect(1:T),"Time (Years)", ginis_s[s,h,:],"Gini of $(CHOICE_NAMES[h])' $stat_name", ginis[s,h,1], ginis[s,h,2], false,LOCAL_COLORS[h])
+        plt = create_plot(collect(1:T),"Time (Years)", ginis_s[s,h,:],""#="Gini of $(CHOICE_NAMES[h])' $stat_name"=#, ginis[s,h,1], ginis[s,h,2], false,LOCAL_COLORS[h])
         display(plt)
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_gini_$(choice_name)_$(stat_name).png")
         #=
@@ -1293,7 +1339,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     end
     # calculate mean
     #means[s,h,i]
-    plt = create_combined_plot(collect(1:T),"Time (Years)",[means_s[s,2,:],means_s[s,3,:],means_s[s,4,:]],["W","SP","EMP"],"Mean $stat_name",[means[s,2,1],means[s,3,1],means[s,4,1]],[means[s,2,2],means[s,3,2],means[s,4,2]], false, ["W","SP","EMP"], LEGENDPOS)
+    plt = create_combined_plot(collect(1:T),"Time (Years)",[means_s[s,2,:],means_s[s,3,:],means_s[s,4,:]],["W","SP","EMP"],""#="Mean $stat_name"=#,[means[s,2,1],means[s,3,1],means[s,4,1]],[means[s,2,2],means[s,3,2],means[s,4,2]], false, ["W","SP","EMP"], LEGENDPOS)
     display(plt)
     savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_mean_occupations_$(stat_name).png")
 
@@ -1303,7 +1349,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     end
     # calculate gini coefficent
     #ginis[s,h,i]
-    plt = create_combined_plot(collect(1:T),"Time (Years)",[ginis_s[s,2,:],ginis_s[s,3,:],ginis_s[s,4,:]],["W","SP","EMP"],"Gini $stat_name",[ginis[s,2,1],ginis[s,3,1],ginis[s,4,1]],[ginis[s,2,2],ginis[s,3,2],ginis[s,4,2]], false, ["W","SP","EMP"], LEGENDPOS)
+    plt = create_combined_plot(collect(1:T),"Time (Years)",[ginis_s[s,2,:],ginis_s[s,3,:],ginis_s[s,4,:]],["W","SP","EMP"],""#="Gini $stat_name"=#,[ginis[s,2,1],ginis[s,3,1],ginis[s,4,1]],[ginis[s,2,2],ginis[s,3,2],ginis[s,4,2]], false, ["W","SP","EMP"], LEGENDPOS)
     display(plt)
     savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_gini_occupations_$(stat_name).png")
 
@@ -1330,22 +1376,22 @@ if calc_mean_quantile
         end
 
         LEGENDPOS = false
-        plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,1,:],qm_s[2,1,:],qm_s[3,1,:],qm_s[4,1,:],qm_s[5,1,:]],LABELS,"Mean of $(stat_name) (quantiles)", [qm[1,1,1],qm[2,1,1],qm[3,1,1],qm[4,1,1],qm[5,1,1]], [qm[1,1,2],qm[2,1,2],qm[3,1,2],qm[4,1,2],qm[5,1,2]], false,["H","W","SP","EMP","ENT"], LEGENDPOS)
+        plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,1,:],qm_s[2,1,:],qm_s[3,1,:],qm_s[4,1,:],qm_s[5,1,:]],LABELS,""#="Mean of $(stat_name) (quantiles)"=#, [qm[1,1,1],qm[2,1,1],qm[3,1,1],qm[4,1,1],qm[5,1,1]], [qm[1,1,2],qm[2,1,2],qm[3,1,2],qm[4,1,2],qm[5,1,2]], false,["H","W","SP","EMP","ENT"], LEGENDPOS)
         display(plt)
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_quantiles.png")
 
         LEGENDPOS = false
-        plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,2,:],qm_s[2,2,:],qm_s[3,2,:],qm_s[4,2,:],qm_s[5,2,:]],LABELS,"Mean of Workers' $(stat_name) (quantiles)", [qm[1,2,1],qm[2,2,1],qm[3,2,1],qm[4,2,1],qm[5,2,1]], [qm[1,2,2],qm[2,2,2],qm[3,2,2],qm[4,2,2],qm[5,2,2]], false,["H","W","SP","EMP","ENT"], LEGENDPOS)
+        plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,2,:],qm_s[2,2,:],qm_s[3,2,:],qm_s[4,2,:],qm_s[5,2,:]],LABELS,""#="Mean of Workers' $(stat_name) (quantiles)"=#, [qm[1,2,1],qm[2,2,1],qm[3,2,1],qm[4,2,1],qm[5,2,1]], [qm[1,2,2],qm[2,2,2],qm[3,2,2],qm[4,2,2],qm[5,2,2]], false,["H","W","SP","EMP","ENT"], LEGENDPOS)
         display(plt)
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_w_quantiles.png")
 
         LEGENDPOS = false
-        plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,3,:],qm_s[2,3,:],qm_s[3,3,:],qm_s[4,3,:],qm_s[5,3,:]],LABELS,"Mean of Sole Proprietors' $(stat_name) (quantiles)", [qm[1,3,1],qm[2,3,1],qm[3,3,1],qm[4,3,1],qm[5,3,1]], [qm[1,3,2],qm[2,3,2],qm[3,3,2],qm[4,3,2],qm[5,3,2]], false,["H","W","SP","EMP","ENT"], LEGENDPOS)
+        plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,3,:],qm_s[2,3,:],qm_s[3,3,:],qm_s[4,3,:],qm_s[5,3,:]],LABELS,""#="Mean of Sole Proprietors' $(stat_name) (quantiles)"=#, [qm[1,3,1],qm[2,3,1],qm[3,3,1],qm[4,3,1],qm[5,3,1]], [qm[1,3,2],qm[2,3,2],qm[3,3,2],qm[4,3,2],qm[5,3,2]], false,["H","W","SP","EMP","ENT"], LEGENDPOS)
         display(plt)
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_sp_quantiles.png")
 
         LEGENDPOS = :topright
-        plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,4,:],qm_s[2,4,:],qm_s[3,4,:],qm_s[4,4,:],qm_s[5,4,:]],LABELS,"Mean of Employers' $(stat_name) (quantiles)", [qm[1,4,1],qm[2,4,1],qm[3,4,1],qm[4,4,1],qm[5,4,1]], [qm[1,4,2],qm[2,4,2],qm[3,4,2],qm[4,4,2],qm[5,4,2]], false,["H","W","SP","EMP","ENT"], LEGENDPOS)
+        plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,4,:],qm_s[2,4,:],qm_s[3,4,:],qm_s[4,4,:],qm_s[5,4,:]],LABELS,""#="Mean of Employers' $(stat_name) (quantiles)"=#, [qm[1,4,1],qm[2,4,1],qm[3,4,1],qm[4,4,1],qm[5,4,1]], [qm[1,4,2],qm[2,4,2],qm[3,4,2],qm[4,4,2],qm[5,4,2]], false,["H","W","SP","EMP","ENT"], LEGENDPOS)
         display(plt)
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_emp_quantiles.png")
     end
@@ -1490,49 +1536,49 @@ for h = 1:4
 end
 =#
 
-plt = create_plot(collect(1:T),"Time (Years)", share_W_earnings_in_output_s,"Share of output as Workers' Earnings", share_W_earnings_in_output[1], share_W_earnings_in_output[2], true,"W")
+plt = create_plot(collect(1:T),"Time (Years)", share_W_earnings_in_output_s,""#="Share of output as Workers' Earnings"=#, share_W_earnings_in_output[1], share_W_earnings_in_output[2], true,"W")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_W_earnings.png")
-plt = create_plot(collect(1:T),"Time (Years)", share_SP_earnings_in_output_s,"Share of output as Sole Proprietors' Earnings", share_SP_earnings_in_output[1], share_SP_earnings_in_output[2], true,"SP")
+plt = create_plot(collect(1:T),"Time (Years)", share_SP_earnings_in_output_s,""#="Share of output as Sole Proprietors' Earnings"=#, share_SP_earnings_in_output[1], share_SP_earnings_in_output[2], true,"SP")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_SP_earnings.png")
-plt = create_plot(collect(1:T),"Time (Years)", share_EMP_earnings_in_output_s,"Share of output as Employers' Earnings", share_EMP_earnings_in_output[1], share_EMP_earnings_in_output[2], true,"EMP")
+plt = create_plot(collect(1:T),"Time (Years)", share_EMP_earnings_in_output_s,""#="Share of output as Employers' Earnings"=#, share_EMP_earnings_in_output[1], share_EMP_earnings_in_output[2], true,"EMP")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_EMP_earnings.png")
-plt = create_plot(collect(1:T),"Time (Years)", share_W_capital_income_in_output_s,"Share of output as Workers' Capital Income", share_W_capital_income_in_output[1], share_W_capital_income_in_output[2], true,"W")
+plt = create_plot(collect(1:T),"Time (Years)", share_W_capital_income_in_output_s,""#="Share of output as Workers' Capital Income"=#, share_W_capital_income_in_output[1], share_W_capital_income_in_output[2], true,"W")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_W_capital_income.png")
-plt = create_plot(collect(1:T),"Time (Years)", share_SP_capital_income_in_output_s,"Share of output as Sole Proprietors' Capital Income", share_SP_capital_income_in_output[1], share_SP_capital_income_in_output[2], true,"SP")
+plt = create_plot(collect(1:T),"Time (Years)", share_SP_capital_income_in_output_s,""#="Share of output as Sole Proprietors' Capital Income"=#, share_SP_capital_income_in_output[1], share_SP_capital_income_in_output[2], true,"SP")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_SP_capital_income.png")
-plt = create_plot(collect(1:T),"Time (Years)", share_EMP_capital_income_in_output_s,"Share of output as Employers' Capital Income", share_EMP_capital_income_in_output[1], share_EMP_capital_income_in_output[2], true,"EMP")
+plt = create_plot(collect(1:T),"Time (Years)", share_EMP_capital_income_in_output_s,""#="Share of output as Employers' Capital Income"=#, share_EMP_capital_income_in_output[1], share_EMP_capital_income_in_output[2], true,"EMP")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_EMP_capital_income.png")
 
-using StatsPlots
-earnings_in_output = #=[Output_1.-Output_1;Output_s.-Output_1].*=#[[share_W_earnings_in_output[1];share_W_earnings_in_output_s] [share_SP_earnings_in_output[1];share_SP_earnings_in_output_s] [share_EMP_earnings_in_output[1];share_EMP_earnings_in_output_s]]
-plt = groupedbar(earnings_in_output,
-        bar_position = :stack,
-        xticks=(collect(1:5:T+1), collect(0:5:T)),
-        label=["Workers" "Sole Prop." "Employers"],
-        color=[:purple :red :green],
-        legend=:right,
-        xlabel="Time (Years)",
-        ylabel="Shares of Earnings in Output")
-display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_earnings.png")
-
-capital_income_in_output = #=[Output_1.-Output_1;Output_s.-Output_1].*=#[[share_W_capital_income_in_output[1];share_W_capital_income_in_output_s] [share_SP_capital_income_in_output[1];share_SP_capital_income_in_output_s] [share_EMP_capital_income_in_output[1];share_EMP_capital_income_in_output_s]]
-plt = groupedbar(capital_income_in_output,
-        bar_position = :stack,
-        xticks=(collect(1:5:T+1), collect(0:5:T)),
-        label=["Workers" "Sole Prop." "Employers"],
-        color=[:purple :red :green],
-        legend=:right,
-        xlabel="Time (Years)",
-        ylabel="Shares of Capital Income in Output")
-display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_capital_income.png")
+# using StatsPlots
+# earnings_in_output = #=[Output_1.-Output_1;Output_s.-Output_1].*=#[[share_W_earnings_in_output[1];share_W_earnings_in_output_s] [share_SP_earnings_in_output[1];share_SP_earnings_in_output_s] [share_EMP_earnings_in_output[1];share_EMP_earnings_in_output_s]]
+# plt = groupedbar(earnings_in_output,
+#         bar_position = :stack,
+#         xticks=(collect(1:5:T+1), collect(0:5:T)),
+#         label=["Workers" "Sole Prop." "Employers"],
+#         color=[:purple :red :green],
+#         legend=:right,
+#         xlabel="Time (Years)",
+#         ylabel="Shares of Earnings in Output")
+# display(plt)
+# savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_earnings.png")
+#
+# capital_income_in_output = #=[Output_1.-Output_1;Output_s.-Output_1].*=#[[share_W_capital_income_in_output[1];share_W_capital_income_in_output_s] [share_SP_capital_income_in_output[1];share_SP_capital_income_in_output_s] [share_EMP_capital_income_in_output[1];share_EMP_capital_income_in_output_s]]
+# plt = groupedbar(capital_income_in_output,
+#         bar_position = :stack,
+#         xticks=(collect(1:5:T+1), collect(0:5:T)),
+#         label=["Workers" "Sole Prop." "Employers"],
+#         color=[:purple :red :green],
+#         legend=:right,
+#         xlabel="Time (Years)",
+#         ylabel="Shares of Capital Income in Output")
+# display(plt)
+# savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_capital_income.png")
 
 #end
 

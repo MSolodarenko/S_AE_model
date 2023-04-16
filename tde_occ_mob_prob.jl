@@ -34,14 +34,14 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::B
         COLOR="brown"
     end
 
-    NUM_YTICKS = 7
     NUM_XTICKS = 6
     XTICKS = Int64.(round.(collect(range(0;stop=T,length=NUM_XTICKS))))
-
     if length(X) <= 10
-        XTICKS = Int64.(round.(collect(range(0;stop=T,step=1))))
+        XTICKS = Int64.(round.(collect(range(1;stop=T,step=1))))
     end
+    XTICKS = [1; XTICKS[2:end]]
 
+    NUM_YTICKS = 10
     YLIMS1 = minimum([Y; Y1; Y2])
     YLIMS2 = maximum([Y; Y1; Y2])
     #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
@@ -85,6 +85,15 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::B
     #YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUM_YTICKS))
     YTICKS = [YTICKSlow; YTICKSmid; YTICKShigh]
 
+    if YTICKS[1] > minimum([Y; Y1; Y2])
+        YTICKS[1] = minimum([Y; Y1; Y2])
+        YLIMS1 = minimum([Y; Y1; Y2])
+    end
+    if YTICKS[end] < maximum([Y; Y1; Y2])
+        YTICKS[end] = maximum([Y; Y1; Y2])
+        YLIMS2 = maximum([Y; Y1; Y2])
+    end
+
     YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
     YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
     #=
@@ -100,16 +109,107 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::B
         DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
         YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
     end
-    Y1line = ones(length(Y)+1).*Y1
-    Y2line = ones(length(Y)+1).*Y2
+
+    Y1line = ones(length(Y)).*Y1
+    Y2line = ones(length(Y)).*Y2
     if length(Y) == 50
-        Y1line[10+2:end] .= NaN
-        Y2line[1:40] .= NaN
+        Y1line[10+1:end] .= NaN
+        Y2line[1:40-1] .= NaN
     elseif length(Y) == 10
-        Y1line[3+2:end] .= NaN
-        Y2line[1:7] .= NaN
+        Y1line[3+1:end] .= NaN
+        Y2line[1:8-1] .= NaN
     end
-    plt = plot(collect([0; X]), collect.([[Y1; Y],Y1line,Y2line]),
+    plt = plot(collect(X), collect.([Y, Y1line,Y2line]),
+                    #color=[COLOR "green" "red"],
+                    color=[COLOR COLOR COLOR],
+                    linestyle=[:solid :dot :dash],
+                    legend=false,
+                    xlabel=XLABEL,
+                    ylabel=YLABEL,
+                    xtickfontsize=TICKSFONTSIZE,
+                    ytickfontsize=TICKSFONTSIZE,
+                    xticks=XTICKS,
+                    yticks = YTICKS,
+                    ylims = YLIMS )
+    # text annotation
+    #=if Y1 != Y2
+        if IS_Y_PERCENTAGE
+            TEXT1 = "Economy at λ=$(round(lambda_1;digits=2)) ($(round(Y1*100;digits=DIGITS+1))%)"
+        else
+            TEXT1 = "Economy at λ=$(round(lambda_1;digits=2)) ($(round(Y1;digits=DIGITS+1)))"
+        end
+        POS = Y1+YLIMMARGIN*1.25
+        if Y1 < Y2
+            POS = Y1-YLIMMARGIN*1.25
+            if POS < YLIMS1-YLIMMARGIN
+                POS = Y1+YLIMMARGIN*1.25
+            end
+        end
+        annotate!([X[end]], POS, text(TEXT1, COLOR, :right, 7))
+
+        if IS_Y_PERCENTAGE
+            TEXT2 = "Economy at λ=$(round(lambda_2;digits=2)) ($(round(Y2*100;digits=DIGITS+1))%)"
+        else
+            TEXT2 = "Economy at λ=$(round(lambda_2;digits=2)) ($(round(Y2;digits=DIGITS+1)))"
+        end
+        POS = Y2-YLIMMARGIN*1.25
+        if POS < YLIMS1-YLIMMARGIN || Y1 < Y2
+            POS = Y2+YLIMMARGIN*1.25
+        end
+        annotate!([X[end]], POS, text(TEXT2, COLOR, :right, 7))
+    end=#
+    return plt
+end
+function create_plot(X,XLABEL::String,Y,YLABEL::String, IS_Y_PERCENTAGE::Bool=false, OCCUPATION::String="H", TICKSFONTSIZE::Int64=9)
+    COLOR="blue"
+    if OCCUPATION=="W"
+        COLOR="purple"
+    elseif OCCUPATION=="SP"
+        COLOR="red"
+    elseif OCCUPATION=="EMP"
+        COLOR="green"
+    elseif OCCUPATION=="ENT"
+        COLOR="brown"
+    end
+
+    NUM_XTICKS = 6
+    XTICKS = Int64.(round.(collect(range(0;stop=T,length=NUM_XTICKS))))
+    if length(X) <= 10
+        XTICKS = Int64.(round.(collect(range(1;stop=T,step=1))))
+    end
+    XTICKS = [1; XTICKS[2:end]]
+
+    NUM_YTICKS = 10
+    YLIMS1 = minimum([Y; 0.0])
+    YLIMS2 = maximum([Y; 0.0])
+    #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
+    YTICKSlow = []
+    YTICKShigh = []
+    numYTICKSlow = Int64(round(NUM_YTICKS*(0.0-YLIMS1)/(YLIMS2-YLIMS1)))
+    YTICKSlow = []
+    if numYTICKSlow > 0
+        YTICKSlow = collect(range(YLIMS1; stop=0.0, length=numYTICKSlow+1))[1:end-1]
+    end
+    numYTICKShigh= NUM_YTICKS-numYTICKSlow#Int64(round(NUMYTICKS*(YLIMS2-0.0)/(YLIMS2-YLIMS1)))
+    YTICKShigh = collect(range(0.0; stop=YLIMS2, length=numYTICKShigh+1))[2:end]
+    YTICKS = [YTICKSlow; 0.0; YTICKShigh]
+    YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
+    YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
+    #=
+    YPOS = mean(YTICKS[end-1:end])
+    if maximum(Y[calibrated_lambda:calibrated_lambda+4]) > YTICKS[end-1]
+        YPOS = mean(YTICKS[1:2])
+    end
+    =#
+    if IS_Y_PERCENTAGE
+        DIGITS = Int(max(2, round(log10(0.01/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
+        YTICKS = (YTICKS, ["$(round(100*y;digits=DIGITS))%" for y in YTICKS])
+    else
+        DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
+        YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
+    end
+
+    plt = plot(collect(X), collect.([Y, zeros(length(Y))]),
                     #color=[COLOR "green" "red"],
                     color=[COLOR COLOR COLOR],
                     linestyle=[:solid :dot :dash],
@@ -151,24 +251,34 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::B
     return plt
 end
 function create_combined_plot(X,XLABEL::String,Ys,YLABELs,YLABEL,Y1s,Y2s, IS_Y_PERCENTAGE::Bool=false, OCCUPATION=["SP","EMP"], LEGENDPOS=false)
-    NUMYTICKS = 10
+    NUM_XTICKS = 6
+    XTICKS = Int64.(round.(collect(range(0;stop=T,length=NUM_XTICKS))))
 
+    XTICKS = [1; XTICKS[2:end]]
+
+    NUMYTICKS = 10
     YLIMS1 = minimum([minimum.(Ys); minimum.(Y1s); minimum.(Y2s)])
     YLIMS2 = maximum([maximum.(Ys); maximum.(Y1s); maximum.(Y2s)])
-
     YTICKSlow = []
     YTICKShigh = []
-    try
-        YTICKSlow = collect(range(YLIMS1; stop=0.0, length=Int64(round(NUMYTICKS*(0.0-YLIMS1)/(YLIMS2-YLIMS1)))))
-        STEP = YTICKSlow[2]-YTICKSlow[1]
-        YTICKShigh = collect(range(0.0; stop=YLIMS2+STEP, step=STEP))[2:end]
-        YLIMS2 = YTICKShigh[end]
-    catch e
-        YTICKShigh = collect(range(0.0; stop=YLIMS2, length=Int64(round(NUMYTICKS*(YLIMS2-0.0)/(YLIMS2-YLIMS1)))))
-        STEP = YTICKShigh[2]-YTICKShigh[1]
-        YTICKSlow = collect(range(0.0; stop=YLIMS1-STEP, step=-STEP))[end:-1:2]
+    # try
+    #     YTICKSlow = collect(range(YLIMS1; stop=0.0, length=Int64(round(NUMYTICKS*(0.0-YLIMS1)/(YLIMS2-YLIMS1)))))
+    #     STEP = YTICKSlow[2]-YTICKSlow[1]
+    #     YTICKShigh = collect(range(0.0; stop=YLIMS2+STEP, step=STEP))[2:end]
+    #     YLIMS2 = YTICKShigh[end]
+    # catch e
+    #     YTICKShigh = collect(range(0.0; stop=YLIMS2, length=Int64(round(NUMYTICKS*(YLIMS2-0.0)/(YLIMS2-YLIMS1)))))
+    #     STEP = YTICKShigh[2]-YTICKShigh[1]
+    #     YTICKSlow = collect(range(0.0; stop=YLIMS1-STEP, step=-STEP))[end:-1:2]
+    # end
+    numYTICKSlow = Int64(round(NUMYTICKS*(0.0-YLIMS1)/(YLIMS2-YLIMS1)))
+    YTICKSlow = []
+    if numYTICKSlow > 0
+        YTICKSlow = collect(range(YLIMS1; stop=0.0, length=numYTICKSlow+1))[1:end-1]
     end
-    YTICKS = [YTICKSlow; YTICKShigh]
+    numYTICKShigh= NUMYTICKS-numYTICKSlow#Int64(round(NUMYTICKS*(YLIMS2-0.0)/(YLIMS2-YLIMS1)))
+    YTICKShigh = collect(range(0.0; stop=YLIMS2, length=numYTICKShigh+1))[2:end]
+    YTICKS = [YTICKSlow; 0.0; YTICKShigh]
     #YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUMYTICKS))
     #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
     YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
@@ -208,7 +318,7 @@ function create_combined_plot(X,XLABEL::String,Ys,YLABELs,YLABEL,Y1s,Y2s, IS_Y_P
         elseif YLABELs[y_i] == "ENT"
             YLABELs[y_i] = "Entrepreneurs"
         end
-        plot!(plt,collect([0; X]), collect.([[Y1s[y_i]; Ys[y_i]], zeros(length(Ys[y_i])+1)]),
+        plot!(plt,collect(X), collect.([Ys[y_i], zeros(length(Ys[y_i]))]),
                         #color=[COLORS[y_i] "green" "red"],
                         color=[COLORS[y_i] "black"],
                         linestyle=[:solid :dot],
@@ -216,6 +326,7 @@ function create_combined_plot(X,XLABEL::String,Ys,YLABELs,YLABEL,Y1s,Y2s, IS_Y_P
                         xlabel=XLABEL,
                         label=[YLABELs[y_i] ""],
                         ylabel = YLABEL,
+                        xticks = XTICKS,
                         yticks = YTICKS,
                         ylims = YLIMS )
         # text annotation
@@ -895,68 +1006,73 @@ plts_otm_zoom = Array{Any}(undef,3,3)
 for (i,j) = collect(Iterators.product(1:3,1:3))
     global T = length(cum_occ_trans_matrix[:,i,j])-1
 
-    cum_diffotm[i,j] = cum_occ_trans_matrix[1:T+1,i,j].-ss_cum_occ_trans_matrix[1:T+1,i,j]
-    plts_cum_diffotm[i,j] = plot(0:T, cum_diffotm[i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
-    plts_cum_wssotm[i,j] = plot(1:T, [cum_occ_trans_matrix[2:T+1,i,j] ss_cum_occ_trans_matrix[2:T+1,i,j]], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
-
-    #plts_otm[i,j] = plot(0:T, occ_trans_matrix[1:T+1,i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
     OCC_ = "W"
     if i==2
         OCC_="SP"
     elseif i==3
         OCC_="EMP"
     end
-    plts_otm[i,j] = create_plot(1:T, #="Time (Years)"=#"",occ_trans_matrix[2:T+1,i,j],"$(occ_text[i])->$(occ_text[j])",occ_trans_matrix[1,i,j],occ_trans_matrix[T+1,i,j], true,OCC_, 5)
-    plts_otm_zoom[i,j] = create_plot(1:10, #="Time (Years)"=#"",occ_trans_matrix[2:10+1#=T+1=#,i,j],"$(occ_text[i])->$(occ_text[j])",occ_trans_matrix[1,i,j],occ_trans_matrix[T+1,i,j], true,OCC_, 5)
+
+    cum_diffotm[i,j] = cum_occ_trans_matrix[2:T+1,i,j].-ss_cum_occ_trans_matrix[2:T+1,i,j]
+    plts_cum_diffotm[i,j] = create_plot(1:T, "Time (Years)",cum_diffotm[i,j], ""#="$(occ_text[i])->$(occ_text[j])"=#, true,OCC_)
+    plts_cum_wssotm[i,j] = plot(1:T, [cum_occ_trans_matrix[2:T+1,i,j] ss_cum_occ_trans_matrix[2:T+1,i,j]], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
+
+    #plts_otm[i,j] = plot(0:T, occ_trans_matrix[1:T+1,i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
+
+    plts_otm[i,j] = create_plot(1:T, "Time (Years)",occ_trans_matrix[2:T+1,i,j],""#="$(occ_text[i])->$(occ_text[j])"=#,occ_trans_matrix[1,i,j],occ_trans_matrix[T+1,i,j], true,OCC_)
+    plts_otm_zoom[i,j] = create_plot(1:10, "Time (Years)",occ_trans_matrix[2:10+1#=T+1=#,i,j],""#="$(occ_text[i])->$(occ_text[j])"=#,occ_trans_matrix[1,i,j],occ_trans_matrix[T+1,i,j], true,OCC_)
 
 end
 
 # it shows the difference between cumulative occupational mobility after reform and pre-reform
-#=
-plt_cum_diffotm = plot(plts_cum_diffotm[1,1],plts_cum_diffotm[1,2],plts_cum_diffotm[1,3], plts_cum_diffotm[2,1],plts_cum_diffotm[2,2],plts_cum_diffotm[2,3], plts_cum_diffotm[3,1],plts_cum_diffotm[3,2],plts_cum_diffotm[3,3], layout=(3,3))
-display(plt_cum_diffotm)
-savefig(plt_cum_diffotm,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_diff_with_ss.png")
-=#
-TT = length(cum_occ_trans_matrix[:,1,1])-1
-ii=1
-LEGENDPOS = :bottomright
-pltW = create_combined_plot(collect(1:TT), "Time (Years)", [cum_diffotm[ii,1][2:end],cum_diffotm[ii,2][2:end],cum_diffotm[ii,3][2:end]], ["W","SP","EMP"],"Occupational shares for Workers from t=0",[cum_diffotm[ii,1][1],cum_diffotm[ii,2][1],cum_diffotm[ii,3][1]],[cum_diffotm[ii,1][end],cum_diffotm[ii,2][end],cum_diffotm[ii,3][end]], true,["W","SP","EMP"],LEGENDPOS)
-display(pltW)
-savefig(pltW,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_W_diff.png")
+# plt_cum_diffotm = plot(plts_cum_diffotm[1,1],plts_cum_diffotm[1,2],plts_cum_diffotm[1,3], plts_cum_diffotm[2,1],plts_cum_diffotm[2,2],plts_cum_diffotm[2,3], plts_cum_diffotm[3,1],plts_cum_diffotm[3,2],plts_cum_diffotm[3,3], layout=(3,3))
+# display(plt_cum_diffotm)
+# savefig(plt_cum_diffotm,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_diff_with_ss.png")
 
-ii=2
-LEGENDPOS = false
-pltSP = create_combined_plot(collect(1:TT), "Time (Years)", [cum_diffotm[ii,1][2:end],cum_diffotm[ii,2][2:end],cum_diffotm[ii,3][2:end]], ["W","SP","EMP"],"Occupational shares for Sole Prop. from t=0",[cum_diffotm[ii,1][1],cum_diffotm[ii,2][1],cum_diffotm[ii,3][1]],[cum_diffotm[ii,1][end],cum_diffotm[ii,2][end],cum_diffotm[ii,3][end]], true,["W","SP","EMP"],LEGENDPOS)
-display(pltSP)
-savefig(pltSP,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_SP_diff.png")
-
-ii=3
-LEGENDPOS = false
-pltEMP = create_combined_plot(collect(1:TT), "Time (Years)", [cum_diffotm[ii,1][2:end],cum_diffotm[ii,2][2:end],cum_diffotm[ii,3][2:end]], ["W","SP","EMP"],"Occupational shares for Employers from t=0",[cum_diffotm[ii,1][1],cum_diffotm[ii,2][1],cum_diffotm[ii,3][1]],[cum_diffotm[ii,1][end],cum_diffotm[ii,2][end],cum_diffotm[ii,3][end]], true,["W","SP","EMP"],LEGENDPOS)
-display(pltEMP)
-savefig(pltEMP,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_EMP_diff.png")
+# TT = length(cum_occ_trans_matrix[:,1,1])-1
+# ii=1
+# LEGENDPOS = :bottomright
+# pltW = create_combined_plot(collect(1:TT), "Time (Years)", [cum_diffotm[ii,1][2:end],cum_diffotm[ii,2][2:end],cum_diffotm[ii,3][2:end]], ["W","SP","EMP"],"Occupational shares for Workers from t=0",[cum_diffotm[ii,1][1],cum_diffotm[ii,2][1],cum_diffotm[ii,3][1]],[cum_diffotm[ii,1][end],cum_diffotm[ii,2][end],cum_diffotm[ii,3][end]], true,["W","SP","EMP"],LEGENDPOS)
+# display(pltW)
+# savefig(pltW,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_W_diff.png")
+#
+# ii=2
+# LEGENDPOS = false
+# pltSP = create_combined_plot(collect(1:TT), "Time (Years)", [cum_diffotm[ii,1][2:end],cum_diffotm[ii,2][2:end],cum_diffotm[ii,3][2:end]], ["W","SP","EMP"],"Occupational shares for Sole Prop. from t=0",[cum_diffotm[ii,1][1],cum_diffotm[ii,2][1],cum_diffotm[ii,3][1]],[cum_diffotm[ii,1][end],cum_diffotm[ii,2][end],cum_diffotm[ii,3][end]], true,["W","SP","EMP"],LEGENDPOS)
+# display(pltSP)
+# savefig(pltSP,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_SP_diff.png")
+#
+# ii=3
+# LEGENDPOS = false
+# pltEMP = create_combined_plot(collect(1:TT), "Time (Years)", [cum_diffotm[ii,1][2:end],cum_diffotm[ii,2][2:end],cum_diffotm[ii,3][2:end]], ["W","SP","EMP"],"Occupational shares for Employers from t=0",[cum_diffotm[ii,1][1],cum_diffotm[ii,2][1],cum_diffotm[ii,3][1]],[cum_diffotm[ii,1][end],cum_diffotm[ii,2][end],cum_diffotm[ii,3][end]], true,["W","SP","EMP"],LEGENDPOS)
+# display(pltEMP)
+# savefig(pltEMP,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_EMP_diff.png")
 
 #plt = plot(pltW,pltSP,pltEMP, layout=(1,3))
 #display(plt)
 #savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_diff_with_ss.png")
 
 # it shows cumulative occupational mobilities after reform and pre-reform
-#=
-plt_cum_wssotm = plot(plts_cum_wssotm[1,1],plts_cum_wssotm[1,2],plts_cum_wssotm[1,3], plts_cum_wssotm[2,1],plts_cum_wssotm[2,2],plts_cum_wssotm[2,3], plts_cum_wssotm[3,1],plts_cum_wssotm[3,2],plts_cum_wssotm[3,3], layout=(3,3))
-display(plt_cum_wssotm)
-savefig(plt_cum_wssotm,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_with_ss.png")
-=#
+# plt_cum_wssotm = plot(plts_cum_wssotm[1,1],plts_cum_wssotm[1,2],plts_cum_wssotm[1,3], plts_cum_wssotm[2,1],plts_cum_wssotm[2,2],plts_cum_wssotm[2,3], plts_cum_wssotm[3,1],plts_cum_wssotm[3,2],plts_cum_wssotm[3,3], layout=(3,3))
+# display(plt_cum_wssotm)
+# savefig(plt_cum_wssotm,"$(LOCAL_DIR_OCCUPATION)time_cumulative_occupational_mobility_with_ss.png")
+
 
 # it shows the transitional share of occupation1 at time 1 who become occupation2 at time t
-plt_otm = plot(plts_otm[1,1],plts_otm[1,2],plts_otm[1,3], plts_otm[2,1],plts_otm[2,2],plts_otm[2,3], plts_otm[3,1],plts_otm[3,2],plts_otm[3,3], layout=(3,3))
-display(plt_otm)
-savefig(plt_otm,"$(LOCAL_DIR_OCCUPATION)time_occupational_mobility.png")
-plt_otm_zoom = plot(plts_otm_zoom[1,1],plts_otm_zoom[1,2],plts_otm_zoom[1,3], plts_otm_zoom[2,1],plts_otm_zoom[2,2],plts_otm_zoom[2,3], plts_otm_zoom[3,1],plts_otm_zoom[3,2],plts_otm_zoom[3,3], layout=(3,3))
-display(plt_otm_zoom)
-savefig(plt_otm_zoom,"$(LOCAL_DIR_OCCUPATION)time_occupational_mobility_zoomed.png")
+# plt_otm = plot(plts_otm[1,1],plts_otm[1,2],plts_otm[1,3], plts_otm[2,1],plts_otm[2,2],plts_otm[2,3], plts_otm[3,1],plts_otm[3,2],plts_otm[3,3], layout=(3,3))
+# display(plt_otm)
+# savefig(plt_otm,"$(LOCAL_DIR_OCCUPATION)time_occupational_mobility.png")
+for (i,j) = collect(Iterators.product(1:3,1:3))
+    plt = plts_otm_zoom[i,j]
+    display(plt)
+    savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_occupational_mobility_zoomed_$(occ_text[i])_$(occ_text[j]).png")
+end
+# plt_otm_zoom = plot(plts_otm_zoom[1,1],plts_otm_zoom[1,2],plts_otm_zoom[1,3], plts_otm_zoom[2,1],plts_otm_zoom[2,2],plts_otm_zoom[2,3], plts_otm_zoom[3,1],plts_otm_zoom[3,2],plts_otm_zoom[3,3], layout=(3,3))
+# display(plt_otm_zoom)
+# savefig(plt_otm_zoom,"$(LOCAL_DIR_OCCUPATION)time_occupational_mobility_zoomed.png")
 
 # it shows the inequality measures for fixed occupation in time t=1
-#=
+
 LOCAL_DIR_INEQUALITY = "$(LOCAL_DIR)/Inequality/Transition/"
 if Sys.iswindows()
     LOCAL_DIR_INEQUALITY = "$(LOCAL_DIR)\\Inequality\\Transition\\"
@@ -965,31 +1081,31 @@ mkpath(LOCAL_DIR_INEQUALITY)
 #cum_household_measures
 inequality_measures = ["mean"#=,"variance","gini"=#]
 measures = ["consumption","earnings","income","wealth","capital income","savings"]
-for m = 1:6
+for m = 4#1:6
     for im = 1#:3
-        plts_cum_wsshm = Array{Any}(undef,3)
-        for o = 1:3
-            T = length(cum_household_measures[:,m,o,im])-1
-            plts_cum_wsshm[o] = plot(0:T, [cum_household_measures[1:T+1,m,o,im] ss_cum_household_measures[1:T+1,m,o,im]], legend=false,ylabel="$(occ_text[o])'s $(inequality_measures[im]) $(measures[m])")
-
-        end
-        plt_cum_wsshm = plot(plts_cum_wsshm[1],plts_cum_wsshm[2],plts_cum_wsshm[3], layout=(1,3))
-        display(plt_cum_wsshm)
-        savefig(plt_cum_wsshm,"$(LOCAL_DIR_INEQUALITY)time_$(inequality_measures[im])_$(measures[m])_with_ss.png")
+        # plts_cum_wsshm = Array{Any}(undef,3)
+        # for o = 1:3
+        #     T = length(cum_household_measures[:,m,o,im])-1
+        #     plts_cum_wsshm[o] = plot(0:T, [cum_household_measures[1:T+1,m,o,im] ss_cum_household_measures[1:T+1,m,o,im]], legend=false,ylabel="$(occ_text[o])'s $(inequality_measures[im]) $(measures[m])")
+        #
+        # end
+        # plt_cum_wsshm = plot(plts_cum_wsshm[1],plts_cum_wsshm[2],plts_cum_wsshm[3], layout=(1,3))
+        # display(plt_cum_wsshm)
+        #savefig(plt_cum_wsshm,"$(LOCAL_DIR_INEQUALITY)time_$(inequality_measures[im])_$(measures[m])_with_ss.png")
 
         plts_cum_wssmthm = Array{Any}(undef,3,3)
         for (i,j) = collect(Iterators.product(1:3,1:3))
             T = length(cum_trans_household_measures[:,m,i,j,im])-1
-            plts_cum_wssmthm[i,j] = plot(0:T, [cum_trans_household_measures[1:T+1,m,i,j,im] ss_cum_trans_household_measures[1:T+1,m,i,j,im]], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
+            plts_cum_wssmthm[i,j] = plot(1:T, cum_trans_household_measures[2:T+1,m,i,j,im].-ss_cum_trans_household_measures[2:T+1,m,i,j,im], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
 
         end
 
         plt_cum_wssmthm = plot(plts_cum_wssmthm[1,1],plts_cum_wssmthm[1,2],plts_cum_wssmthm[1,3], plts_cum_wssmthm[2,1],plts_cum_wssmthm[2,2],plts_cum_wssmthm[2,3], plts_cum_wssmthm[3,1],plts_cum_wssmthm[3,2],plts_cum_wssmthm[3,3], layout=(3,3))
         display(plt_cum_wssmthm)
-        savefig(plt_cum_wssmthm,"$(LOCAL_DIR_INEQUALITY)time_cumulative_$(inequality_measures[im])_$(measures[m])_with_ss.png")
+        #savefig(plt_cum_wssmthm,"$(LOCAL_DIR_INEQUALITY)time_cumulative_$(inequality_measures[im])_$(measures[m])_with_ss.png")
     end
 end
-=#
+
 
 LOCAL_DIR_INEQUALITY = "$(LOCAL_DIR)/Inequality/Transition/"
 if Sys.iswindows()
@@ -998,7 +1114,7 @@ end
 mkpath(LOCAL_DIR_INEQUALITY)
 occ_text = ["W","SP","EMP"]
 inequality_measures = ["Mean"#=,"variance","gini"=#]
-measures = ["Consumption","Earnings","Income","Wealth","Capital Income","Savings"]
+measures = ["Consumption","Earnings","Income","Wealth","Capital_Income","Savings"]
 for m = 1:6
     for im = 1#:3
         #=plts_cum_diff_in_diff_hm = Array{Any}(undef,3)
@@ -1019,21 +1135,25 @@ for m = 1:6
             T = length(cum_household_measures[:,m,o,im])-1
             cum_diff_hm[o] = (cum_household_measures[1:T+1,m,o,im].-ss_cum_household_measures[1:T+1,m,o,im])
             cum_diff_percent_hm[o] = cum_diff_hm[o]./ss_cum_household_measures[1:T+1,m,o,im]
+            if m==6
+                cum_diff_percent_hm[o] = cum_diff_hm[o]./ss_cum_household_measures[1:T+1,4,o,im]
+            end
+            # cum_diff_percent_hm[o] = cum_diff_hm[o]./((cum_household_measures[1:T+1,m,o,im].+ss_cum_household_measures[1:T+1,m,o,im])/2.0)
         end
         LEGENDPOS = false
-        if m==1
-            LEGENDPOS = :bottomright
+        if m==6
+            LEGENDPOS = :topright
         end
-        plt = create_combined_plot(collect(1:T),"Time (Years)", [cum_diff_percent_hm[1][2:end],cum_diff_percent_hm[2][2:end],cum_diff_percent_hm[3][2:end]], ["W","SP","EMP"], "$(inequality_measures[im]) $(measures[m]) (diff%)", [cum_diff_percent_hm[1][1],cum_diff_percent_hm[2][1],cum_diff_percent_hm[3][1]],[cum_diff_percent_hm[1][end],cum_diff_percent_hm[2][end],cum_diff_percent_hm[3][end]],true, ["W","SP","EMP"],LEGENDPOS)
+        plt = create_combined_plot(collect(1:T),"Time (Years)", [cum_diff_percent_hm[1][2:end],cum_diff_percent_hm[2][2:end],cum_diff_percent_hm[3][2:end]], ["W","SP","EMP"], ""#="$(inequality_measures[im]) $(measures[m]) (diff%)"=#, [cum_diff_percent_hm[1][1],cum_diff_percent_hm[2][1],cum_diff_percent_hm[3][1]],[cum_diff_percent_hm[1][end],cum_diff_percent_hm[2][end],cum_diff_percent_hm[3][end]],true, ["W","SP","EMP"],LEGENDPOS)
         display(plt)
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_$(inequality_measures[im])_$(measures[m])_diff_percent.png")
 
-        LEGENDPOS = false
-        if m==1
-            LEGENDPOS = :bottomright
-        end
-        plt = create_combined_plot(collect(1:T),"Time (Years)", [cum_diff_hm[1][2:end],cum_diff_hm[2][2:end],cum_diff_hm[3][2:end]], ["W","SP","EMP"], "$(inequality_measures[im]) $(measures[m]) (diff)", [cum_diff_hm[1][1],cum_diff_hm[2][1],cum_diff_hm[3][1]],[cum_diff_hm[1][end],cum_diff_hm[2][end],cum_diff_hm[3][end]],false, ["W","SP","EMP"],LEGENDPOS)
-        display(plt)
-        savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_$(inequality_measures[im])_$(measures[m])_diff.png")
+        # LEGENDPOS = false
+        # if m==6
+        #     LEGENDPOS = :bottomright
+        # end
+        # plt = create_combined_plot(collect(1:T),"Time (Years)", [cum_diff_hm[1][2:end],cum_diff_hm[2][2:end],cum_diff_hm[3][2:end]], ["W","SP","EMP"], "$(inequality_measures[im]) $(measures[m]) (diff)", [cum_diff_hm[1][1],cum_diff_hm[2][1],cum_diff_hm[3][1]],[cum_diff_hm[1][end],cum_diff_hm[2][end],cum_diff_hm[3][end]],false, ["W","SP","EMP"],LEGENDPOS)
+        # display(plt)
+        # savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_$(inequality_measures[im])_$(measures[m])_diff.png")
     end
 end
