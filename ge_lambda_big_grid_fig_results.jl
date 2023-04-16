@@ -196,11 +196,6 @@ end
 # income, earnings, wealth, consumption
 quantile_means = zeros(5,4,4,num_lambdas)
 
-gini_wealth = zeros(num_lambdas)
-gini_wealth_w = zeros(num_lambdas)
-gini_wealth_se = zeros(num_lambdas)
-gini_wealth_emp = zeros(num_lambdas)
-
 Capital = zeros(num_lambdas)
 
 # ENT, SP, EMP
@@ -370,7 +365,11 @@ Investment_productivity_s = zeros(num_lambdas)
             vars[s,h,i] = sum(density_distr.*choice.*(max.(1e-12,stat_distr).- avgs[s,h,i]).^2)/sum(density_distr.*choice)
             avgs[s,h,i] /= sum(density_distr.*choice)
 
-            quantile_means[:,h,s,i] .= quantile_mean(stat_distr, density_distr.*choice)
+            try
+                quantile_means[:,h,s,i] .= quantile_mean(stat_distr, density_distr.*choice)
+            catch e
+                quantile_means[:,h,s,i] .= NaN
+            end
         end
     end
 
@@ -381,11 +380,6 @@ Investment_productivity_s = zeros(num_lambdas)
     share_of_output_EMPs[i] = output_EMPs[i]/Outputs[i]
 
     ratio_of_capitals[i] = ss_star[1][6]
-
-    gini_wealth[i] = sum([ asset_distr[y_i]*asset_distr[y_j]*abs(asset_grid[y_i]-asset_grid[y_j]) for y_i=1:max_a_i, y_j=1:max_a_i ]) / (2*sum(asset_grid[1:max_a_i].*asset_distr[1:max_a_i]))
-    gini_wealth_w[i] = sum([ asset_distr_w[y_i]*asset_distr_w[y_j]*abs(asset_grid[y_i]-asset_grid[y_j]) for y_i=1:max_a_i, y_j=1:max_a_i ]) / (2*sum(asset_grid[1:max_a_i].*asset_distr_w[1:max_a_i]))
-    gini_wealth_se[i] = sum([ asset_distr_se[y_i]*asset_distr_se[y_j]*abs(asset_grid[y_i]-asset_grid[y_j]) for y_i=1:max_a_i, y_j=1:max_a_i ]) / (2*sum(asset_grid[1:max_a_i].*asset_distr_se[1:max_a_i]))
-    gini_wealth_emp[i] = sum([ asset_distr_emp[y_i]*asset_distr_emp[y_j]*abs(asset_grid[y_i]-asset_grid[y_j]) for y_i=1:max_a_i, y_j=1:max_a_i ]) / (2*sum(asset_grid[1:max_a_i].*asset_distr_emp[1:max_a_i]))
 
     unlimited_capital_choice = capital_d.<(lambdas[i].*(asset_grid.*ones(size(capital_d))))
     for c = 1:4
@@ -705,20 +699,6 @@ plt = create_plot(C_Ys,"Credit/Output", loges,"Variance of log-earnings", false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_log_earnings.png")
 
-#mean quantiles of wealth
-plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_mean_wealth[1,:], quantile_mean_wealth[2,:], quantile_mean_wealth[3,:], quantile_mean_wealth[4,:], quantile_mean_wealth[5,:]],["1st","2nd","3rd","4th","5th"],"Mean of Wealth (quantiles)",false,["H","W","SP","EMP","ENT"])
-display(plt)
-savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_combined_credit_to_gdp_mean_wealth_quantiles.png")
-plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_mean_wealth_w[1,:], quantile_mean_wealth_w[2,:], quantile_mean_wealth_w[3,:], quantile_mean_wealth_w[4,:], quantile_mean_wealth_w[5,:]],["1st","2nd","3rd","4th","5th"],"Mean of Workers' Wealth (quantiles)",false,["H","W","SP","EMP","ENT"])
-display(plt)
-savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_combined_credit_to_gdp_mean_wealth_w_quantiles.png")
-plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_mean_wealth_sp[1,:], quantile_mean_wealth_sp[2,:], quantile_mean_wealth_sp[3,:], quantile_mean_wealth_sp[4,:], quantile_mean_wealth_sp[5,:]],["1st","2nd","3rd","4th","5th"],"Mean of Sole Proprietors' Wealth (quantiles)",false,["H","W","SP","EMP","ENT"])
-display(plt)
-savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_combined_credit_to_gdp_mean_wealth_sp_quantiles.png")
-plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_mean_wealth_emp[1,:], quantile_mean_wealth_emp[2,:], quantile_mean_wealth_emp[3,:], quantile_mean_wealth_emp[4,:], quantile_mean_wealth_emp[5,:]],["1st","2nd","3rd","4th","5th"],"Mean of Employers' Wealth (quantiles)",false,["H","W","SP","EMP","ENT"])
-display(plt)
-savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_combined_credit_to_gdp_mean_wealth_emp_quantiles.png")
-
 #Crdit/Output to Gini Workers and Entrepreneurs
 plts = create_plots(C_Ys,"Credit/Output", [giniWs, giniEnts],["Gini for workers' income","Gini for entrepreneurs' income"],false,["W","ENT"])
 for i in 1:length(plts)
@@ -760,9 +740,13 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     LABELS=["1st","2nd","3rd","4th","5th"]
     for h=1:4
         LABEL = "Mean of $(CHOICE_NAMES[h])' $(stat_name) (quantiles)"
-        plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_means[1,h,s,:],quantile_means[2,h,s,:],quantile_means[3,h,s,:],quantile_means[4,h,s,:],quantile_means[5,h,s,:]],LABELS,LABEL, false, ["H","W","SP","EMP","ENT"])
-        display(plt)
-        savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_$(OCCS[h])_quantiles.png")
+        try
+            plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_means[1,h,s,:],quantile_means[2,h,s,:],quantile_means[3,h,s,:],quantile_means[4,h,s,:],quantile_means[5,h,s,:]],LABELS,LABEL, false, ["H","W","SP","EMP","ENT"])
+            display(plt)
+            savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_$(OCCS[h])_quantiles.png")
+        catch e
+            
+        end
     end
     # calculate mean
     #means[s,h,i]
