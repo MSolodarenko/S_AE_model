@@ -745,7 +745,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
             display(plt)
             savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_$(OCCS[h])_quantiles.png")
         catch e
-            
+
         end
     end
     # calculate mean
@@ -1310,4 +1310,4 @@ println("Std of the ratio of C/Earnings for H,W,SP,EMP: $(round.(std_consumption
 println("Mean of the ratio of Savings/Earnings for H,W,SP,EMP: $(round.(mean_savings_to_earnings;digits=2))")
 println("Std of the ratio of Savings/Earnings for H,W,SP,EMP: $(round.(std_savings_to_earnings;digits=2))")
 
-@save "$(LOCAL_DIR_GENERAL)SSS_fixed.jld2" SSS C_Ys Outputs Incomes Consumptions Rs Ws logcs loges giniWs giniEnts share_unbound means ginis avglogs varlogs avgs vars quantile_means TFPis TFPds mean_MPL var_MPL mean_MPK var_MPK
+@save "$(LOCAL_DIR_GENERAL)SSS.jld2" SSS C_Ys Outputs Incomes Consumptions Rs Ws logcs loges giniWs giniEnts share_unbound means ginis avglogs varlogs avgs vars quantile_means TFPis TFPds mean_MPL var_MPL mean_MPK var_MPK
