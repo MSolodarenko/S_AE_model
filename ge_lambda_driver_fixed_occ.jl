@@ -91,24 +91,17 @@ l1_i = findfirst(x -> x==LAMBDA, lambdas)
 
 #reuse the calculated results
 country = "Italy"
-LOCAL_DIR = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/Italy/"
+LOCAL_DIR = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/Italy/General/"
 if Sys.iswindows()
-    LOCAL_DIR = "\\Results\\Fixed_occ_shares\\Lambda_grid\\Italy\\"
+    LOCAL_DIR = "\\Results\\Fixed_occ_shares\\Lambda_grid\\Italy\\General\\"
 end
 print_sameline("Loading data from Fixed_occ_shares/Lambda_grid")
-#@load "$(LOCAL_DIR)SSS.jld2" SSS
-SSS_names = readdir(LOCAL_DIR)
-SSS_names = SSS_names[findall(x->occursin("SS_",x), SSS_names)]
-SSS_old = Array{Any}(undef,length(SSS_names))
+@load "$(LOCAL_DIR)SSS.jld2" SSS
+SSS_old = copy(SSS)
 lambdas_old = zeros(length(SSS_old))
 @showprogress for i = 1:length(SSS_old)
-    @load "$(LOCAL_DIR)$(SSS_names[i])" SS
-    SSS_old[i] = copy(SS)
-    lambdas_old[i] = SS[5][1]
+    lambdas_old[i] = SSS_old[i][5][1]
 end
-temp_is = sortperm(lambdas_old)
-lambdas_old = lambdas_old[temp_is]
-SSS_old = SSS_old[temp_is]
 
 LOCAL_DIR_ITALY = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/Italy_updated/"
 if Sys.iswindows()
