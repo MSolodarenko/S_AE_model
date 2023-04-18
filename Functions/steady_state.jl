@@ -51,8 +51,8 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
     #         lambda, beta, delta, gamma, eta, theta, c_e, rho_m, rho_w, sigma_eps_m, rho_eps_m_w, sigma_zeta, p_alpha, eta_alpha, prob_node1_alpha, mu_m_alpha, rho_alpha_m_w, sigma_alpha_w, sigma_eps_w, crra
     #  model_params
 
-    r_min = -model_params[3]
-    r_max = 1/model_params[2]-1
+    r_min = R_MIN#-model_params[3]
+    r_max = R_MAX#1/model_params[2]-1
 
     w_min = W_MIN#0.18#0.01
     w_max = W_MAX#0.3#0.99

@@ -55,6 +55,9 @@ gen_tol_f = GLOBAL_PARAMS[2]
 r_min = -DELTA#-delta
 r_max = 1/BETA-1#1/beta-1
 
+R_MIN = r_min
+R_MAX = r_max
+
 # wage bounds #### NOT DONE!!! ########
 W_MIN = 0.01#0.23#
 W_MAX = 0.47#0.33#

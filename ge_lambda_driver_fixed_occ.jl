@@ -8,45 +8,49 @@ using JLD2
 print_sameline("Loading functions for steady_state procedure")
 include("Functions/steady_state.jl")
 
+country = "Italy"
+LOCAL_DIR = "$(@__DIR__)/Results/Lambda_grid_big_grid/$(country)_SS_2092_69/General/"
+if Sys.iswindows()
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Lambda_grid_big_grid\\$(country)_$(CODENAME)\\General\\"
+end
+@load "$(LOCAL_DIR)SSS_fixed.jld2" SSS
+
 # global parameters of the model's code
 #                   1           2           3       4
 #                gen_tol_x, gen_tol_f, distr_tol, val_tol
-GLOBAL_PARAMS = [1e-6, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-12, 1e-9]#[1e-8, 1e-4, 1e-7, 1e-5]#
-
+GLOBAL_PARAMS = SSS[1][1][46]
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
-GLOBAL_APPROX_PARAMS = [69,3,3,3,6,3]#[35,3,3,3,6,3]
+GLOBAL_APPROX_PARAMS = SSS[1][1][47]
 
-CODENAME = #="SS_2642"#"SS_2065"=#"SS_2092"
-CODENAME = "$(CODENAME)_$(GLOBAL_APPROX_PARAMS[1])"
 # parameters of the model's economy (Italy)
-                    #SS_2642 #SS_2065 #SS_2092 #prev.calibration
-LAMBDA =            #=1.633951#1.405096=#1.665907 #1.513028
-BETA =              #=0.923514#0.910782=#0.934172 #0.917506
-DELTA =             0.1
-GAMMA =             0.16
-ETA =               0.3
-THETA =             0.54
+MODEL_PARAMS = SSS[10][1][48]
+LAMBDA =            MODEL_PARAMS[1]
+BETA =              MODEL_PARAMS[2]
+DELTA =             MODEL_PARAMS[3]
+GAMMA =             MODEL_PARAMS[4]
+ETA =               MODEL_PARAMS[5]
+THETA =             MODEL_PARAMS[6]
 
-C_E =               #=0.034618#0.011300=#0.057572 #0.007001
-RHO_M =             #=0.961272#0.963735=#0.951032 #0.710266
-RHO_W =             0.96
-SIGMA_EPS_M =       #=0.996198#0.877067=#0.754644 #1.022857
-RHO_EPS_M_W =       #=0.296954#0.309361=#0.216037 #0.361605
-SIGMA_ZETA =        #=0.256800#0.247935=#0.211565 #0.091089
-P_ALPHA =           #=0.039732#0.034184=#0.022080 #0.024445
-ETA_ALPHA =         #=5.860434#5.567285=#5.811008 #5.896035
-PROB_NODE1_ALPHA =  0.39
-MU_M_ALPHA =       #=-4.950012#-2.089921=#-3.266806#-4.817675
-RHO_ALPHA_M_W =     #=0.103225#0.166184=#0.147661 #0.181454
-SIGMA_ALPHA_W =     0.12
-SIGMA_EPS_W =       #=0.119669#0.152209=#0.048689 #0.021947
+C_E =               MODEL_PARAMS[7]
+RHO_M =             MODEL_PARAMS[8]
+RHO_W =             MODEL_PARAMS[9]
+SIGMA_EPS_M =       MODEL_PARAMS[10]
+RHO_EPS_M_W =       MODEL_PARAMS[11]
+SIGMA_ZETA =        MODEL_PARAMS[12]
+P_ALPHA =           MODEL_PARAMS[13]
+ETA_ALPHA =         MODEL_PARAMS[14]
+PROB_NODE1_ALPHA =  MODEL_PARAMS[15]
+MU_M_ALPHA =        MODEL_PARAMS[16]
+RHO_ALPHA_M_W =     MODEL_PARAMS[17]
+SIGMA_ALPHA_W =     MODEL_PARAMS[18]
+SIGMA_EPS_W =       MODEL_PARAMS[19]
 
-CRRA = 1.0 # >0.0
+CRRA =              MODEL_PARAMS[20]
 
-R_ =                #=-2.627421/100#-5.147463/100=#1.434096/100#-0.005338
-W_ =                #=0.136814#0.287390=#0.294537 #0.230294
+R_ =                SSS[10][2]
+W_ =                SSS[10][3]
 
 gen_tol_x = GLOBAL_PARAMS[1]
 gen_tol_f = GLOBAL_PARAMS[2]
@@ -55,46 +59,64 @@ gen_tol_f = GLOBAL_PARAMS[2]
 r_min = -DELTA#-delta
 r_max = 1/BETA-1#1/beta-1
 
-# wage bounds #### NOT DONE!!! ########
-W_MIN = 0.01#0.18
-W_MAX = 0.47#0.3
+R_MIN = r_min
+R_MAX = r_max
 
-optimal_r = R_#(r_min+r_max)/2#r#
-optimal_w = W_#(w_min+w_max)/2#w#
+# wage bounds #### NOT DONE!!! ########
+w_min = 0.01#0.18
+w_max = 0.47#0.3
+
+W_MIN = w_min
+W_MAX = w_max
+
+optimal_r = R_
+optimal_w = W_
 
 text_output = false
 fig_output = false
 calc_add_results = false
 
 include("Functions/AllubErosa_fixed_occ.jl")
-OCC_SHARES = [0.77445, 0.06473, 0.16082]
+OCC_SHARES = [SSS[10][1][14], SSS[10][1][15], SSS[10][1][16]]
 function AllubErosa(r,w,global_params,global_approx_params,model_params,approx_object)
     return AllubErosa(r,w,global_params,global_approx_params,model_params,approx_object,OCC_SHARES)
 end
 
 # Generate gen eq'm for different lambdas
-lambdas = #=[1.513028, 2.6]=#[collect(range(1.01; length = 5, stop = 1.270437995455));
-           collect(range(1.27; length = 6, stop = LAMBDA)      )[2:end];
-           collect(range(LAMBDA; length = 4, stop = 2.0)           )[2:end];
-           collect(range(2.0;  length = 6, stop = 5.0)           )[2:end];
-           collect(range(5.0;  length = 6, stop = 10.0)          )[2:end]#=;
-           collect(range(10.0; length = 5, stop = 25.0)          )[2:end];
-           collect(range(25.0; length = 4, stop = 100.0)         )[2:end];
-           collect(range(100.0;length = 4, stop = 2500.0)        )[2:end]=#]
-
+lambdas = zeros(length(SSS))
+@showprogress for i = 1:length(SSS)
+    lambdas[i] = SSS[i][5][1]
+end
 l1_i = findfirst(x -> x==LAMBDA, lambdas)
 
-LOCAL_DIR_BRAZIL = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/Brazil_$(CODENAME)/"
-LOCAL_DIR_ITALY = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/Italy_$(CODENAME)/"
+#reuse the calculated results
+country = "Italy"
+LOCAL_DIR = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/Italy/"
 if Sys.iswindows()
-   LOCAL_DIR_BRAZIL = "$(@__DIR__)\\Results\\Fixed_occ_shares\\Lambda_grid\\Brazil_$(CODENAME)\\"
-   LOCAL_DIR_ITALY = "$(@__DIR__)\\Results\\Fixed_occ_shares\\Lambda_grid\\Italy_$(CODENAME)\\"
+    LOCAL_DIR = "\\Results\\Fixed_occ_shares\\Lambda_grid\\Italy\\"
 end
-for country = ["Italy"#=, "Brazil"=#]
+print_sameline("Loading data from Fixed_occ_shares/Lambda_grid")
+#@load "$(LOCAL_DIR)SSS.jld2" SSS
+SSS_names = readdir(LOCAL_DIR)
+SSS_names = SSS_names[findall(x->occursin("SS_",x), SSS_names)]
+SSS_old = Array{Any}(undef,length(SSS_names))
+lambdas_old = zeros(length(SSS_old))
+@showprogress for i = 1:length(SSS_old)
+    @load "$(LOCAL_DIR)$(SSS_names[i])" SS
+    SSS_old[i] = copy(SS)
+    lambdas_old[i] = SS[5][1]
+end
+temp_is = sortperm(lambdas_old)
+lambdas_old = lambdas_old[temp_is]
+SSS_old = SSS_old[temp_is]
+
+LOCAL_DIR_ITALY = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/Italy_updated/"
+if Sys.iswindows()
+   LOCAL_DIR_ITALY = "$(@__DIR__)\\Results\\Fixed_occ_shares\\Lambda_grid\\Italy_updated\\"
+end
+for country = ["Italy"]
     if country == "Italy"
         LOCAL_DIR = LOCAL_DIR_ITALY
-    elseif country == "Brazil"
-        LOCAL_DIR = LOCAL_DIR_BRAZIL
     else
         throw("No directory set for country $country")
     end
@@ -149,6 +171,74 @@ for country = ["Italy"#=, "Brazil"=#]
             println("Already calculated")
             ss_star = copy(SS)
         catch e
+            iter = findmin(abs.(lambdas_old.-lambdas[i]))[2]
+            guess_R = SSS_old[iter][2]
+            guess_W = SSS_old[iter][3]
+
+            try
+                @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i-1];digits=2)).jld2" SS_minus1
+                R_MIN = SS_minus1[2]
+                W_MIN = SS_minus1[3]
+            catch e
+                if i>1
+                    iter_minus1 = findmin(abs.(lambdas_old.-lambdas[i-1]))[2]
+                    R_MIN = SSS_old[iter_minus1][2]
+                    W_MIN = SSS_old[iter_minus1][3]
+                    if R_MIN > guess_R || W_MIN > guess_W
+                        if iter_minus1>1
+                            R_MIN = SSS_old[iter_minus1-1][2]
+                            W_MIN = SSS_old[iter_minus1-1][3]
+                            if iter_minus1>2
+                                if SSS_old[iter_minus1-2][2] > R_MIN || SSS_old[iter_minus1-2][3] > W_MIN
+                                    R_MIN = SSS_old[iter_minus1-2][2]
+                                    W_MIN = SSS_old[iter_minus1-2][3]
+                                end
+                            end
+                        else
+                            R_MIN = r_min
+                            W_MIN = w_min
+                        end
+                    end
+
+                else
+                    R_MIN = r_min
+                    W_MIN = w_min
+                end
+            end
+
+            try
+                @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i+1];digits=2)).jld2" SS_plus1
+                R_MAX = SS_plus1[2]
+                W_MAX = SS_plus1[3]
+            catch e
+                if i<length(lambdas)-1
+                    iter_plus1 = findmin(abs.(lambdas_old.-lambdas[i+1]))[2]
+                    R_MAX = SSS_old[iter_plus1][2]
+                    W_MAX = SSS_old[iter_plus1][3]
+                    if R_MAX < guess_R || W_MAX < guess_W
+                        if iter_plus1<length(lambdas_old)-1
+                            R_MAX = SSS_old[iter_plus1+1][2]
+                            W_MAX = SSS_old[iter_plus1+1][3]
+                            if iter_plus1<length(lambdas_old)-2
+                                if SSS_old[iter_plus1+2][2] < R_MAX || SSS_old[iter_plus1+2][3] < W_MAX
+                                    R_MAX = SSS_old[iter_plus1+2][2]
+                                    W_MAX = SSS_old[iter_plus1+2][3]
+                                end
+                            end
+                        else
+                            R_MAX = r_max
+                            W_MAX = w_max
+                        end
+                    end
+
+                else
+                    R_MAX = r_max
+                    W_MAX = w_max
+                end
+            end
+            println("R: $(R_MIN)<=$(guess_R)<=$(R_MAX)")
+            println("W: $(W_MIN)<=$(guess_W)<=$(W_MAX)")
+
             try
                 # ss_star = [res, r, w, approx_object, model_params]
                 @time ss_star = steady_state(guess_R, guess_W, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS)
