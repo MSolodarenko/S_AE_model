@@ -94,7 +94,7 @@ l1_i = findfirst(x -> x==LAMBDA, lambdas)
 country = "Italy"
 LOCAL_DIR = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/Italy/General/"
 if Sys.iswindows()
-    LOCAL_DIR = "\\Results\\Fixed_occ_shares\\Lambda_grid\\Italy\\General\\"
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Fixed_occ_shares\\Lambda_grid\\Italy\\General\\"
 end
 print_sameline("Loading data from Fixed_occ_shares/Lambda_grid")
 @load "$(LOCAL_DIR)SSS_fixed.jld2" SSS_fixed_occ
