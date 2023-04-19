@@ -252,9 +252,7 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
     distr_maxiters= 1600
     distr_len     = Inf
     distr_iters   = 0
-    if text_output
-        print_sameline("Start of the main stationary distribution iteration loop")
-    end
+    print_sameline("Start of the main stationary distribution iteration loop")
 
     distr_a1_z0 = copy(distr)
     new_distr = copy(distr)
@@ -337,7 +335,7 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
             newK_supply += sum(distr[occ].*policy[occ])
         end
         K_s_error = abs(newK_supply-oldK_supply)
-        if text_output
+        if distr_iters%25==0#text_output
             print_sameline("Distr#$(distr_iters) - err: $(distr_len) - sumdistr: $(round.([sum(distr[1]),sum(distr[2]),sum(distr[3])];digits=2)), K_s:$(round(newK_supply;digits=6)), K_s_err:$(K_s_error)")
         end
         distr_len = K_s_error
@@ -355,7 +353,7 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
             =#
         end
     end
-    if text_output
+    if true#text_output
         print_sameline("Calculation was finished on iteration - $(distr_iters) with error: $(distr_len)")
     end
 

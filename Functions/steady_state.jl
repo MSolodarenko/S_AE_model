@@ -64,11 +64,11 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
     println("Initiate the search for general equilibrium factor prices                                      \r")
     #R = (r_min+r_max)/2#R_
     #W = (w_min+w_max)/2#W_
-    if R <= r_min || R >= r_max
+    if R < r_min || R > r_max
         #R = (r_min+r_max)/2
         R = rand()*(r_max-r_min)+r_min
     end
-    if W <= w_min || W >= w_max
+    if W < w_min || W > w_max
         #W = (w_min+w_max)/2
         W = rand()*(w_max-w_min)+w_min
     end

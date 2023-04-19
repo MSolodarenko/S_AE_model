@@ -4,6 +4,7 @@ include("Functions/print_sameline.jl")
 print_sameline("Initialising libraries")
 using Plots
 using JLD2
+using ProgressMeter
 
 print_sameline("Loading functions for steady_state procedure")
 include("Functions/steady_state.jl")
@@ -11,9 +12,9 @@ include("Functions/steady_state.jl")
 country = "Italy"
 LOCAL_DIR = "$(@__DIR__)/Results/Lambda_grid_big_grid/$(country)_SS_2092_69/General/"
 if Sys.iswindows()
-    LOCAL_DIR = "$(@__DIR__)\\Results\\Lambda_grid_big_grid\\$(country)_$(CODENAME)\\General\\"
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Lambda_grid_big_grid\\$(country)_SS_2092_69\\General\\"
 end
-@load "$(LOCAL_DIR)SSS_fixed.jld2" SSS
+@load "$(LOCAL_DIR)SSS.jld2" SSS
 
 # global parameters of the model's code
 #                   1           2           3       4
@@ -25,29 +26,29 @@ GLOBAL_PARAMS = SSS[1][1][46]
 GLOBAL_APPROX_PARAMS = SSS[1][1][47]
 
 # parameters of the model's economy (Italy)
-MODEL_PARAMS = SSS[10][1][48]
-LAMBDA =            MODEL_PARAMS[1]
-BETA =              MODEL_PARAMS[2]
-DELTA =             MODEL_PARAMS[3]
-GAMMA =             MODEL_PARAMS[4]
-ETA =               MODEL_PARAMS[5]
-THETA =             MODEL_PARAMS[6]
+MODEL_PARAMS_INIT = SSS[10][1][48]
+LAMBDA =            MODEL_PARAMS_INIT[1]
+BETA =              MODEL_PARAMS_INIT[2]
+DELTA =             MODEL_PARAMS_INIT[3]
+GAMMA =             MODEL_PARAMS_INIT[4]
+ETA =               MODEL_PARAMS_INIT[5]
+THETA =             MODEL_PARAMS_INIT[6]
 
-C_E =               MODEL_PARAMS[7]
-RHO_M =             MODEL_PARAMS[8]
-RHO_W =             MODEL_PARAMS[9]
-SIGMA_EPS_M =       MODEL_PARAMS[10]
-RHO_EPS_M_W =       MODEL_PARAMS[11]
-SIGMA_ZETA =        MODEL_PARAMS[12]
-P_ALPHA =           MODEL_PARAMS[13]
-ETA_ALPHA =         MODEL_PARAMS[14]
-PROB_NODE1_ALPHA =  MODEL_PARAMS[15]
-MU_M_ALPHA =        MODEL_PARAMS[16]
-RHO_ALPHA_M_W =     MODEL_PARAMS[17]
-SIGMA_ALPHA_W =     MODEL_PARAMS[18]
-SIGMA_EPS_W =       MODEL_PARAMS[19]
+C_E =               MODEL_PARAMS_INIT[7]
+RHO_M =             MODEL_PARAMS_INIT[8]
+RHO_W =             MODEL_PARAMS_INIT[9]
+SIGMA_EPS_M =       MODEL_PARAMS_INIT[10]
+RHO_EPS_M_W =       MODEL_PARAMS_INIT[11]
+SIGMA_ZETA =        MODEL_PARAMS_INIT[12]
+P_ALPHA =           MODEL_PARAMS_INIT[13]
+ETA_ALPHA =         MODEL_PARAMS_INIT[14]
+PROB_NODE1_ALPHA =  MODEL_PARAMS_INIT[15]
+MU_M_ALPHA =        MODEL_PARAMS_INIT[16]
+RHO_ALPHA_M_W =     MODEL_PARAMS_INIT[17]
+SIGMA_ALPHA_W =     MODEL_PARAMS_INIT[18]
+SIGMA_EPS_W =       MODEL_PARAMS_INIT[19]
 
-CRRA =              MODEL_PARAMS[20]
+CRRA =              MODEL_PARAMS_INIT[20]
 
 R_ =                SSS[10][2]
 W_ =                SSS[10][3]
@@ -96,11 +97,10 @@ if Sys.iswindows()
     LOCAL_DIR = "\\Results\\Fixed_occ_shares\\Lambda_grid\\Italy\\General\\"
 end
 print_sameline("Loading data from Fixed_occ_shares/Lambda_grid")
-@load "$(LOCAL_DIR)SSS.jld2" SSS
-SSS_old = copy(SSS)
-lambdas_old = zeros(length(SSS_old))
-@showprogress for i = 1:length(SSS_old)
-    lambdas_old[i] = SSS_old[i][5][1]
+@load "$(LOCAL_DIR)SSS_fixed.jld2" SSS_fixed_occ
+lambdas_old = zeros(length(SSS_fixed_occ))
+@showprogress for i = 1:length(SSS_fixed_occ)
+    lambdas_old[i] = SSS_fixed_occ[i][5][1]
 end
 
 LOCAL_DIR_ITALY = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/Italy_updated/"
@@ -139,7 +139,14 @@ for country = ["Italy"]
 
     SSS = Array{Any}(undef,length(lambdas))
 
-    for i = [l1_i; l1_i-1:-1:1; l1_i+1:1:length(lambdas)]#1:length(lambdas)#[[l1_i, l3_i, l2_i]; deleteat!(collect(1:length(lambdas)),[l1_i, l2_i, l3_i])]#
+    #list_of_iterators = [l1_i; l1_i-1:-1:1; l1_i+1:1:length(lambdas)]
+    list_of_iterators = [l1_i; l1_i-1:-1:1; length(lambdas):-1:l1_i+1]
+    if Sys.iswindows()
+        list_of_iterators = [l1_i; l1_i+1:1:length(lambdas); 1:l1_i-1]
+    end
+
+    for i = list_of_iterators
+        global R_MIN, W_MIN, R_MAX, W_MAX
         println("\n$(country) - $(i)/$(length(lambdas)) - $(lambdas[i])")
         if i >= l1_i-1 && i <= l1_i+1
             guess_R = R_
@@ -163,36 +170,29 @@ for country = ["Italy"]
             @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i];digits=2)).jld2" SS
             println("Already calculated")
             ss_star = copy(SS)
+            println("The interest rate - $(ss_star[2]*100)% and the wage - $(ss_star[3])")
         catch e
-            iter = findmin(abs.(lambdas_old.-lambdas[i]))[2]
-            guess_R = SSS_old[iter][2]
-            guess_W = SSS_old[iter][3]
+            # iter = findmin(abs.(lambdas_old.-lambdas[i]))[2]
+            # guess_R = SSS_fixed_occ[iter][2]
+            # guess_W = SSS_fixed_occ[iter][3]
 
             try
-                @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i-1];digits=2)).jld2" SS_minus1
-                R_MIN = SS_minus1[2]
-                W_MIN = SS_minus1[3]
+                @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i-1];digits=2)).jld2" SS
+                R_MIN = SS[2]
+                W_MIN = SS[3]
             catch e
-                if i>1
-                    iter_minus1 = findmin(abs.(lambdas_old.-lambdas[i-1]))[2]
-                    R_MIN = SSS_old[iter_minus1][2]
-                    W_MIN = SSS_old[iter_minus1][3]
-                    if R_MIN > guess_R || W_MIN > guess_W
-                        if iter_minus1>1
-                            R_MIN = SSS_old[iter_minus1-1][2]
-                            W_MIN = SSS_old[iter_minus1-1][3]
-                            if iter_minus1>2
-                                if SSS_old[iter_minus1-2][2] > R_MIN || SSS_old[iter_minus1-2][3] > W_MIN
-                                    R_MIN = SSS_old[iter_minus1-2][2]
-                                    W_MIN = SSS_old[iter_minus1-2][3]
-                                end
-                            end
-                        else
-                            R_MIN = r_min
-                            W_MIN = w_min
+                if i > l1_i
+                    iter = l1_i
+                    try
+                        while iter < i
+                            @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter];digits=2)).jld2" SS
+                            iter+=1
                         end
+                    catch e
+                        @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter-1];digits=2)).jld2" SS
+                        R_MIN = SS[2]
+                        W_MIN = SS[3]
                     end
-
                 else
                     R_MIN = r_min
                     W_MIN = w_min
@@ -200,30 +200,22 @@ for country = ["Italy"]
             end
 
             try
-                @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i+1];digits=2)).jld2" SS_plus1
-                R_MAX = SS_plus1[2]
-                W_MAX = SS_plus1[3]
+                @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i+1];digits=2)).jld2" SS
+                R_MAX = SS[2]
+                W_MAX = SS[3]
             catch e
-                if i<length(lambdas)-1
-                    iter_plus1 = findmin(abs.(lambdas_old.-lambdas[i+1]))[2]
-                    R_MAX = SSS_old[iter_plus1][2]
-                    W_MAX = SSS_old[iter_plus1][3]
-                    if R_MAX < guess_R || W_MAX < guess_W
-                        if iter_plus1<length(lambdas_old)-1
-                            R_MAX = SSS_old[iter_plus1+1][2]
-                            W_MAX = SSS_old[iter_plus1+1][3]
-                            if iter_plus1<length(lambdas_old)-2
-                                if SSS_old[iter_plus1+2][2] < R_MAX || SSS_old[iter_plus1+2][3] < W_MAX
-                                    R_MAX = SSS_old[iter_plus1+2][2]
-                                    W_MAX = SSS_old[iter_plus1+2][3]
-                                end
-                            end
-                        else
-                            R_MAX = r_max
-                            W_MAX = w_max
+                if i < l1_i
+                    iter = l1_i
+                    try
+                        while iter > i
+                            @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter];digits=2)).jld2" SS
+                            iter-=1
                         end
+                    catch e
+                        @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter+1];digits=2)).jld2" SS
+                        R_MAX = SS[2]
+                        W_MAX = SS[3]
                     end
-
                 else
                     R_MAX = r_max
                     W_MAX = w_max
