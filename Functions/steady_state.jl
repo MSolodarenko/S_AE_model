@@ -375,14 +375,26 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
 
             if new_R <= r_min
                 new_R = 0.9*r_min + (1.0-0.9)*best_R
+                if new_R == R
+                    new_R = 0.5*r_min + (1.0-0.5)*new_R
+                end
             elseif new_R >= r_max
                 new_R = 0.9*r_max + (1.0-0.9)*best_R
+                if new_R == R
+                    new_R = 0.5*r_max + (1.0-0.5)*new_R
+                end
             end
 
             if new_W <= w_min
                 new_W = 0.9*w_min + (1.0-0.9)*best_W
+                if new_W == W
+                    new_W = 0.5*w_min + (1.0-0.5)*new_W
+                end
             elseif new_W >= w_max
                 new_W = 0.9*w_max + (1.0-0.9)*best_W
+                if new_W == W
+                    new_W = 0.5*w_max + (1.0-0.5)*new_W
+                end
             end
             #=
             if best_total_len_grid[r_i_,w_i_] == Inf && worst_R_grid[r_i_,w_i_] != Inf && worst_W_grid[r_i_,w_i_] != Inf
@@ -451,9 +463,15 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
 
             #new_R = (old_R + new_R)/2.0
             new_R = (old_R + new_R + best_R)/3.0
+            if isNaN(new_R)
+                new_R = rand()*(r_max-r_min)+r_min
+            end
             new_R = min(max(r_min, new_R), r_max)
             #new_W = (old_W + new_W)/2.0
             new_W = (old_W + new_W + best_W)/3.0
+            if isNaN(new_W)
+                new_W = rand()*(w_max-w_min)+w_min
+            end
             new_W = min(max(w_min, new_W), w_max)
             #=
             if best_total_len_grid[r_i_,w_i_] == Inf

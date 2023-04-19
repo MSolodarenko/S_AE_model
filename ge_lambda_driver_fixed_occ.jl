@@ -140,7 +140,8 @@ for country = ["Italy"]
     SSS = Array{Any}(undef,length(lambdas))
 
     #list_of_iterators = [l1_i; l1_i-1:-1:1; l1_i+1:1:length(lambdas)]
-    list_of_iterators = [l1_i; l1_i-1:-1:1; length(lambdas):-1:l1_i+1]
+    #list_of_iterators = [l1_i; l1_i-1:-1:1; length(lambdas):-1:l1_i+1]
+    list_of_iterators = [l1_i; l1_i-1:-1:1; l1_i+1:1:length(lambdas)]
     if Sys.iswindows()
         list_of_iterators = [l1_i; l1_i+1:1:length(lambdas); 1:l1_i-1]
     end
@@ -220,6 +221,10 @@ for country = ["Italy"]
                     R_MAX = r_max
                     W_MAX = w_max
                 end
+            end
+            if !Sys.iswindows() && i > l1_i
+                guess_R = 0.9*R_MIN+0.1*R_MAX
+                guess_W = 0.9*W_MIN+0.1*W_MAX
             end
             println("R: $(R_MIN)<=$(guess_R)<=$(R_MAX)")
             println("W: $(W_MIN)<=$(guess_W)<=$(W_MAX)")

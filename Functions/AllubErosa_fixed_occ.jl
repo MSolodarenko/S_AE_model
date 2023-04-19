@@ -26,6 +26,16 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
             path = "$(@__DIR__)\\val_aprime\\"
         end
         @load "$(path)val_aprime_$(number_a_nodes)_$(number_u_nodes)_$(number_zeta_nodes)_$(number_alpha_m_nodes)_$(number_alpha_w_nodes)_fixed_occ.jld2" local_value local_aprime_nodes
+        foreach(local_value) do x
+            if isnan(x)
+                throw("NaN_error")
+            end
+        end
+        foreach(local_aprime_nodes) do x
+            if isnan(x)
+                throw("NaN_error")
+            end
+        end
         value = copy(local_value)
         aprime_nodes = copy(local_aprime_nodes)
         print_sameline("Initialise value function from file")
