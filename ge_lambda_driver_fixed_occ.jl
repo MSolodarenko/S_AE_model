@@ -140,26 +140,17 @@ for country = ["Italy"]
     SSS = Array{Any}(undef,length(lambdas))
 
     #list_of_iterators = [l1_i; l1_i-1:-1:1; l1_i+1:1:length(lambdas)]
-    #list_of_iterators = [l1_i; l1_i-1:-1:1; length(lambdas):-1:l1_i+1]
-    list_of_iterators = [l1_i; l1_i-1:-1:1; l1_i+1:1:length(lambdas)]
+    list_of_iterators = [l1_i; l1_i+1:1:length(lambdas); 1:l1_i-1]
     if Sys.iswindows()
-        list_of_iterators = [l1_i; l1_i+1:1:length(lambdas); 1:l1_i-1]
+        list_of_iterators = [l1_i; l1_i-1:-1:1; length(lambdas):-1:l1_i+1]
     end
 
     for i = list_of_iterators
         global R_MIN, W_MIN, R_MAX, W_MAX
         println("\n$(country) - $(i)/$(length(lambdas)) - $(lambdas[i])")
-        if i >= l1_i-1 && i <= l1_i+1
-            guess_R = R_
-            guess_W = W_
-        end
+
         MODEL_PARAMS = zeros(19)
-        if country == "Brazil"
-            #           1       2     3     4       5   6       7   8       9       10          11              12      13          14          15              16          17              18              19       20
-            #         lambda, beta, delta, gamma, eta, theta, c_e, rho_m, rho_w, sigma_eps_m, rho_eps_m_w, sigma_zeta, p_alpha, eta_alpha, prob_node1_alpha, mu_m_alpha, rho_alpha_m_w, sigma_alpha_w, sigma_eps_w, crra
-            # brazil MODEL_PARAMS
-            MODEL_PARAMS = [lambdas[i], 0.886291098471, 0.06, 0.197999, 0.325612, 0.476388, 0.080459934034, 0.78839752660496, 0.96, 1.14553769575612, 0.3351447009, 0.211613239161, 0.041225789925, 5.403585195245, 0.22878505546, -2.975991405139, 0.147638317002, 0.42, 0.07352027977526, CRRA]
-        elseif country == "Italy"
+        if country == "Italy"
             # italy MODEL_PARAMS
             MODEL_PARAMS = [lambdas[i], BETA, DELTA, GAMMA, ETA, THETA, C_E, RHO_M, RHO_W, SIGMA_EPS_M, RHO_EPS_M_W, SIGMA_ZETA, P_ALPHA, ETA_ALPHA, PROB_NODE1_ALPHA, MU_M_ALPHA, RHO_ALPHA_M_W, SIGMA_ALPHA_W, SIGMA_EPS_W, CRRA]
         else
@@ -178,6 +169,7 @@ for country = ["Italy"]
             # guess_W = SSS_fixed_occ[iter][3]
 
             try
+                # throw(error)
                 @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i-1];digits=2)).jld2" SS
                 R_MIN = SS[2]
                 W_MIN = SS[3]
@@ -201,6 +193,7 @@ for country = ["Italy"]
             end
 
             try
+                # throw(error)
                 @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i+1];digits=2)).jld2" SS
                 R_MAX = SS[2]
                 W_MAX = SS[3]
@@ -222,9 +215,15 @@ for country = ["Italy"]
                     W_MAX = w_max
                 end
             end
-            if !Sys.iswindows() && i > l1_i
-                guess_R = 0.9*R_MIN+0.1*R_MAX
-                guess_W = 0.9*W_MIN+0.1*W_MAX
+            if i > l1_i
+                guess_R = 0.95*R_MIN+0.05*R_MAX
+                guess_W = 0.99*W_MIN+0.01*W_MAX
+            elseif i < l1_i
+                guess_R = 0.05*R_MIN+0.95*R_MAX
+                guess_W = 0.01*W_MIN+0.99*W_MAX
+            elseif i == l1_i
+                guess_R = 1.7932/100#R_
+                guess_W = 0.159956#W_
             end
             println("R: $(R_MIN)<=$(guess_R)<=$(R_MAX)")
             println("W: $(W_MIN)<=$(guess_W)<=$(W_MAX)")

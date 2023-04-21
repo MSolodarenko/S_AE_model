@@ -207,16 +207,16 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
         R = new_R
         W = new_W
         try
-            if abs(R - best_R) < gen_tol_x && abs(W - best_W) < gen_tol_x
+            if abs(R - best_R) < gen_tol_x/2.0 && abs(W - best_W) < gen_tol_x/2.0
                 throw(error("same as best_R and best_W"))
             end
-            if abs(R - old_R) < gen_tol_x && abs(W - old_W) < gen_tol_x
+            if abs(R - old_R) < gen_tol_x/2.0 && abs(W - old_W) < gen_tol_x/2.0
                 throw(error("same as old_R and old_W"))
             end
-            if abs(R - old_old_R) < gen_tol_x && abs(W - old_old_W) < gen_tol_x
+            if abs(R - old_old_R) < gen_tol_x/2.0 && abs(W - old_old_W) < gen_tol_x/2.0
                 throw(error("same as old_old_R and old_old_W"))
             end
-            if abs(R - old_old_old_R) < gen_tol_x && abs(W - old_old_old_W) < gen_tol_x
+            if abs(R - old_old_old_R) < gen_tol_x/2.0 && abs(W - old_old_old_W) < gen_tol_x/2.0
                 throw(error("same as old_old_old_R and old_old_old_W"))
             end
             res = AllubErosa(R,W, global_params, global_approx_params, model_params, approx_object)
@@ -463,13 +463,13 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
 
             #new_R = (old_R + new_R)/2.0
             new_R = (old_R + new_R + best_R)/3.0
-            if isNaN(new_R)
+            if isnan(new_R)
                 new_R = rand()*(r_max-r_min)+r_min
             end
             new_R = min(max(r_min, new_R), r_max)
             #new_W = (old_W + new_W)/2.0
             new_W = (old_W + new_W + best_W)/3.0
-            if isNaN(new_W)
+            if isnan(new_W)
                 new_W = rand()*(w_max-w_min)+w_min
             end
             new_W = min(max(w_min, new_W), w_max)

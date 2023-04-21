@@ -258,7 +258,7 @@ function compute_income_profile(occ_choice::Int64, a::Float64,zm::Float64,zw::Fl
 
         cost_of_employing = 0.0
 		managerial_input = 0.0
-    elseif occ_choice == 2 #income_se[5] > income_emp[5]
+    elseif occ_choice == 2 || (occ_choice == 3 && income_emp[5] + (1+r)*a < 0.01) #income_se[5] > income_emp[5]
         # Self-employed
         #occ_choice = 2
         income = income_se[5] + (1+r)*a

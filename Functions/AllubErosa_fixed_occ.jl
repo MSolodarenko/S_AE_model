@@ -6,17 +6,25 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
     print_sameline("Initialise aprime_indices and aprime_nodes")
     # guess values and indices aprime
     aprime_nodes = Array{Any}(undef,3)
-    for occ = 1:3
+    Threads.@threads for occ = 1:3
         aprime_nodes[occ] = 0.66.*income[occ]
     end
 
     print_sameline("Initialise value function")
     # guess the initial value for value_function
     value = Array{Any}(undef,3)
-    for occ = 1:3
+    Threads.@threads for occ = 1:3
         #value = utility.(earnings, crra)./(1.0-beta)
         value[occ] = utility.(income[occ].-aprime_nodes[occ], crra)./(1.0-beta)
     end
+
+    # A = value[1][:,1,:,:,:]
+    # B = value[1][:,2,:,:,:]
+    # C = value[1][:,3,:,:,:]
+    # println("\n$(A==B==C)")
+    # throw(error)
+
+    print_sameline("Start of the main VFI loop")
 
     value_from_file_flag = true
     try
@@ -26,15 +34,18 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
             path = "$(@__DIR__)\\val_aprime\\"
         end
         @load "$(path)val_aprime_$(number_a_nodes)_$(number_u_nodes)_$(number_zeta_nodes)_$(number_alpha_m_nodes)_$(number_alpha_w_nodes)_fixed_occ.jld2" local_value local_aprime_nodes
-        foreach(local_value) do x
-            if isnan(x)
-                throw("NaN_error")
-            end
-        end
-        foreach(local_aprime_nodes) do x
-            if isnan(x)
-                throw("NaN_error")
-            end
+        # foreach(local_value) do x
+        #     if isnan(x)
+        #         throw("NaN_error")
+        #     end
+        # end
+        # foreach(local_aprime_nodes) do x
+        #     if isnan(x)
+        #         throw("NaN_error")
+        #     end
+        # end
+        if any(isnan, local_value) || any(isnan, local_aprime_nodes)
+            throw("NaN error")
         end
         value = copy(local_value)
         aprime_nodes = copy(local_aprime_nodes)
@@ -47,35 +58,37 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
     val_Delta   = 0.5#0.05  # update parameter for value function iteration
     val_maxiters= 1000#250#500#
     if value_from_file_flag
-        val_maxiters= 300
+        val_maxiters= 500#300
     end
     val_len     = Inf
+    val_sumlen = Inf
     val_iters   = 0
     aprime_len = Inf
-    print_sameline("Start of the main VFI loop")
 
-    new_value = copy(value)
-    new_aprime_nodes = copy(aprime_nodes)
+    new_value = Array{Any}(undef,3)
+    new_aprime_nodes = Array{Any}(undef,3)
 
     # future payoffs if no change in fixed effects (no death)
     value_tran = Array{Any}(undef,3)
-    for occ = 1:3
+    Threads.@threads for occ = 1:3
+        new_value[occ] = copy(value[occ]).*0.0
+        new_aprime_nodes[occ] = copy(aprime_nodes[occ]).*0.0
         value_tran[occ] = zeros(number_a_nodes,number_u_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
     end
     # future expected payoffs conditional on no death
     expectation_value_death = Array{Any}(undef,3)
-    for occ = 1:3
+    Threads.@threads for occ = 1:3
         expectation_value_death[occ] = zeros(number_a_nodes)
     end
 
     old_val_len = copy(val_len)
-    stable = true
+    stable = 1
 
     while val_len > val_tol && val_iters < val_maxiters
 
         # compute future payoffs if no change in fixed effects (no death)
         value_tran .*= 0.0
-        for occ = 1:3
+        Threads.@threads for occ = 1:3
             for u_i in 1:number_u_nodes
                 for alpha_m_i in 1:number_alpha_m_nodes
                     for alpha_w_i in 1:number_alpha_w_nodes
@@ -88,7 +101,7 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
         end
 
         value_tran_rhs = Array{Any}(undef,3)
-        for occ = 1:3
+        Threads.@threads for occ = 1:3
             value_tran_rhs[occ] = Array{Any}(undef, number_u_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
             for u_prime_i in 1:number_u_nodes
                 for alpha_m_i in 1:number_alpha_m_nodes
@@ -100,7 +113,7 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
         end
 
         expectation_value_death .*= 0.0
-        for occ = 1:3
+        Threads.@threads for occ = 1:3
             for aprime_i in 1:number_a_nodes
                 for alpha_m_prime_i in 1:number_alpha_m_nodes
                     for alpha_w_prime_i in 1:number_alpha_w_nodes
@@ -116,12 +129,118 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
         end
 
         # loop for finding new_value and new_aprime_indices
-        Threads.@threads for (occ,(u_i,(zeta_i,(alpha_m_i,alpha_w_i)))) in collect(Iterators.product(1:3,Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))))
-            #print_sameline("$(u_i),$(zeta_i),$(alpha_m_i),$(alpha_w_i)\r")
-            new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = new_val_and_a1(value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i],aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], income[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], value_tran_rhs[occ][:,alpha_m_i,alpha_w_i],expectation_value_death_rhs[occ], u_i,alpha_m_i,alpha_w_i ,a_min,a_max,a_nodes, aprime_len,val_len, number_a_nodes, beta, p_alpha, P_u, number_u_nodes, crra)
-            #println_sameline(new_aprime_nodes[:,u_i,zeta_i,alpha_m_i,alpha_w_i])
-            #throw(error)
+        # Threads.@threads for (occ,(u_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:3,Iterators.product(1:number_u_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes))))
+        #     Threads.@threads for zeta_i = 1:number_zeta_nodes
+        #         #print_sameline("$(u_i),$(zeta_i),$(alpha_m_i),$(alpha_w_i)\r")
+        #         new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = new_val_and_a1(value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i],aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], income[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], value_tran_rhs[occ][:,alpha_m_i,alpha_w_i],expectation_value_death_rhs[occ], u_i,alpha_m_i,alpha_w_i ,a_min,a_max,a_nodes, aprime_len,val_len, number_a_nodes, beta, p_alpha, P_u, number_u_nodes, crra)
+        #     end
+        #
+        # end
+
+        # Threads.@threads for (occ,(u_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:3,Iterators.product(1:number_u_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes))))
+        #     if occ==1
+        #         for zeta_i = 1:number_zeta_nodes
+        #             if zeta_i>1
+        #                 new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = copy(new_value[occ][:,u_i,zeta_i-1,alpha_m_i,alpha_w_i]), copy(new_aprime_nodes[occ][:,u_i,zeta_i-1,alpha_m_i,alpha_w_i])
+        #             else
+        #                 #print_sameline("$(u_i),$(zeta_i),$(alpha_m_i),$(alpha_w_i)\r")
+        #                 new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = new_val_and_a1(value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i],aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], income[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], value_tran_rhs[occ][:,alpha_m_i,alpha_w_i],expectation_value_death_rhs[occ], u_i,alpha_m_i,alpha_w_i ,a_min,a_max,a_nodes, aprime_len,val_len, number_a_nodes, beta, p_alpha, P_u, number_u_nodes, crra)
+        #             end
+        #         end
+        #     else
+        #         Threads.@threads for zeta_i = 1:number_zeta_nodes
+        #             #print_sameline("$(u_i),$(zeta_i),$(alpha_m_i),$(alpha_w_i)\r")
+        #             new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = new_val_and_a1(value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i],aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], income[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], value_tran_rhs[occ][:,alpha_m_i,alpha_w_i],expectation_value_death_rhs[occ], u_i,alpha_m_i,alpha_w_i ,a_min,a_max,a_nodes, aprime_len,val_len, number_a_nodes, beta, p_alpha, P_u, number_u_nodes, crra)
+        #         end
+        #     end
+        # end
+
+        Threads.@threads for (occ,(alpha_m_i,alpha_w_i)) in collect(Iterators.product(1:3,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))
+            if occ==1
+                if val_len > 1e-3 && val_sumlen > 1e-1
+                    Threads.@threads for u_w_i = 1:3 #attention shit hardcode
+                        u_i = (u_w_i-1)*3+1 #attention shit hardcode
+                        for zeta_i = 1:number_zeta_nodes
+                            if zeta_i>1
+                                new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = copy(new_value[occ][:,u_i,zeta_i-1,alpha_m_i,alpha_w_i]), copy(new_aprime_nodes[occ][:,u_i,zeta_i-1,alpha_m_i,alpha_w_i])
+                            else
+                                #print_sameline("$(u_i),$(zeta_i),$(alpha_m_i),$(alpha_w_i)\r")
+                                new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = new_val_and_a1(value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i],aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], income[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], value_tran_rhs[occ][:,alpha_m_i,alpha_w_i],expectation_value_death_rhs[occ], u_i,alpha_m_i,alpha_w_i ,a_min,a_max,a_nodes, aprime_len,val_len, number_a_nodes, beta, p_alpha, P_u, number_u_nodes, crra)
+                            end
+                        end
+                        Threads.@threads for u_i_i = u_i+1:(u_w_i*3) #attention shit hardcode
+                            new_value[occ][:,u_i_i,:,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,:,alpha_m_i,alpha_w_i] = copy(new_value[occ][:,u_i,:,alpha_m_i,alpha_w_i]), copy(new_aprime_nodes[occ][:,u_i,:,alpha_m_i,alpha_w_i])
+                        end
+                    end
+                else
+                    Threads.@threads for u_i = 1:number_u_nodes
+                        for zeta_i = 1:number_zeta_nodes
+                            if zeta_i>1
+                                new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = copy(new_value[occ][:,u_i,zeta_i-1,alpha_m_i,alpha_w_i]), copy(new_aprime_nodes[occ][:,u_i,zeta_i-1,alpha_m_i,alpha_w_i])
+                            else
+                                #print_sameline("$(u_i),$(zeta_i),$(alpha_m_i),$(alpha_w_i)\r")
+                                new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = new_val_and_a1(value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i],aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], income[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], value_tran_rhs[occ][:,alpha_m_i,alpha_w_i],expectation_value_death_rhs[occ], u_i,alpha_m_i,alpha_w_i ,a_min,a_max,a_nodes, aprime_len,val_len, number_a_nodes, beta, p_alpha, P_u, number_u_nodes, crra)
+                            end
+                        end
+                    end
+                end
+            else
+                Threads.@threads for (u_i,zeta_i) = collect(Iterators.product(1:number_u_nodes,1:number_zeta_nodes))
+                    #print_sameline("$(u_i),$(zeta_i),$(alpha_m_i),$(alpha_w_i)\r")
+                    new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = new_val_and_a1(value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i],aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], income[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], value_tran_rhs[occ][:,alpha_m_i,alpha_w_i],expectation_value_death_rhs[occ], u_i,alpha_m_i,alpha_w_i ,a_min,a_max,a_nodes, aprime_len,val_len, number_a_nodes, beta, p_alpha, P_u, number_u_nodes, crra)
+                end
+            end
+
         end
+
+        # Threads.@threads for (occ,(alpha_m_i,alpha_w_i)) in collect(Iterators.product(1:3,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))
+        #     if occ==1
+        #         if val_len > 1e-3 && val_sumlen > 1e-1
+        #             Threads.@threads for u_w_i = 1:3 #attention shit hardcode
+        #                 u_i = (u_w_i-1)*3+1 #attention shit hardcode
+        #                 zeta_i = 1
+        #                 new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = new_val_and_a1(value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i],aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], income[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], value_tran_rhs[occ][:,alpha_m_i,alpha_w_i],expectation_value_death_rhs[occ], u_i,alpha_m_i,alpha_w_i ,a_min,a_max,a_nodes, aprime_len,val_len, number_a_nodes, beta, p_alpha, P_u, number_u_nodes, crra)
+        #                 Threads.@threads for (u_i_i,zeta_i_i) = collect(Iterators.product(u_i+1:(u_w_i*3),2:number_zeta_nodes))
+        #                     new_value[occ][:,u_i_i,zeta_i_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i_i,zeta_i_i,alpha_m_i,alpha_w_i] = copy(new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i]), copy(new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i])
+        #                 end
+        #             end
+        #         else
+        #             Threads.@threads for u_i = 1:number_u_nodes
+        #                 for zeta_i = 1:number_zeta_nodes
+        #                     if zeta_i>1
+        #                         new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = copy(new_value[occ][:,u_i,zeta_i-1,alpha_m_i,alpha_w_i]), copy(new_aprime_nodes[occ][:,u_i,zeta_i-1,alpha_m_i,alpha_w_i])
+        #                     else
+        #                         #print_sameline("$(u_i),$(zeta_i),$(alpha_m_i),$(alpha_w_i)\r")
+        #                         new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = new_val_and_a1(value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i],aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], income[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], value_tran_rhs[occ][:,alpha_m_i,alpha_w_i],expectation_value_death_rhs[occ], u_i,alpha_m_i,alpha_w_i ,a_min,a_max,a_nodes, aprime_len,val_len, number_a_nodes, beta, p_alpha, P_u, number_u_nodes, crra)
+        #                     end
+        #                 end
+        #             end
+        #         end
+        #     else
+        #         Threads.@threads for (u_i,zeta_i) = collect(Iterators.product(1:number_u_nodes,1:number_zeta_nodes))
+        #             #print_sameline("$(u_i),$(zeta_i),$(alpha_m_i),$(alpha_w_i)\r")
+        #             new_value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], new_aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] = new_val_and_a1(value[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i],aprime_nodes[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], income[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i], value_tran_rhs[occ][:,alpha_m_i,alpha_w_i],expectation_value_death_rhs[occ], u_i,alpha_m_i,alpha_w_i ,a_min,a_max,a_nodes, aprime_len,val_len, number_a_nodes, beta, p_alpha, P_u, number_u_nodes, crra)
+        #         end
+        #     end
+        #
+        # end
+
+        # TOTAL_MAX_ERR = 0.0
+        # for u_w_i = 1:3
+        #     base_u_w_i = Int64((u_w_i-1)*3)
+        #     A = new_value[1][:,base_u_w_i+1,:,:,:]
+        #     B = new_value[1][:,base_u_w_i+2,:,:,:]
+        #     C = new_value[1][:,base_u_w_i+3,:,:,:]
+        #     #println()
+        #     #println([sum(abs,A.-B) sum(abs,C.-B) sum(abs,A.-C)])
+        #     TOTAL_MAX_ERR = max(TOTAL_MAX_ERR,maximum(abs,A.-B))
+        #     TOTAL_MAX_ERR = max(TOTAL_MAX_ERR,maximum(abs,C.-B))
+        #     TOTAL_MAX_ERR = max(TOTAL_MAX_ERR,maximum(abs,A.-C))
+        #     #display([A[:,1,1,1] B[:,1,1,1] C[:,1,1,1]])
+        # end
+        # println()
+        # println(TOTAL_MAX_ERR)
+        # throw(error)
 
         val_iters += 1
         b_lowerbar = zeros(3)
@@ -141,11 +260,12 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
             aprime_len = max(aprime_len, maximum(abs,new_aprime_nodes[occ]-aprime_nodes[occ])/maximum(abs,new_aprime_nodes[occ]))
             aprime_sumlen = max(aprime_len, sum(abs,new_aprime_nodes[occ]-aprime_nodes[occ])/maximum(abs,new_aprime_nodes[occ]))
         end
-
-        if text_output
-            print_sameline("VF#$(val_iters) - err: $(round(val_len;digits=12)) b_l:$(round.(b_lowerbar;digits=4)) b_u:$(round.(b_upperbar;digits=4)), sum_err:$(round(val_sumlen;digits=9)), a_err:$(round(aprime_len;digits=4)), a_sumerr:$(round(aprime_sumlen;digits=4))")
+        is_b_bar_used = true
+        if old_val_len < val_len || val_len < val_tol*4
+            stable+=1
         end
-        if val_len > val_tol*5 && old_val_len > val_len && stable
+
+        if stable < val_maxiters*0.5 #&& val_len > val_tol*5 #&& old_val_len > val_len#
             for occ = 1:3
                 if b_lowerbar[occ] > -10000000+1#=-Inf=# && b_upperbar[occ] < 10000000-1#=Inf=# #&& b_lowerbar < 0.0 && b_upperbar > 0.0
                     value[occ] .= new_value[occ] .+ (b_lowerbar[occ] + b_upperbar[occ])/2
@@ -155,11 +275,15 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
                 aprime_nodes[occ] .= new_aprime_nodes[occ]
             end
         else
-            stable = false
+            #stable += 1
+            is_b_bar_used = false
             for occ = 1:3
                 value[occ] .= new_value[occ].*val_Delta .+ value[occ].*(1-val_Delta)
                 aprime_nodes[occ] .= new_aprime_nodes[occ].*val_Delta .+ aprime_nodes[occ].*(1-val_Delta)
             end
+        end
+        if val_iters%25==0 || val_iters==1#text_output
+            print_sameline("VF#$(val_iters) - err: $(round(val_len;digits=12)) b:$(is_b_bar_used) b_l:$(round.(b_lowerbar;digits=4)) b_u:$(round.(b_upperbar;digits=4)), sum_err:$(round(val_sumlen;digits=9)), a_err:$(round(aprime_len;digits=4)), a_sumerr:$(round(aprime_sumlen;digits=4))")
         end
 
         old_val_len = copy(val_len)
@@ -183,14 +307,12 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
 
     end
 
-    if text_output
-        print_sameline("Calculation was finished on iteration - $(val_iters) with error: $(val_len)")
+    if true#text_output
+        println_sameline("VF Calculation was finished on iteration - $(val_iters) with error: $(val_len)")
     end
-    if isnan(val_len) || val_iters >= val_maxiters
+    if isnan(val_len) || val_len > 1e-3#val_iters >= val_maxiters
         throw(error("Policy function is NaN"))
-    end
-
-    if true#!value_from_file_flag#false#
+    else#if val_len < 1e-2
         local_value = copy(value)
         local_aprime_nodes = copy(aprime_nodes)
         path = "$(@__DIR__)/val_aprime/"
@@ -215,7 +337,7 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
     a1_indices = Array{Any}(undef,3)
     lottery_prob_1 = Array{Any}(undef,3)
     lottery_prob_2 = Array{Any}(undef,3)
-    for occ = 1:3
+    Threads.@threads for occ = 1:3
         policy[occ] = zeros(number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
         a1_indices[occ] = Array{Int64}(undef,number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
         lottery_prob_1[occ] = zeros(number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
@@ -241,18 +363,34 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
     end
     #throw(error)
     distr = Array{Any}(undef,3)
-    for occ = 1:3
+    Threads.@threads for occ = 1:3
         distr[occ] = zeros(number_asset_grid,number_u_nodes,number_zeta_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
     end
 
     # initialise stationary distribution
     print_sameline("Initialise stationary distribution")
-    Threads.@threads for (occ,(zeta_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:3,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes))))
-        distr[occ][floor(Int,number_asset_grid/5),:,zeta_i,alpha_m_i,alpha_w_i] = stat_P_u.*(P_zeta[zeta_i]*P_alpha[alpha_m_i,alpha_w_i])
+    distr_from_file_flag = true
+    try
+        path = "$(@__DIR__)/distr/"
+        if Sys.iswindows()
+            path = "$(@__DIR__)\\distr\\"
+        end
+        @load "$(path)distr_$(number_a_nodes)_$(number_u_nodes)_$(number_zeta_nodes)_$(number_alpha_m_nodes)_$(number_alpha_w_nodes)_fixed_occ.jld2" local_distr
+        Threads.@threads for occ = 1:3
+            distr[occ] = copy(local_distr[occ])
+        end
+        print_sameline("Initialise distr from file")
+    catch e
+        distr_from_file_flag = false
+        Threads.@threads for (occ,(zeta_i,(alpha_m_i,alpha_w_i))) in collect(Iterators.product(1:3,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes))))
+            distr[occ][floor(Int,number_asset_grid/5),:,zeta_i,alpha_m_i,alpha_w_i] = stat_P_u.*(P_zeta[zeta_i]*P_alpha[alpha_m_i,alpha_w_i])
+        end
+        print_sameline("Initialise distr from scratch")
     end
 
+
     oldK_supply = 0.0
-    for occ = 1:3
+    Threads.@threads for occ = 1:3
         distr[occ] = (distr[occ]./sum(distr[occ])).*fixed_occ_shares[occ]
         oldK_supply += sum(distr[occ].*policy[occ])
     end
@@ -315,7 +453,7 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
 
         # calculate sum of capital of all people who change skills
         distr_marginal_assets = Array{Any}(undef,3)
-        for occ = 1:3
+        Threads.@threads for occ = 1:3
             distr_marginal_assets[occ] = sum(sum(sum(sum(distr_a1_z0[occ],dims=5)[:,:,:,:,1],dims=4)[:,:,:,1],dims=3)[:,:,1],dims=2)[:,1]
         end
 
@@ -324,7 +462,7 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
             new_distr2[occ][:,u_prime_i,zeta_prime_i,alpha_m_prime_i,alpha_w_prime_i] = (p_alpha*stat_P_u[u_prime_i]*P_zeta[zeta_prime_i]*P_alpha[alpha_m_prime_i,alpha_w_prime_i]).*distr_marginal_assets[occ]
         end
 
-        for occ = 1:3
+        Threads.@threads for occ = 1:3
             new_distr[occ] .+= new_distr2[occ]
         end
 
@@ -345,7 +483,7 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
             newK_supply += sum(distr[occ].*policy[occ])
         end
         K_s_error = abs(newK_supply-oldK_supply)
-        if distr_iters%25==0#text_output
+        if distr_iters%25==0 || distr_iters==1#text_output
             print_sameline("Distr#$(distr_iters) - err: $(distr_len) - sumdistr: $(round.([sum(distr[1]),sum(distr[2]),sum(distr[3])];digits=2)), K_s:$(round(newK_supply;digits=6)), K_s_err:$(K_s_error)")
         end
         distr_len = K_s_error
@@ -364,7 +502,17 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
         end
     end
     if true#text_output
-        print_sameline("Calculation was finished on iteration - $(distr_iters) with error: $(distr_len)")
+        println_sameline("Distr Calculation was finished on iteration - $(distr_iters) with error: $(distr_len)")
+    end
+
+    if distr_len < 1e-2
+        local_distr = copy(distr)
+        path = "$(@__DIR__)/distr/"
+        if Sys.iswindows()
+            path = "$(@__DIR__)\\distr\\"
+        end
+        @save "$(path)distr_$(number_a_nodes)_$(number_u_nodes)_$(number_zeta_nodes)_$(number_alpha_m_nodes)_$(number_alpha_w_nodes)_fixed_occ.jld2" local_distr
+
     end
 
     if fig_output
@@ -390,14 +538,15 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
         =#
     end
 
-    if text_output
-        print_sameline("Calculation of aggregate quantities for capital and labour")
-    end
 
     return distr, number_asset_grid, asset_grid, policy, a1_indices, lottery_prob_1, lottery_prob_2
 end
 
 function find_aggregate_capital_labour_demand_supply_fixed_occ(number_asset_grid,asset_grid,policy,density_distr,r,w, labour_excess, labour_d, labour_s, capital_excess, capital_d)
+
+    if text_output
+        print_sameline("Calculation of aggregate quantities for capital and labour")
+    end
 
     # find capital demand and supply
     K_demand = sum( [sum(density_distr[occ].*capital_d[occ]) for occ in 1:3])
