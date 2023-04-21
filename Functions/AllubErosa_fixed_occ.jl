@@ -82,6 +82,8 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
     end
 
     old_val_len = copy(val_len)
+    old_b_lowerbar = ones(3).*(-Inf)
+    old_b_upperbar = ones(3).*Inf
     stable = 1
 
     while val_len > val_tol && val_iters < val_maxiters
@@ -261,11 +263,11 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
             aprime_sumlen = max(aprime_len, sum(abs,new_aprime_nodes[occ]-aprime_nodes[occ])/maximum(abs,new_aprime_nodes[occ]))
         end
         is_b_bar_used = true
-        if old_val_len < val_len || val_len < val_tol*4
+        if old_val_len < val_len || val_len < val_tol*4 || any(b_lowerbar.<old_b_lowerbar) || any(b_upperbar.>old_b_upperbar)
             stable+=1
         end
 
-        if stable < val_maxiters*0.5 #&& val_len > val_tol*5 #&& old_val_len > val_len#
+        if stable < val_maxiters*0.3333 #&& val_len > val_tol*5 #&& old_val_len > val_len#
             for occ = 1:3
                 if b_lowerbar[occ] > -10000000+1#=-Inf=# && b_upperbar[occ] < 10000000-1#=Inf=# #&& b_lowerbar < 0.0 && b_upperbar > 0.0
                     value[occ] .= new_value[occ] .+ (b_lowerbar[occ] + b_upperbar[occ])/2
