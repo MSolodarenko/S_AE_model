@@ -398,7 +398,7 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
     print_sameline("Initialise stationary distribution")
     distr_from_file_flag = true
     try
-        throw(err)
+        # throw(err)
         path = "$(@__DIR__)/distr/"
         if Sys.iswindows()
             path = "$(@__DIR__)\\distr\\"
