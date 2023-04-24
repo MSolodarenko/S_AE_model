@@ -44,7 +44,8 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
         #         throw("NaN_error")
         #     end
         # end
-        if any(isnan, local_value) || any(isnan, local_aprime_nodes)
+        if any(isnan, local_value[1]) || any(isnan, local_value[2]) || any(isnan, local_value[3]) || any(isnan, local_aprime_nodes[1]) || any(isnan, local_aprime_nodes[2]) || any(isnan, local_aprime_nodes[3])
+            display([any(isnan, local_value[1]), any(isnan, local_value[2]), any(isnan, local_value[3]), any(isnan, local_aprime_nodes[1]), any(isnan, local_aprime_nodes[2]), any(isnan, local_aprime_nodes[3])])
             throw("NaN error")
         end
         value = copy(local_value)
@@ -56,10 +57,10 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
     end
 
     val_Delta   = 0.5#0.05  # update parameter for value function iteration
-    val_maxiters= 1000#250#500#
-    if value_from_file_flag
-        val_maxiters= 500#300
-    end
+    val_maxiters= 3*1000#250#500#
+    # if value_from_file_flag
+    #     val_maxiters= 500#300
+    # end
     val_len     = Inf
     val_sumlen = Inf
     val_iters   = 0
@@ -263,11 +264,11 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
             aprime_sumlen = max(aprime_len, sum(abs,new_aprime_nodes[occ]-aprime_nodes[occ])/maximum(abs,new_aprime_nodes[occ]))
         end
         is_b_bar_used = true
-        if old_val_len < val_len || val_len < val_tol*4 || any(b_lowerbar.<old_b_lowerbar) || any(b_upperbar.>old_b_upperbar)
+        if #=old_val_len < val_len || val_len < val_tol*4 ||=# any(b_lowerbar.<old_b_lowerbar) || any(b_upperbar.>old_b_upperbar)
             stable+=1
         end
 
-        if stable < val_maxiters*0.3333 #&& val_len > val_tol*5 #&& old_val_len > val_len#
+        if stable < val_maxiters*0.1 #&& val_len > val_tol*5 #&& old_val_len > val_len#
             for occ = 1:3
                 if b_lowerbar[occ] > -10000000+1#=-Inf=# && b_upperbar[occ] < 10000000-1#=Inf=# #&& b_lowerbar < 0.0 && b_upperbar > 0.0
                     value[occ] .= new_value[occ] .+ (b_lowerbar[occ] + b_upperbar[occ])/2
@@ -284,7 +285,7 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
                 aprime_nodes[occ] .= new_aprime_nodes[occ].*val_Delta .+ aprime_nodes[occ].*(1-val_Delta)
             end
         end
-        if val_iters%25==0 || val_iters==1#text_output
+        if val_iters%10==0 || val_iters==1#text_output
             print_sameline("VF#$(val_iters) - err: $(round(val_len;digits=12)) b:$(is_b_bar_used) b_l:$(round.(b_lowerbar;digits=4)) b_u:$(round.(b_upperbar;digits=4)), sum_err:$(round(val_sumlen;digits=9)), a_err:$(round(aprime_len;digits=4)), a_sumerr:$(round(aprime_sumlen;digits=4))")
         end
 
@@ -312,8 +313,10 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
     if true#text_output
         println_sameline("VF Calculation was finished on iteration - $(val_iters) with error: $(val_len)")
     end
-    if isnan(val_len) || val_len > 1e-3#val_iters >= val_maxiters
+    if isnan(val_len) #|| val_iters >= val_maxiters
         throw(error("Policy function is NaN"))
+    elseif val_len > 1e-2
+        throw(error("Policy functions have not converged"))
     else#if val_len < 1e-2
         local_value = copy(value)
         local_aprime_nodes = copy(aprime_nodes)
@@ -399,7 +402,7 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
 
     # main loop
     distr_Delta   = 1.0#0.5  # update parameter for iteration process
-    distr_maxiters= 1600
+    distr_maxiters= 3*1600
     distr_len     = Inf
     distr_iters   = 0
     print_sameline("Start of the main stationary distribution iteration loop")

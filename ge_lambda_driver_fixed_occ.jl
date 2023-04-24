@@ -5,6 +5,7 @@ print_sameline("Initialising libraries")
 using Plots
 using JLD2
 using ProgressMeter
+using Suppressor
 
 print_sameline("Loading functions for steady_state procedure")
 include("Functions/steady_state.jl")
@@ -159,7 +160,7 @@ for country = ["Italy"]
         ss_star = []
         SS = []
         try
-            @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i];digits=2)).jld2" SS
+            @suppress_err @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i];digits=2)).jld2" SS
             println("Already calculated")
             ss_star = copy(SS)
             println("The interest rate - $(ss_star[2]*100)% and the wage - $(ss_star[3])")
@@ -168,62 +169,119 @@ for country = ["Italy"]
             # guess_R = SSS_fixed_occ[iter][2]
             # guess_W = SSS_fixed_occ[iter][3]
 
-            try
-                # throw(error)
-                @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i-1];digits=2)).jld2" SS
-                R_MIN = SS[2]
-                W_MIN = SS[3]
-            catch e
-                if i > l1_i
-                    iter = l1_i
-                    try
-                        while iter < i
-                            @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter];digits=2)).jld2" SS
-                            iter+=1
-                        end
-                    catch e
-                        @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter-1];digits=2)).jld2" SS
-                        R_MIN = SS[2]
-                        W_MIN = SS[3]
-                    end
-                else
-                    R_MIN = r_min
-                    W_MIN = w_min
+            # try
+            #     # throw(error)
+            #     @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i-1];digits=2)).jld2" SS
+            #     R_MIN = SS[2]
+            #     W_MIN = SS[3]
+            # catch e
+            #     if i > l1_i
+            #         iter = l1_i
+            #         try
+            #             while iter < i
+            #                 @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter];digits=2)).jld2" SS
+            #                 iter+=1
+            #             end
+            #         catch e
+            #             @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter-1];digits=2)).jld2" SS
+            #             R_MIN = SS[2]
+            #             W_MIN = SS[3]
+            #         end
+            #     else
+            #         R_MIN = r_min
+            #         W_MIN = w_min
+            #     end
+            # end
+            min_is_found = false
+            iter = i-1
+            while iter > 0 && !min_is_found
+                @suppress_err try
+                    @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter];digits=2)).jld2" SS
+                    min_is_found = true
+                    R_MIN = SS[2]
+                    W_MIN = SS[3]
+                catch e
+                    iter -= 1
                 end
+            end
+            if !min_is_found
+                R_MIN = r_min
+                W_MIN = w_min
             end
 
-            try
-                # throw(error)
-                @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i+1];digits=2)).jld2" SS
-                R_MAX = SS[2]
-                W_MAX = SS[3]
-            catch e
-                if i < l1_i
-                    iter = l1_i
-                    try
-                        while iter > i
-                            @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter];digits=2)).jld2" SS
-                            iter-=1
-                        end
-                    catch e
-                        @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter+1];digits=2)).jld2" SS
-                        R_MAX = SS[2]
-                        W_MAX = SS[3]
-                    end
-                else
-                    R_MAX = r_max
-                    W_MAX = w_max
+            # try
+            #     # throw(error)
+            #     @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i+1];digits=2)).jld2" SS
+            #     R_MAX = SS[2]
+            #     W_MAX = SS[3]
+            # catch e
+            #     if i < l1_i
+            #         iter = l1_i
+            #         try
+            #             while iter > i
+            #                 @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter];digits=2)).jld2" SS
+            #                 iter-=1
+            #             end
+            #         catch e
+            #             @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter+1];digits=2)).jld2" SS
+            #             R_MAX = SS[2]
+            #             W_MAX = SS[3]
+            #         end
+            #     else
+            #         R_MAX = r_max
+            #         W_MAX = w_max
+            #     end
+            # end
+            max_is_found = false
+            iter = i+1
+            while iter <= length(lambdas) && !max_is_found
+                @suppress_err try
+                    @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[iter];digits=2)).jld2" SS
+                    max_is_found = true
+                    R_MAX = SS[2]
+                    W_MAX = SS[3]
+                catch e
+                    iter += 1
                 end
             end
-            if i > l1_i
+            if !max_is_found
+                R_MAX = r_max
+                W_MAX = w_max
+            end
+
+            if i == 10
+                guess_R = 1.7929539540888162/100#R_
+                guess_W = 0.15997672649914652#W_
+            elseif i == 8
+                guess_R = 1.169/100#R_
+                guess_W = 0.159688#W_
+            elseif i == 9
+                guess_R = 1.5995147810553203/100#R_
+                guess_W = 0.15997522673188153#W_
+            elseif i == 11
+                guess_R = 2.078678700816376/100#R_
+                guess_W = 0.1619210016023443#W_
+            elseif i == 12
+                guess_R = 2.3116713029092075/100#R_
+                guess_W = 0.16229482981762994#W_
+            elseif i == 13
+                guess_R = 2.4904744014401006/100#R_
+                guess_W = 0.1642226728241757#W_
+            elseif i == 14
+                guess_R = 2.9391361991653033/100#R_
+                guess_W = 0.16422267358861903#W_
+            elseif i == 15
+                guess_R = 2.9869593599518462/100#R_
+                guess_W = 0.18189517491443577#W_
+            elseif i == 16
+                guess_R = 2.9945/100#R_
+                guess_W = 0.18309#W_
+            elseif i > l1_i
                 guess_R = 0.95*R_MIN+0.05*R_MAX
                 guess_W = 0.99*W_MIN+0.01*W_MAX
             elseif i < l1_i
                 guess_R = 0.05*R_MIN+0.95*R_MAX
                 guess_W = 0.01*W_MIN+0.99*W_MAX
-            elseif i == l1_i
-                guess_R = 1.7932/100#R_
-                guess_W = 0.159956#W_
             end
             println("R: $(R_MIN)<=$(guess_R)<=$(R_MAX)")
             println("W: $(W_MIN)<=$(guess_W)<=$(W_MAX)")
@@ -246,7 +304,11 @@ for country = ["Italy"]
             SSS[i] = copy(ss_star)
 
             SS = copy(ss_star)
-            @save "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i];digits=2)).jld2" SS
+            if SS[6] <= GLOBAL_PARAMS[2]
+                @save "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i];digits=2)).jld2" SS
+            else
+                @save "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i];digits=2))_failed.jld2" SS
+            end
         end
 
         open("$(LOCAL_DIR)res_$(round(lambdas[i];digits=3)).txt", "a") do f

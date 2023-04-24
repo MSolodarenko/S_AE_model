@@ -207,16 +207,16 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
         R = new_R
         W = new_W
         try
-            if abs(R - best_R) < gen_tol_x/2.0 && abs(W - best_W) < gen_tol_x/2.0
+            if abs(R - best_R) < gen_tol_x/10.0 && abs(W - best_W) < gen_tol_x/10.0
                 throw(error("same as best_R and best_W"))
             end
-            if abs(R - old_R) < gen_tol_x/2.0 && abs(W - old_W) < gen_tol_x/2.0
+            if abs(R - old_R) < gen_tol_x/10.0 && abs(W - old_W) < gen_tol_x/10.0
                 throw(error("same as old_R and old_W"))
             end
-            if abs(R - old_old_R) < gen_tol_x/2.0 && abs(W - old_old_W) < gen_tol_x/2.0
+            if abs(R - old_old_R) < gen_tol_x/10.0 && abs(W - old_old_W) < gen_tol_x/10.0
                 throw(error("same as old_old_R and old_old_W"))
             end
-            if abs(R - old_old_old_R) < gen_tol_x/2.0 && abs(W - old_old_old_W) < gen_tol_x/2.0
+            if abs(R - old_old_old_R) < gen_tol_x/10.0 && abs(W - old_old_old_W) < gen_tol_x/10.0
                 throw(error("same as old_old_old_R and old_old_old_W"))
             end
             res = AllubErosa(R,W, global_params, global_approx_params, model_params, approx_object)
@@ -532,7 +532,7 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
 
             println_sameline("#$(rw_iters) - r:$(round(R*100;digits=4))%, w:$(round(W;digits=6)) - total_len:-.------ - len_r:-.------ - len_w:-.------ - new_r:$(round(new_R*100;digits=4))%, new_w:$(round(new_W;digits=6))")
             draw_best_grid(best_total_len_grid, best_len_r_grid,best_len_w_grid, best_R_grid,best_W_grid, R,W, len_r,len_w, new_R,new_W)
-            if max(abs(new_R-R), abs(new_W-W)) < gen_tol_x
+            if max(abs(new_R-R), abs(new_W-W)) < gen_tol_x/10.0
                 #=
                 new_R = R + len_r
                 new_R = min(max(r_min, new_R), r_max)
@@ -557,7 +557,7 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
 
         end
 
-        if max(abs(new_R-R), abs(new_W-W)) < gen_tol_x
+        if max(abs(new_R-R), abs(new_W-W)) < gen_tol_x/10.0
             #=
             new_R = R + len_r
             new_R = min(max(r_min, new_R), r_max)
@@ -596,9 +596,9 @@ function steady_state(R, W, global_params, global_approx_params, model_params)
 
     if total_len < best_total_len #rw_iters < rw_maxiters
         println("The interest rate - $(R*100)% and the wage - $(W) with total_len - $(total_len)")
-        return [res, R, W, approx_object, model_params]
+        return [res, R, W, approx_object, model_params, total_len]
     else
         println("The interest rate - $(best_R*100)% and the wage - $(best_W) with total_len - $(best_total_len)")
-        return [best_res, best_R, best_W, approx_object, model_params]
+        return [best_res, best_R, best_W, approx_object, model_params, best_total_len]
     end
 end
