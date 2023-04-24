@@ -249,33 +249,9 @@ for country = ["Italy"]
                 W_MAX = w_max
             end
 
-            if i == 10
-                guess_R = 1.79295/100#R_
-                guess_W = 0.15997#W_
-            elseif i == 8
-                guess_R = 1.169/100#R_
-                guess_W = 0.159688#W_
-            elseif i == 9
-                guess_R = 1.5995147810553203/100#R_
-                guess_W = 0.15997522673188153#W_
-            elseif i == 11
-                guess_R = 2.078678700816376/100#R_
-                guess_W = 0.1619210016023443#W_
-            elseif i == 12
-                guess_R = 2.3116713029092075/100#R_
-                guess_W = 0.16229482981762994#W_
-            elseif i == 13
-                guess_R = 2.4904744014401006/100#R_
-                guess_W = 0.1642226728241757#W_
-            elseif i == 14
-                guess_R = 2.9391361991653033/100#R_
-                guess_W = 0.16422267358861903#W_
-            elseif i == 15
-                guess_R = 2.9869593599518462/100#R_
-                guess_W = 0.18189517491443577#W_
-            elseif i == 16
-                guess_R = 2.9945/100#R_
-                guess_W = 0.18309#W_
+            if i == l1_i
+                guess_R = 1.915632259660541/100#R_
+                guess_W = 0.22444240890245049#W_
             elseif i > l1_i
                 guess_R = 0.95*R_MIN+0.05*R_MAX
                 guess_W = 0.99*W_MIN+0.01*W_MAX
