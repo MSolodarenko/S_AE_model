@@ -62,6 +62,7 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
     #     val_maxiters= 500#300
     # end
     val_len     = Inf
+    val_lens = ones(3).*Inf
     val_sumlen = Inf
     val_iters   = 0
     aprime_len = Inf
@@ -83,15 +84,18 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
     end
 
     old_val_len = copy(val_len)
+    old_val_lens = copy(val_lens)
     old_b_lowerbar = ones(3).*(-Inf)
     old_b_upperbar = ones(3).*Inf
     stable = 1
+
+    lonc_occs = [1,2,3] #list_of_non_converged_occs
 
     while val_len > val_tol && val_iters < val_maxiters
 
         # compute future payoffs if no change in fixed effects (no death)
         value_tran .*= 0.0
-        Threads.@threads for occ = 1:3
+        Threads.@threads for occ = lonc_occs
             for u_i in 1:number_u_nodes
                 for alpha_m_i in 1:number_alpha_m_nodes
                     for alpha_w_i in 1:number_alpha_w_nodes
@@ -104,7 +108,7 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
         end
 
         value_tran_rhs = Array{Any}(undef,3)
-        Threads.@threads for occ = 1:3
+        Threads.@threads for occ = lonc_occs
             value_tran_rhs[occ] = Array{Any}(undef, number_u_nodes,number_alpha_m_nodes,number_alpha_w_nodes)
             for u_prime_i in 1:number_u_nodes
                 for alpha_m_i in 1:number_alpha_m_nodes
@@ -116,7 +120,7 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
         end
 
         expectation_value_death .*= 0.0
-        Threads.@threads for occ = 1:3
+        Threads.@threads for occ = lonc_occs
             for aprime_i in 1:number_a_nodes
                 for alpha_m_prime_i in 1:number_alpha_m_nodes
                     for alpha_w_prime_i in 1:number_alpha_w_nodes
@@ -127,7 +131,7 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
         end
 
         expectation_value_death_rhs = Array{Any}(undef,3)
-        for occ = 1:3
+        for occ = lonc_occs
             expectation_value_death_rhs[occ] = Schumaker(a_nodes,expectation_value_death[occ]; extrapolation = (Linear,Linear))
         end
 
@@ -158,7 +162,7 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
         #     end
         # end
 
-        Threads.@threads for (occ,(alpha_m_i,alpha_w_i)) in collect(Iterators.product(1:3,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))
+        Threads.@threads for (occ,(alpha_m_i,alpha_w_i)) in collect(Iterators.product(lonc_occs,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))
             if occ==1
                 if val_len > 1e-3 && val_sumlen > 1e-1
                     Threads.@threads for u_w_i = 1:3 #attention shit hardcode
@@ -249,27 +253,42 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
         b_lowerbar = zeros(3)
         b_upperbar = zeros(3)
         val_len = 0.0
+        val_lens = zeros(3)
         val_sumlen = 0.0
         aprime_len = 0.0
         aprime_sumlen = 0.0
         for occ = 1:3
+
+            if all(new_value[occ].==0.0)
+                new_value[occ] = value[occ]
+                new_aprime_nodes[occ] = aprime_nodes[occ]
+            end
+
             b_lowerbar[occ] = (beta/(1-beta))*minimum(new_value[occ] - value[occ])
             b_upperbar[occ] = (beta/(1-beta))*maximum(new_value[occ] - value[occ])
 
-            val_len = max(val_len, maximum(abs,new_value[occ]-value[occ])/maximum(abs,new_value[occ]))
+            val_lens[occ] = maximum(abs,new_value[occ]-value[occ])/maximum(abs,new_value[occ])
+            val_len = max(val_len, val_lens[occ])
 
             val_sumlen = max(val_sumlen, sum(abs,new_value[occ]-value[occ])/maximum(abs,new_value[occ]))
 
             aprime_len = max(aprime_len, maximum(abs,new_aprime_nodes[occ]-aprime_nodes[occ])/maximum(abs,new_aprime_nodes[occ]))
             aprime_sumlen = max(aprime_len, sum(abs,new_aprime_nodes[occ]-aprime_nodes[occ])/maximum(abs,new_aprime_nodes[occ]))
+
+            if val_lens[occ] < val_tol/3
+                i_s = findall(x->x!=occ,lonc_occs)
+                lonc_occs = lonc_occs[i_s]
+                value[occ] .= new_value[occ]
+                aprime_nodes[occ] .= new_aprime_nodes[occ]
+            end
         end
         is_b_bar_used = true
         if #=old_val_len < val_len || val_len < val_tol*4 ||=# any(b_lowerbar.<old_b_lowerbar) || any(b_upperbar.>old_b_upperbar)
             stable+=1
         end
 
-        if stable < val_maxiters*0.1 #&& val_len > val_tol*5 #&& old_val_len > val_len#
-            for occ = 1:3
+        if stable < 250#val_maxiters*0.1 #&& val_len > val_tol*5 #&& old_val_len > val_len#
+            for occ = lonc_occs
                 if b_lowerbar[occ] > -10000000+1#=-Inf=# && b_upperbar[occ] < 10000000-1#=Inf=# #&& b_lowerbar < 0.0 && b_upperbar > 0.0
                     value[occ] .= new_value[occ] .+ (b_lowerbar[occ] + b_upperbar[occ])/2
                 else
@@ -286,10 +305,13 @@ function find_policy_fixed_occ(a_min,a_max,a_nodes,r,w, income,earnings, val_tol
             end
         end
         if val_iters%10==0 || val_iters==1#text_output
-            print_sameline("VF#$(val_iters) - err: $(round(val_len;digits=12)) b:$(is_b_bar_used) b_l:$(round.(b_lowerbar;digits=4)) b_u:$(round.(b_upperbar;digits=4)), sum_err:$(round(val_sumlen;digits=9)), a_err:$(round(aprime_len;digits=4)), a_sumerr:$(round(aprime_sumlen;digits=4))")
+            print_sameline("VF#$(val_iters) - err: $(round(val_len;digits=12))/$(round.(val_lens;digits=12)) b:$(is_b_bar_used)/$(min(stable,250)) b_l:$(round.(b_lowerbar;digits=4)) b_u:$(round.(b_upperbar;digits=4)), sum_err:$(round(val_sumlen;digits=9))") #, a_err:$(round(aprime_len;digits=4)), a_sumerr:$(round(aprime_sumlen;digits=4))
         end
 
         old_val_len = copy(val_len)
+        old_val_lens =copy(val_lens)
+        old_b_lowerbar = copy(b_lowerbar)
+        old_b_upperbar = copy(b_upperbar)
 
         if fig_output
             #=
@@ -376,6 +398,7 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
     print_sameline("Initialise stationary distribution")
     distr_from_file_flag = true
     try
+        throw(err)
         path = "$(@__DIR__)/distr/"
         if Sys.iswindows()
             path = "$(@__DIR__)\\distr\\"
@@ -395,14 +418,32 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
 
 
     oldK_supply = 0.0
+    oldK_supplys = zeros(3)
     Threads.@threads for occ = 1:3
         distr[occ] = (distr[occ]./sum(distr[occ])).*fixed_occ_shares[occ]
-        oldK_supply += sum(distr[occ].*policy[occ])
+        oldK_supplys[occ] = sum(distr[occ].*policy[occ])
+        oldK_supply += oldK_supplys[occ]
     end
+    # cum_distr = Array{Any}(undef,3)
+    # Threads.@threads for occ = 1:3
+    #     cum_distr[occ] = copy(distr[occ][:,1,1,1,1])
+    #     cum_distr[occ][1] = sum(cum_distr[occ][1,:,:,:,:])
+    #     for a_i in 2:number_asset_grid
+    #         cum_distr[occ][a_i] = cum_distr[occ][a_i-1] + sum(distr[occ][a_i,:,:,:,:])
+    #     end
+    #     #cum_distr[occ] ./= fixed_occ_shares[occ]
+    # end
+    # distr_label = permutedims(["$(occ)" for occ in 1:3])
+    # plot_distr = [cum_distr[occ][:] for occ in 1:3 ]
+    # display(plot(#=asset_grid,=#plot_distr,label=distr_label,#=xticks = a_min:5.0:a_max,=#xrotation=-45,legend=:outertopleft,foreground_color_legend = nothing))
+    #
+    # display(round.([sum(distr[1]),sum(distr[2]),sum(distr[3])];digits=2))
+    # display(round.([cum_distr[1][end],cum_distr[2][end],cum_distr[3][end]];digits=2))
+    # throw(error)
 
     # main loop
     distr_Delta   = 1.0#0.5  # update parameter for iteration process
-    distr_maxiters= 3*1600
+    distr_maxiters= 9*1600
     distr_len     = Inf
     distr_iters   = 0
     print_sameline("Start of the main stationary distribution iteration loop")
@@ -411,12 +452,15 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
     new_distr = copy(distr)
     new_distr2 = copy(distr)
 
+    lonc_occs = [1,2,3] #list_of_non_converged_occs
+
     while distr_len > distr_tol && distr_iters < distr_maxiters
 
         # calculate distribution
         # over future capital and current level of skills
         distr_a1_z0 .*= 0.0
-        Threads.@threads for (occ,(u_i,(zeta_i,(alpha_m_i,alpha_w_i)))) in collect(Iterators.product(1:3,Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))))
+        Threads.@threads for (occ,(u_i,(zeta_i,(alpha_m_i,alpha_w_i)))) in collect(Iterators.product(lonc_occs,Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))))
+            distr_a1_z0[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i] .*= 0.0
             non_zero_asset_grid_iters = findall(!iszero,distr[occ][:,u_i,zeta_i,alpha_m_i,alpha_w_i])
             for a_i in non_zero_asset_grid_iters#1:number_asset_grid#
                 j_1 = a1_indices[occ][a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
@@ -433,7 +477,7 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
         # first calculate transition
         # for people that do not change alpha_m and alpha_w
         new_distr .*= 0.0
-        Threads.@threads for (occ,(alpha_m_i,alpha_w_i)) in collect(Iterators.product(1:3,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))
+        Threads.@threads for (occ,(alpha_m_i,alpha_w_i)) in collect(Iterators.product(lonc_occs,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))
             # zeta is the transitory shock,
             # so add over all levels of zeta
             # and then draw new u_prime and new zeta_prime
@@ -458,16 +502,16 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
 
         # calculate sum of capital of all people who change skills
         distr_marginal_assets = Array{Any}(undef,3)
-        Threads.@threads for occ = 1:3
+        Threads.@threads for occ = lonc_occs
             distr_marginal_assets[occ] = sum(sum(sum(sum(distr_a1_z0[occ],dims=5)[:,:,:,:,1],dims=4)[:,:,:,1],dims=3)[:,:,1],dims=2)[:,1]
         end
 
         new_distr2 .*= 0.0
-        Threads.@threads for (occ,(u_prime_i,(zeta_prime_i,(alpha_m_prime_i,alpha_w_prime_i)))) in collect(Iterators.product(1:3,Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))))
+        Threads.@threads for (occ,(u_prime_i,(zeta_prime_i,(alpha_m_prime_i,alpha_w_prime_i)))) in collect(Iterators.product(lonc_occs,Iterators.product(1:number_u_nodes,Iterators.product(1:number_zeta_nodes,Iterators.product(1:number_alpha_m_nodes,1:number_alpha_w_nodes)))))
             new_distr2[occ][:,u_prime_i,zeta_prime_i,alpha_m_prime_i,alpha_w_prime_i] = (p_alpha*stat_P_u[u_prime_i]*P_zeta[zeta_prime_i]*P_alpha[alpha_m_prime_i,alpha_w_prime_i]).*distr_marginal_assets[occ]
         end
 
-        Threads.@threads for occ = 1:3
+        Threads.@threads for occ = lonc_occs
             new_distr[occ] .+= new_distr2[occ]
         end
 
@@ -477,33 +521,64 @@ function find_stationary_distribution_pdf(fixed_occ_shares, a1_nodes,a_min,a_max
         #new_distr .= new_distr./sum(new_distr)
 
         distr_len = 0.0
+        distr_lens = zeros(3)
+        newK_supply = 0.0
+        newK_supplys = zeros(3)
         for occ = 1:3
-            distr_len = max(distr_len, maximum(abs,distr[occ]-new_distr[occ]))
+            if all(new_distr[occ].==0.0)
+                new_distr[occ] = distr[occ]
+            else
+                new_distr[occ] = (new_distr[occ]./sum(new_distr[occ])).*fixed_occ_shares[occ]
+            end
+            distr_lens[occ] = maximum(abs,distr[occ]-new_distr[occ])
+            distr_len = max(distr_len, distr_lens[occ])
             distr[occ] .= new_distr[occ]
+            newK_supplys[occ] = sum(distr[occ].*policy[occ])
+            newK_supply += newK_supplys[occ]
+
+            if abs(newK_supplys[occ]-oldK_supplys[occ]) < distr_tol/3
+                i_s = findall(x->x!=occ,lonc_occs)
+                lonc_occs = lonc_occs[i_s]
+            end
         end
         distr_iters += 1
-
-        newK_supply = 0.0
-        for occ = 1:3
-            newK_supply += sum(distr[occ].*policy[occ])
-        end
         K_s_error = abs(newK_supply-oldK_supply)
+
         if distr_iters%25==0 || distr_iters==1#text_output
-            print_sameline("Distr#$(distr_iters) - err: $(distr_len) - sumdistr: $(round.([sum(distr[1]),sum(distr[2]),sum(distr[3])];digits=2)), K_s:$(round(newK_supply;digits=6)), K_s_err:$(K_s_error)")
+            print_sameline("Distr#$(distr_iters) - K_s:$(round(newK_supply;digits=6))/$(round.(newK_supplys;digits=6)), K_s_err:$(K_s_error)/$(newK_supplys.-oldK_supplys)") #- err: $(distr_lens) - sumdistr: $(round.([sum(distr[1]),sum(distr[2]),sum(distr[3])];digits=3))
         end
         distr_len = K_s_error
 
         oldK_supply = newK_supply
-        if fig_output
-            #=
-            cum_distr = copy(distr)
-            for a_i in 2:number_a_nodes
-                cum_distr[a_i,:,:,:,:] .+= cum_distr[a_i-1,:,:,:,:]
+        oldK_supplys = copy(newK_supplys)
+        if fig_output#distr_iters%25==0 || distr_iters==1#
+
+            # cum_distr = Array{Any}(undef,3)
+            # Threads.@threads for occ = 1:3
+            #     cum_distr[occ] = copy(distr[occ])
+            #     for a_i in 2:number_a_nodes
+            #         cum_distr[occ][a_i,:,:,:,:] .+= cum_distr[occ][a_i-1,:,:,:,:]
+            #     end
+            # end
+            # distr_label = permutedims(["$(occ),$(u),$(zeta),$(alpha_m),$(alpha_w)" for occ in 1:3 for u in 1:number_u_nodes for zeta in 1:number_zeta_nodes for alpha_m in 1:number_alpha_m_nodes for alpha_w in 1:number_alpha_w_nodes])
+            # plot_distr = [cum_distr[occ][:,u,zeta,alpha_m,alpha_w] for occ in 1:3 for u in 1:number_u_nodes for zeta in 1:number_zeta_nodes for alpha_m in 1:number_alpha_m_nodes for alpha_w in 1:number_alpha_w_nodes]
+            # display(plot(#=asset_grid,=#plot_distr,label=distr_label,#=xticks = a_min:5.0:a_max,=#xrotation=-45,legend=:outertopleft,foreground_color_legend = nothing))
+
+            cum_distr = Array{Any}(undef,3)
+            Threads.@threads for occ = 1:3
+                cum_distr[occ] = copy(distr[occ][:,1,1,1,1])
+                cum_distr[occ][1] = sum(distr[occ][1,:,:,:,:])
+                for a_i in 2:number_asset_grid
+                    cum_distr[occ][a_i] = cum_distr[occ][a_i-1] + sum(distr[occ][a_i,:,:,:,:])
+                end
+                #cum_distr[occ] ./= fixed_occ_shares[occ]
             end
-            distr_label = permutedims(["$(u),$(zeta),$(alpha_m),$(alpha_w)" for u in 1:number_u_nodes for zeta in 1:number_zeta_nodes for alpha_m in 1:number_alpha_m_nodes for alpha_w in 1:number_alpha_w_nodes])
-            plot_distr = [cum_distr[:,u,zeta,alpha_m,alpha_w] for u in 1:number_u_nodes for zeta in 1:number_zeta_nodes for alpha_m in 1:number_alpha_m_nodes for alpha_w in 1:number_alpha_w_nodes]
+            distr_label = permutedims(["$(occ)" for occ in 1:3])
+            plot_distr = [cum_distr[occ][:] for occ in 1:3 ]
             display(plot(#=asset_grid,=#plot_distr,label=distr_label,#=xticks = a_min:5.0:a_max,=#xrotation=-45,legend=:outertopleft,foreground_color_legend = nothing))
-            =#
+
+            #display([round.(fixed_occ_shares;digits=2) round.([sum(distr[1]),sum(distr[2]),sum(distr[3])];digits=2) round.([cum_distr[1][end],cum_distr[2][end],cum_distr[3][end]];digits=2)])
+            #throw(error)
         end
     end
     if true#text_output

@@ -15,17 +15,18 @@ if Sys.iswindows()
 end
 @load "$(LOCAL_DIR)SSS.jld2" SSS
 
+lambda_i = 11
 # global parameters of the model's code
 #                   1           2           3       4
 #                gen_tol_x, gen_tol_f, distr_tol, val_tol
-GLOBAL_PARAMS = SSS[1][1][46]
+GLOBAL_PARAMS = SSS[lambda_i][1][46]
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
-GLOBAL_APPROX_PARAMS = SSS[1][1][47]
+GLOBAL_APPROX_PARAMS = SSS[lambda_i][1][47]
 
 # parameters of the model's economy (Italy)
-MODEL_PARAMS_INIT = SSS[10][1][48]
+MODEL_PARAMS_INIT = SSS[lambda_i][1][48]
 LAMBDA =            MODEL_PARAMS_INIT[1]
 BETA =              MODEL_PARAMS_INIT[2]
 DELTA =             MODEL_PARAMS_INIT[3]
@@ -49,8 +50,8 @@ SIGMA_EPS_W =       MODEL_PARAMS_INIT[19]
 
 CRRA =              MODEL_PARAMS_INIT[20]
 
-R_ =                SSS[10][2]
-W_ =                SSS[10][3]
+R_ =                SSS[lambda_i][2]
+W_ =                SSS[lambda_i][3]
 
 gen_tol_x = GLOBAL_PARAMS[1]
 gen_tol_f = GLOBAL_PARAMS[2]
@@ -80,6 +81,8 @@ calc_add_results = false
 country = "Italy"
 guess_R = 0.015444627627924897#(r_min+r_max)/2#
 guess_W = 0.29488937039113056#(w_min+w_max)/2#
+guess_R = 2.078678700816376/100#R_
+guess_W = 0.1619210016023443#W_
 
 # Generate gen eq'm for different LAMBDAs
 
@@ -92,7 +95,7 @@ else
 end
 
 include("Functions/AllubErosa_fixed_occ.jl")
-OCC_SHARES = [SSS[10][1][14], SSS[10][1][15], SSS[10][1][16]]
+OCC_SHARES = [SSS[lambda_i][1][14], SSS[lambda_i][1][15], SSS[lambda_i][1][16]]
 function AllubErosa(r,w,global_params,global_approx_params,model_params,approx_object)
     return AllubErosa(r,w,global_params,global_approx_params,model_params,approx_object,OCC_SHARES)
 end

@@ -250,8 +250,8 @@ for country = ["Italy"]
             end
 
             if i == 10
-                guess_R = 1.7929539540888162/100#R_
-                guess_W = 0.15997672649914652#W_
+                guess_R = 1.79295/100#R_
+                guess_W = 0.15997#W_
             elseif i == 8
                 guess_R = 1.169/100#R_
                 guess_W = 0.159688#W_
