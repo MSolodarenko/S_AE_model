@@ -280,7 +280,7 @@ for country = ["Italy"]
             SSS[i] = copy(ss_star)
 
             SS = copy(ss_star)
-            if SS[6] <= GLOBAL_PARAMS[2]
+            if SS[6] <= 2*GLOBAL_PARAMS[2]
                 @save "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i];digits=2)).jld2" SS
             else
                 @save "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i];digits=2))_failed.jld2" SS
