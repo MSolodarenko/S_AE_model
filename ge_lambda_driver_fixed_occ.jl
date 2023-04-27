@@ -249,15 +249,21 @@ for country = ["Italy"]
                 W_MAX = w_max
             end
 
-            if i == l1_i
-                guess_R = 1.915632259660541/100#R_
-                guess_W = 0.22444240890245049#W_
-            elseif i > l1_i
-                guess_R = 0.95*R_MIN+0.05*R_MAX
-                guess_W = 0.99*W_MIN+0.01*W_MAX
-            elseif i < l1_i
-                guess_R = 0.05*R_MIN+0.95*R_MAX
-                guess_W = 0.01*W_MIN+0.99*W_MAX
+            try
+                @suppress_err @load "$(LOCAL_DIR)SS_lambda_$(round(lambdas[i];digits=2))_failed.jld2" SS
+                guess_R = SS[2]
+                guess_W = SS[3]
+            catch e
+                if i == l1_i
+                    guess_R = 1.915632259660541/100#R_
+                    guess_W = 0.22444240890245049#W_
+                elseif i > l1_i
+                    guess_R = 0.95*R_MIN+0.05*R_MAX
+                    guess_W = 0.99*W_MIN+0.01*W_MAX
+                elseif i < l1_i
+                    guess_R = 0.05*R_MIN+0.95*R_MAX
+                    guess_W = 0.01*W_MIN+0.99*W_MAX
+                end
             end
             println("R: $(R_MIN)<=$(guess_R)<=$(R_MAX)")
             println("W: $(W_MIN)<=$(guess_W)<=$(W_MAX)")
