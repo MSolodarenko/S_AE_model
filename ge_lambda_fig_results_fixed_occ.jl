@@ -298,7 +298,11 @@ var_MPK = zeros(3,num_lambdas)
                 vars[s,h,i] = sum([ sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).-avgs[s,h,i]).^2) for occ in 1:3])/sum([ sum(density_distr[occ]) for occ in 1:3])
                 avgs[s,h,i] /= sum([ sum(density_distr[occ]) for occ in 1:3])
 
-                quantile_means[:,h,s,i] .= quantile_mean([stat_distr[1];stat_distr[2];stat_distr[3]], [density_distr[1];density_distr[2];density_distr[3]])
+                try
+                    quantile_means[:,h,s,i] .= quantile_mean([stat_distr[1];stat_distr[2];stat_distr[3]], [density_distr[1];density_distr[2];density_distr[3]])
+                catch e
+                    quantile_means[:,h,s,i] .= NaN
+                end
             elseif h == 2 #W
                 temp_occ = 1
             elseif h == 3 #SP
@@ -338,7 +342,11 @@ var_MPK = zeros(3,num_lambdas)
                 vars[s,h,i] = sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).- avgs[s,h,i]).^2)/sum(density_distr[occ])
                 avgs[s,h,i] /= sum(density_distr[occ])
 
-                quantile_means[:,h,s,i] .= quantile_mean(stat_distr[occ], density_distr[occ])
+                try
+                    quantile_means[:,h,s,i] .= quantile_mean(stat_distr[occ], density_distr[occ])
+                catch e
+                    quantile_means[:,h,s,i] .= NaN
+                end
             end
 
         end
