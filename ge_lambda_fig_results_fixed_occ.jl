@@ -20,7 +20,7 @@ LAMBDA = 1.665907
 country = "Italy"
 LOCAL_DIR = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/$(country)_updated/"
 if Sys.iswindows()
-    LOCAL_DIR = "\\Results\\Fixed_occ_shares\\Lambda_grid\\$(country)_updated\\"
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Fixed_occ_shares\\Lambda_grid\\$(country)_updated\\"
 end
 global_approx_params = copy(GLOBAL_APPROX_PARAMS)
 
