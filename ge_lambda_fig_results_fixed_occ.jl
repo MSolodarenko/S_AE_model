@@ -16,12 +16,11 @@ using ProgressMeter
 GLOBAL_APPROX_PARAMS = [69,3,3,3,6,3]#[35,3,3,3,6,3]
 
 # parameters of the model's economy (Italy)
-                    #SS_2642 #SS_2065 #SS_2092 #prev.calibration
-LAMBDA =            #=1.633951#1.405096=#1.665907 #1.513028
+LAMBDA = 1.665907
 country = "Italy"
-LOCAL_DIR = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/$(country)/"
+LOCAL_DIR = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/$(country)_updated/"
 if Sys.iswindows()
-    LOCAL_DIR = "\\Results\\Fixed_occ_shares\\Lambda_grid\\$(country)\\"
+    LOCAL_DIR = "\\Results\\Fixed_occ_shares\\Lambda_grid\\$(country)_updated\\"
 end
 global_approx_params = copy(GLOBAL_APPROX_PARAMS)
 
@@ -31,6 +30,7 @@ SSS_names = readdir(LOCAL_DIR)
 SSS_names = SSS_names[findall(x->occursin("SS_",x), SSS_names)]
 SSS = Array{Any}(undef,length(SSS_names))
 lambdas = zeros(length(SSS))
+SS = []
 @showprogress for i = 1:length(SSS)
     @load "$(LOCAL_DIR)$(SSS_names[i])" SS
     SSS[i] = copy(SS)
