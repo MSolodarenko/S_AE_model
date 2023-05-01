@@ -656,10 +656,14 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
 
     LABELS=["1st","2nd","3rd","4th","5th"]
     for h=1:4
-        LABEL = "Mean of $(CHOICE_NAMES[h])' $(stat_name) (quantiles)"
-        plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_means[1,h,s,:],quantile_means[2,h,s,:],quantile_means[3,h,s,:],quantile_means[4,h,s,:],quantile_means[5,h,s,:]],LABELS,LABEL, false, ["H","W","SP","EMP","ENT"])
-        display(plt)
-        savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_$(OCCS[h])_quantiles.png")
+        try
+            LABEL = "Mean of $(CHOICE_NAMES[h])' $(stat_name) (quantiles)"
+            plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_means[1,h,s,:],quantile_means[2,h,s,:],quantile_means[3,h,s,:],quantile_means[4,h,s,:],quantile_means[5,h,s,:]],LABELS,LABEL, false, ["H","W","SP","EMP","ENT"])
+            display(plt)
+            savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_$(OCCS[h])_quantiles.png")
+        catch e
+
+        end
     end
     # calculate mean
     #means[s,h,i]
