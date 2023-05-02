@@ -142,7 +142,7 @@ function quantile_mean(stat, distr)
     stat_distr = stat_distr[idx]
 
     p0 = plot(stat_distr)
-    max_a_i = length(cdf)#findlast(x->x<1.0-1e-4, cdf)
+    max_a_i = findlast(x->x<1.0-1e-4, cdf)#length(cdf)#
 
     p1 = plot(cdf[1:max_a_i]./cdf[max_a_i])
 
