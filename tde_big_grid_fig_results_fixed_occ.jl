@@ -391,25 +391,25 @@ display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_wages.png")
 
 # initialisation
-Output_1 = sum([ss_1[1][32][occ].*ss_1[1][5][occ] for occ=1:3])
-Output_2 = sum([ss_2[1][32][occ].*ss_2[1][5][occ] for occ=1:3])
+Output_1 = sum([sum(ss_1[1][32][occ].*ss_1[1][5][occ]) for occ=1:3])
+Output_2 = sum([sum(ss_2[1][32][occ].*ss_2[1][5][occ]) for occ=1:3])
 Output_s = zeros(T)
 Credit_to_Output_1 = ss_1[1][13]
 Credit_to_Output_2 = ss_2[1][13]
 Credit_to_Output_s = zeros(T)
-Capital_1 = sum([ss_1[1][3].*ss_1[1][5][occ] for occ=1:3])
-Capital_2 = sum([ss_2[1][3].*ss_2[1][5][occ] for occ=1:3])
+Capital_1 = sum([sum(ss_1[1][3].*ss_1[1][5][occ]) for occ=1:3])
+Capital_2 = sum([sum(ss_2[1][3].*ss_2[1][5][occ]) for occ=1:3])
 Capital_s = zeros(T)
 # All, SP, EMP, ENT
 Credit = zeros(4,2)
 Credit_s = zeros(4,T)
 var_Credit = zeros(4,2)
 var_Credit_s = zeros(4,T)
-Income_1 = sum([(ss_1[1][23][occ] .- ones(size(ss_1[1][5][occ])).*ss_1[1][3]).*ss_1[1][5][occ] for occ=1:3])
-Income_2 = sum([(ss_2[1][23][occ] .- ones(size(ss_2[1][5][occ])).*ss_2[1][3]).*ss_2[1][5][occ] for occ=1:3])
+Income_1 = sum([sum((ss_1[1][23][occ] .- ones(size(ss_1[1][5][occ])).*ss_1[1][3]).*ss_1[1][5][occ]) for occ=1:3])
+Income_2 = sum([sum((ss_2[1][23][occ] .- ones(size(ss_2[1][5][occ])).*ss_2[1][3]).*ss_2[1][5][occ]) for occ=1:3])
 Income_s = zeros(T)
-Consumption_1 = sum([(ss_1[1][23][occ] .- ss_1[1][4][occ]).*ss_1[1][5][occ] for occ=1:3])
-Consumption_2 = sum([(ss_2[1][23][occ] .- ss_2[1][4][occ]).*ss_2[1][5][occ] for occ=1:3])
+Consumption_1 = sum([sum((ss_1[1][23][occ] .- ss_1[1][4][occ]).*ss_1[1][5][occ]) for occ=1:3])
+Consumption_2 = sum([sum((ss_2[1][23][occ] .- ss_2[1][4][occ]).*ss_2[1][5][occ]) for occ=1:3])
 Consumption_s = zeros(T)
 
 # income, earnings, wealth, consumption
@@ -623,13 +623,13 @@ Threads.@threads for i = 1:2
         end
 
         if h==1
-            Credit[h,i] = sum(sum([density_distr[occ] .* credit[occ] for occ=list_of_occs]))
-            var_Credit[h,i] = sum(sum([density_distr[occ] .* (credit[occ] .- Credit[h,i]).^2  for occ=list_of_occs]))/sum(sum([density_distr[occ] for occ=list_of_occs]))
-            Credit[h,i] /= sum(sum([density_distr[occ] for occ=list_of_occs]))
+            Credit[h,i] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
+            var_Credit[h,i] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit[h,i]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            Credit[h,i] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
         elseif h!=2
-            Credit[h-1,i] = sum(sum([density_distr[occ] .* credit[occ] for occ=list_of_occs]))
-            var_Credit[h-1,i] = sum(sum([density_distr[occ] .* (credit[occ] .- Credit[h-1,i]).^2  for occ=list_of_occs]))/sum(sum([density_distr[occ] for occ=list_of_occs]))
-            Credit[h-1,i] /= sum(sum([density_distr[occ] for occ=list_of_occs]))
+            Credit[h-1,i] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
+            var_Credit[h-1,i] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit[h-1,i]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            Credit[h-1,i] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
         end
 
         next!(p)
@@ -649,29 +649,29 @@ Threads.@threads for i = 1:2
             end
 
             # calculate mean
-            means[s,h,i] = sum(sum([stat_distr[occ] .* density_distr[occ] for occ=list_of_occs]))/sum(sum([density_distr[occ] for occ=list_of_occs]))
+            means[s,h,i] = sum([sum(stat_distr[occ] .* density_distr[occ]) for occ=list_of_occs]))/sum([sum(density_distr[occ]) for occ=list_of_occs])
             next!(p)
 
             # calculate gini coefficent
             density_distr_choice = []
             stat_choice = []
             if h==1
-                density_distr_choice = ([density_distr[1]; density_distr[2]; density_distr[3]])./sum(sum([density_distr[occ] for occ=1:3]))
+                density_distr_choice = ([density_distr[1]; density_distr[2]; density_distr[3]])./sum([sum(density_distr[occ]) for occ=1:3])
                 stat_choice = [stat_distr[1]; stat_distr[2]; stat_distr[3]]
             elseif h==2
-                density_distr_choice = (density_distr[1])./sum(sum(density_distr[1]))
+                density_distr_choice = (density_distr[1])./sum(density_distr[1])
                 stat_choice = stat_distr[1]
             elseif h==3
-                density_distr_choice = (density_distr[2])./sum(sum(density_distr[2]))
+                density_distr_choice = (density_distr[2])./sum(density_distr[2])
                 stat_choice = stat_distr[2]
             elseif h==4
-                density_distr_choice = (density_distr[3])./sum(sum(density_distr[3]))
+                density_distr_choice = (density_distr[3])./sum(density_distr[3])
                 stat_choice = stat_distr[3]
             # elseif 2<=h && h>=4
             #     density_distr_choice = ([density_distr[occ] for occ=list_of_occs])./sum(sum([density_distr[occ] for occ=list_of_occs]))
             #     stat_choice = [stat_distr[occ] for occ=list_of_occs]
             elseif h==5
-                density_distr_choice = ([density_distr[2]; density_distr[3]])./sum(sum([density_distr[occ] for occ=2:3]))
+                density_distr_choice = ([density_distr[2]; density_distr[3]])./sum([sum(density_distr[occ]) for occ=2:3])
                 stat_choice = [stat_distr[2]; stat_distr[3]]
             end
             density_distr_choice_vec = vec(density_distr_choice)
@@ -686,9 +686,9 @@ Threads.@threads for i = 1:2
             end
             next!(p)
 
-            avgs[s,h,i] = sum(sum([density_distr[occ].*max.(1e-12,stat_distr[occ]) for occ = list_of_occs]))
-            vars[s,h,i] = sum(sum([density_distr[occ].*(max.(1e-12,stat_distr[occ]).- avgs[s,h,i]).^2 for occ = list_of_occs]))/sum(sum([density_distr[occ] for occ = list_of_occs]))
-            avgs[s,h,i] /= sum(sum([density_distr[occ] for occ = list_of_occs]))
+            avgs[s,h,i] = sum([sum(density_distr[occ].*max.(1e-12,stat_distr[occ])) for occ = list_of_occs])
+            vars[s,h,i] = sum([sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).- avgs[s,h,i]).^2) for occ = list_of_occs])/sum([sum(density_distr[occ]) for occ = list_of_occs])
+            avgs[s,h,i] /= sum([sum(density_distr[occ]) for occ = list_of_occs])
             coef_of_variation[s,h,i] = sqrt( vars[s,h,i] )/avgs[s,h,i]
             next!(p)
 
@@ -775,17 +775,17 @@ Threads.@threads for t=1:T
 
     occ_choice, income, earnings, capital_excess, capital_d, credit, labour_excess, labour_d, labour_s, deposit, output, cost_of_employing, managerial_input = compute_income_profile_fixed_occ(asset_grid,number_asset_grid,r_s[t], w_s[t], number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes, lambda_s[t], delta, gamma, eta, theta, c_e, z_m_nodes, z_w_nodes, number_u_nodes)
 
-    Output_s[t] = sum(sum([output[occ] .* capital_s_distr_s[occ][t,:,:,:,:,:] for occ=1:3]))
+    Output_s[t] = sum([sum(output[occ] .* capital_s_distr_s[occ][t,:,:,:,:,:]) for occ=1:3])
 
-    Capital_s[t]= sum(sum([asset_grid .* capital_s_distr_s[occ][t,:,:,:,:,:] for occ=1:3]))
+    Capital_s[t]= sum([sum(asset_grid .* capital_s_distr_s[occ][t,:,:,:,:,:]) for occ=1:3])
 
-    agg_credit = sum(sum([credit[occ] .* capital_s_distr_s[occ][t,:,:,:,:,:] for occ=1:3]))
+    agg_credit = sum([sum(credit[occ] .* capital_s_distr_s[occ][t,:,:,:,:,:]) for occ=1:3])
 
     Credit_to_Output_s[t] = agg_credit/Output_s[t]
 
-    Income_s[t] = sum(sum([(income[occ].- ones(size(capital_s_distr_s[occ][t,:,:,:,:,:])).*asset_grid) .* capital_s_distr_s[occ][t,:,:,:,:,:] for occ=1:3]))
+    Income_s[t] = sum([sum((income[occ].- ones(size(capital_s_distr_s[occ][t,:,:,:,:,:])).*asset_grid) .* capital_s_distr_s[occ][t,:,:,:,:,:]) for occ=1:3])
 
-    Consumption_s[t] = sum(sum([(income[occ].-policy_s[occ][t,:,:,:,:,:]) .* capital_s_distr_s[occ][t,:,:,:,:,:] for occ=1:3] ))
+    Consumption_s[t] = sum([sum((income[occ].-policy_s[occ][t,:,:,:,:,:]) .* capital_s_distr_s[occ][t,:,:,:,:,:]) for occ=1:3] )
 
     # income, earnings, wealth, consumption
     # All, W, SP, EMP, ENT
@@ -825,13 +825,13 @@ Threads.@threads for t=1:T
         end
 
         if h==1
-            Credit[h,t] = sum(sum([density_distr[occ] .* credit[occ] for occ=list_of_occs]))
-            var_Credit[h,t] = sum(sum([density_distr[occ] .* (credit[occ] .- Credit[h,t]).^2  for occ=list_of_occs]))/sum(sum([density_distr[occ] for occ=list_of_occs]))
-            Credit[h,t] /= sum(sum([density_distr[occ] for occ=list_of_occs]))
+            Credit[h,t] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
+            var_Credit[h,t] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit[h,t]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            Credit[h,t] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
         elseif h!=2
-            Credit[h-1,t] = sum(sum([density_distr[occ] .* credit[occ] for occ=list_of_occs]))
-            var_Credit[h-1,t] = sum(sum([density_distr[occ] .* (credit[occ] .- Credit[h-1,t]).^2  for occ=list_of_occs]))/sum(sum([density_distr[occ] for occ=list_of_occs]))
-            Credit[h-1,t] /= sum(sum([density_distr[occ] for occ=list_of_occs]))
+            Credit[h-1,t] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
+            var_Credit[h-1,t] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit[h-1,t]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            Credit[h-1,t] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
         end
         next!(p)
 
@@ -850,29 +850,29 @@ Threads.@threads for t=1:T
             end
 
             # calculate mean
-            means[s,h,t] = sum(sum([stat_distr[occ] .* density_distr[occ] for occ=list_of_occs]))/sum(sum([density_distr[occ] for occ=list_of_occs]))
+            means[s,h,t] = sum([sum(stat_distr[occ] .* density_distr[occ]) for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
             next!(p)
 
             # calculate gini coefficent
             density_distr_choice = []
             stat_choice = []
             if h==1
-                density_distr_choice = ([density_distr[1]; density_distr[2]; density_distr[3]])./sum(sum([density_distr[occ] for occ=1:3]))
+                density_distr_choice = ([density_distr[1]; density_distr[2]; density_distr[3]])./sum([sum(density_distr[occ]) for occ=1:3])
                 stat_choice = [stat_distr[1]; stat_distr[2]; stat_distr[3]]
             elseif h==2
-                density_distr_choice = (density_distr[1])./sum(sum(density_distr[1]))
+                density_distr_choice = (density_distr[1])./sum(density_distr[1])
                 stat_choice = stat_distr[1]
             elseif h==3
-                density_distr_choice = (density_distr[2])./sum(sum(density_distr[2]))
+                density_distr_choice = (density_distr[2])./sum(density_distr[2])
                 stat_choice = stat_distr[2]
             elseif h==4
-                density_distr_choice = (density_distr[3])./sum(sum(density_distr[3]))
+                density_distr_choice = (density_distr[3])./sum(density_distr[3])
                 stat_choice = stat_distr[3]
             # elseif 2<=h && h>=4
             #     density_distr_choice = ([density_distr[occ] for occ=list_of_occs])./sum(sum([density_distr[occ] for occ=list_of_occs]))
             #     stat_choice = [stat_distr[occ] for occ=list_of_occs]
             elseif h==5
-                density_distr_choice = ([density_distr[2]; density_distr[3]])./sum(sum([density_distr[occ] for occ=2:3]))
+                density_distr_choice = ([density_distr[2]; density_distr[3]])./sum([sum(density_distr[occ]) for occ=2:3])
                 stat_choice = [stat_distr[2]; stat_distr[3]]
             end
             density_distr_choice_vec = vec(density_distr_choice)
