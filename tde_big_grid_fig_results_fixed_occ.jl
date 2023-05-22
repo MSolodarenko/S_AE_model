@@ -825,13 +825,13 @@ Threads.@threads for t=1:T
         end
 
         if h==1
-            Credit[h,t] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
-            var_Credit[h,t] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit[h,t]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
-            Credit[h,t] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
+            Credit_s[h,t] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
+            var_Credit_s[h,t] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit_s[h,t]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            Credit_s[h,t] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
         elseif h!=2
-            Credit[h-1,t] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
-            var_Credit[h-1,t] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit[h-1,t]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
-            Credit[h-1,t] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
+            Credit_s[h-1,t] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
+            var_Credit_s[h-1,t] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit_s[h-1,t]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            Credit_s[h-1,t] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
         end
         next!(p)
 
@@ -850,7 +850,7 @@ Threads.@threads for t=1:T
             end
 
             # calculate mean
-            means[s,h,t] = sum([sum(stat_distr[occ] .* density_distr[occ]) for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            means_s[s,h,t] = sum([sum(stat_distr[occ] .* density_distr[occ]) for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
             next!(p)
 
             # calculate gini coefficent
@@ -889,9 +889,9 @@ Threads.@threads for t=1:T
 
             if h!=5 && calc_mean_quantile
                 try
-                    quantile_means[:,h,s,t] .= quantile_mean(stat_choice, density_distr_choice)
+                    quantile_means_s[:,h,s,t] .= quantile_mean(stat_choice, density_distr_choice)
                 catch e
-                    quantile_means[:,h,s,t] .= NaN
+                    quantile_means_s[:,h,s,t] .= NaN
                 end
                 next!(p)
             end
