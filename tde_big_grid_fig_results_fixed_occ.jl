@@ -649,7 +649,7 @@ Threads.@threads for i = 1:2
             end
 
             # calculate mean
-            means[s,h,i] = sum([sum(stat_distr[occ] .* density_distr[occ]) for occ=list_of_occs]))/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            means[s,h,i] = sum([sum(stat_distr[occ] .* density_distr[occ]) for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
             next!(p)
 
             # calculate gini coefficent
