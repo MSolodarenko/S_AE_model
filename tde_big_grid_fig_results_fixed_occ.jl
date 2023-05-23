@@ -3,7 +3,8 @@ using Plots
 
 using ProgressMeter
 using SchumakerSpline
-using BasicInterpolators: LinearInterpolator
+#using BasicInterpolators: LinearInterpolator
+using Interpolations
 
 include("Functions/profit.jl")
 
@@ -483,6 +484,17 @@ function quantile_mean(stat, distr)
         end
 
     end
+    p_3 = plot(stat_distr)
+
+    tolerance_sum = 1e-4
+    idx = findall(x->x<tolerance_sum, stat_distr)
+    tolerance = tolerance_sum/length(idx)
+
+    idx = findall(x->x>tolerance, stat_distr)
+    stat_grid = stat_grid[idx]
+    stat_distr = stat_distr[idx]
+    p_2 = plot(stat_distr)
+
     cdf = cumsum(stat_distr)
 
     idx = unique(z -> cdf[z], 1:length(cdf))
@@ -490,8 +502,8 @@ function quantile_mean(stat, distr)
     stat_grid = stat_grid[idx]
     stat_distr = stat_distr[idx]
 
-    p0 = plot(stat_distr)
-    max_a_i = findlast(x->x<1.0-1e-4, cdf)
+    p_1 = plot(stat_distr)
+    max_a_i = findlast(x->x<1.0-tolerance_sum, cdf)
     try
         cdf = cdf[1:max_a_i]./cdf[max_a_i]
     catch e1
@@ -512,7 +524,8 @@ function quantile_mean(stat, distr)
     stat_distr = stat_distr[idx]
 
     p0 = plot(stat_distr)
-    max_a_i = findlast(x->x<1.0-1e-4, cdf)#length(cdf)#
+
+    max_a_i = findlast(x->x<1.0-tolerance_sum, cdf)#length(cdf)#
 
     p1 = plot(cdf[1:max_a_i]./cdf[max_a_i])
 
@@ -527,7 +540,7 @@ function quantile_mean(stat, distr)
             cdf_1 = linear_interpolation([0.0; collect(cdf[1:max_a_i]./cdf[max_a_i])], [1; collect(1:max_a_i)], extrapolation_bc = Flat());
             p2 = plot(collect(range(0.0;stop=1.0,length=120)),cdf_1.(collect(range(0.0;stop=1.0,length=120))))
         catch e2
-            display(plot(p0,p1,legend=false))
+            display(plot(p_3,p_2,p_1,p0,p1,legend=false))
             throw(e2)
         end
     end
@@ -696,6 +709,7 @@ Threads.@threads for i = 1:2
                 try
                     quantile_means[:,h,s,i] .= quantile_mean(stat_choice, density_distr_choice)
                 catch e
+                    throw(e)
                     quantile_means[:,h,s,i] .= NaN
                 end
                 next!(p)
@@ -1063,3 +1077,47 @@ savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_SP_capital_income.png
 plt = create_plot(collect(1:T),"Time (Years)", share_EMP_capital_income_in_output_s,""#="Share of output as Employers' Capital Income"=#, share_EMP_capital_income_in_output[1], share_EMP_capital_income_in_output[2], true,"EMP")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_share_of_output_EMP_capital_income.png")
+
+#                    1[1] 1[2] 1[3]
+trans_SSS_fixed =[  [ss_1,ss_2,trans_res],
+#                    2[1]     2[2]     2[3]
+                    [lambda_1,lambda_2,lambda_s],
+#                    3[1] 3[2] 3[3]
+                    [r_1, r_2, r_s],
+#                    4[1] 4[2] 4[3]
+                    [w_1, w_2, w_s],
+#                    5[1]      5[2]       5[3]
+                    [Capital_1,Capital_2, Capital_s],
+#                    6[1]          6[2]          6[3]
+                    [Consumption_1,Consumption_2,Consumption_s],
+#                    7[1]        7[2]        7[3]
+                    [Credit[:,1],Credit[:,2],Credit_s],
+#                    8[1]               8[2]               8[3]
+                    [Credit_to_Output_1,Credit_to_Output_2,Credit_to_Output_s],
+#                    9[1]     9[2]     9[3]
+                    [Income_1,Income_2,Income_s],
+#                    10[1]    10[2]    10[3]
+                    [Output_1,Output_2,Output_s],
+#                    11[1]        11[2]        11[3]
+                    [ginis[:,:,1],ginis[:,:,2],ginis_s],
+#                    12[1]        12[2]        12[3]
+                    [means[:,:,1],means[:,:,2],means_s],
+#                    13[1]           13[2]           13[3]
+                    [var_Credit[:,1],var_Credit[:,2],var_Credit_s],
+#                    14[1]                   14[2]                   14[3]
+                    [quantile_means[:,:,:,1],quantile_means[:,:,:,2],quantile_means_s],
+#                    15[1]                         15[2]                         15[3]
+                    [share_W_earnings_in_output[1],share_W_earnings_in_output[2],share_W_earnings_in_output_s],
+#                    16[1]                          16[2]                          16[3]
+                    [share_SP_earnings_in_output[1],share_SP_earnings_in_output[2],share_SP_earnings_in_output_s],
+#                    17[1]                           17[2]                           17[3]
+                    [share_EMP_earnings_in_output[1],share_EMP_earnings_in_output[2],share_EMP_earnings_in_output_s],
+#                    18[1]                               18[2]                               18[3]
+                    [share_W_capital_income_in_output[1],share_W_capital_income_in_output[2],share_W_capital_income_in_output_s],
+#                    19[1]                                19[2]                                19[3]
+                    [share_SP_capital_income_in_output[1],share_SP_capital_income_in_output[2],share_SP_capital_income_in_output_s],
+#                    20[1]                                 20[2]                                 20[3]
+                    [share_EMP_capital_income_in_output[1],share_EMP_capital_income_in_output[2],share_EMP_capital_income_in_output_s]
+                    ]
+
+@save "$(LOCAL_DIR_GENERAL)trans_SSS_fixed.jld2" trans_SSS_fixed
