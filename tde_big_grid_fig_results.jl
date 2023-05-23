@@ -1633,4 +1633,4 @@ trans_SSS =[  [ss_1,ss_2,trans_res],
                     [share_EMP_capital_income_in_output[1],share_EMP_capital_income_in_output[2],share_EMP_capital_income_in_output_s]
                     ]
 
-@save "$(LOCAL_DIR_GENERAL)trans_SSS_fixed.jld2" trans_SSS
+@save "$(LOCAL_DIR_GENERAL)trans_SSS.jld2" trans_SSS
