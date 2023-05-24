@@ -3,7 +3,8 @@ using Plots
 
 using ProgressMeter
 using SchumakerSpline
-using BasicInterpolators: LinearInterpolator
+#using BasicInterpolators: LinearInterpolator
+using Interpolations
 
 include("Functions/profit.jl")
 
@@ -488,23 +489,30 @@ vars_s = zeros(4,5,T)
 ##########################
 calc_mean_quantile = true#false#
 ##########################
+# 5 quantiles
+# All, W, SP, EMP
+# income, earnings, wealth, consumption
+quantile_means = zeros(5,4,4,2)
 
-quantile_mean_wealth = zeros(5,4,2)
-quantile_mean_consumption = zeros(5,4,2)
-quantile_mean_earnings = zeros(5,4,2)
-quantile_mean_income = zeros(5,4,2)
-
-quantile_mean_wealth_s = zeros(5,4,T)
-quantile_mean_consumption_s = zeros(5,4,T)
-quantile_mean_earnings_s = zeros(5,4,T)
-quantile_mean_income_s = zeros(5,4,T)
+quantile_means_s = zeros(5,4,4,T)
 
 function quantile_mean(stat, distr)
     distr ./= sum(distr)
 
-    ud_stat_grid = vec(stat)
-    ud_stat_distr = vec(distr)
-    stat_grid = exp.(collect(range(log(minimum(ud_stat_grid)+1); stop=log(maximum(ud_stat_grid)+1), length=length(stat[:,1,1,1,1,1])))).-1
+    stat_grid = vec(stat)
+    stat_distr = vec(distr)
+    ids = findall(x->x>0.0, stat_distr)
+    ud_stat_grid = stat_grid[ids]
+    ud_stat_distr = stat_distr[ids]
+    try
+        stat_grid = exp.(collect(range(log(1); stop=log(maximum(ud_stat_grid)+1-minimum(ud_stat_grid)), length=length(stat[:,1,1,1,1,1])))).+minimum(ud_stat_grid).-1
+    catch e
+        temp111 = findmin(ud_stat_grid)
+        display([ud_stat_grid[temp111[2]], ud_stat_distr[temp111[2]]])
+        id111 = findall(x->x<=0.0, stat_grid)
+        display(sum(stat_distr[id111]))
+        throw(e)
+    end
     stat_distr = zeros(length(stat_grid))
     Threads.@threads for i in 1:length(stat_grid)
         iters1 = []
@@ -529,56 +537,19 @@ function quantile_mean(stat, distr)
             cand_distr2 = ud_stat_distr[iters2]
             stat_distr[i] += sum(cand_distr2.*lottery_prob2)
         end
-        next!(p)
-    end
-    # grid = collect(1:length(ud_stat_grid))
-    # stat_grid = []
-    # stat_distr = []
-    # while !isempty(grid)
-    #     i = grid[1]
-    #     #iters = findall(x->(ud_stat_grid[i]-1e-5<=x<=ud_stat_grid[i]+1e-5),ud_stat_grid)
-    #     iters = findall(x->(x==ud_stat_grid[i]),ud_stat_grid)
-    #     if isempty(stat_grid)
-    #         push!(stat_grid,ud_stat_grid[i])
-    #         push!(stat_distr,sum(ud_stat_distr[iters]))
-    #     elseif stat_grid[end] < ud_stat_grid[i]
-    #         push!(stat_grid,ud_stat_grid[i])
-    #         push!(stat_distr,sum(ud_stat_distr[iters]))
-    #     else
-    #         ii = findfirst(x->ud_stat_grid[i]<x,stat_grid)
-    #         insert!(stat_grid,ii,ud_stat_grid[i])
-    #         insert!(stat_distr,ii,sum(ud_stat_distr[iters]))
-    #     end
-    #     splice!(ud_stat_grid,iters)
-    #     splice!(ud_stat_distr,iters)
-    #
-    #     grid = collect(1:length(ud_stat_grid))
-    #
-    #     p1 = plot(ud_stat_grid,legend=false)
-    #     p2 = plot(ud_stat_distr,legend=false)
-    #     p3 = plot(stat_grid,legend=false)
-    #     p4 = plot(stat_distr,legend=false)
-    #     display(plot(p1,p2,p3,p4,layout=(2,2),legend=false))
-    #
-    # end
 
-    # unsorted_stat_grid = vec(stat)
-    # unsorted_stat_distr = vec(distr)
-    #
-    # perm = sortperm(unsorted_stat_grid)
-    #
-    # dirty_stat_grid = copy(unsorted_stat_grid[perm])
-    # dirty_stat_distr = copy(unsorted_stat_distr[perm])
-    #
-    # stat_grid = []
-    # stat_distr = []
-    # i = 1
-    # while i < length(dirty_stat_grid)
-    #     iters = findall(x->x==dirty_stat_grid[i], dirty_stat_grid)
-    #     push!(stat_grid,dirty_stat_grid[i])
-    #     push!(stat_distr,sum(dirty_stat_distr[iters]))
-    #     i = iters[end]+1
-    # end
+    end
+    p_3 = plot(stat_distr)
+
+    tolerance_sum = 1e-4
+    idx = findall(x->x<tolerance_sum, stat_distr)
+    tolerance = tolerance_sum/length(idx)
+
+    idx = findall(x->x>tolerance, stat_distr)
+    stat_grid = stat_grid[idx]
+    stat_distr = stat_distr[idx]
+    p_2 = plot(stat_distr)
+
     cdf = cumsum(stat_distr)
 
     idx = unique(z -> cdf[z], 1:length(cdf))
@@ -586,9 +557,19 @@ function quantile_mean(stat, distr)
     stat_grid = stat_grid[idx]
     stat_distr = stat_distr[idx]
 
-    p0 = plot(stat_distr)
-    max_a_i = findlast(x->x<1.0-1e-4, cdf)
-    cdf = cdf[1:max_a_i]./cdf[max_a_i]
+    p_1 = plot(stat_distr)
+    max_a_i = findlast(x->x<1.0-tolerance_sum, cdf)
+    try
+        cdf = cdf[1:max_a_i]./cdf[max_a_i]
+    catch e1
+        try
+            max_a_i = length(cdf)-1
+            cdf = cdf[1:max_a_i]./cdf[max_a_i]
+        catch e
+            display(cdf)
+            throw(e)
+        end
+    end
     stat_grid = stat_grid[1:max_a_i]
     stat_distr = stat_distr[1:max_a_i]
 
@@ -598,23 +579,24 @@ function quantile_mean(stat, distr)
     stat_distr = stat_distr[idx]
 
     p0 = plot(stat_distr)
-    max_a_i = length(cdf)#findlast(x->x<1.0-1e-4, cdf)
+
+    max_a_i = findlast(x->x<1.0-tolerance_sum, cdf)#length(cdf)#
 
     p1 = plot(cdf[1:max_a_i]./cdf[max_a_i])
 
     cdf_1 = []
     try
         #cdf_1 = Schumaker(cdf[1:max_a_i]./cdf[max_a_i],1:max_a_i; extrapolation=(Constant,Constant))
-        cdf_1 = LinearInterpolator(collect(cdf[1:max_a_i]./cdf[max_a_i]), collect(1:max_a_i));
+        cdf_1 = linear_interpolation(collect(cdf[1:max_a_i]./cdf[max_a_i]), collect(1:max_a_i), extrapolation_bc = Flat());
         p2 = plot(collect(range(0.0;stop=1.0,length=120)),cdf_1.(collect(range(0.0;stop=1.0,length=120))))
     catch e1
         try
             #cdf_1 = Schumaker(cdf[1:max_a_i]./cdf[max_a_i],1:max_a_i; extrapolation=(Constant,Constant))
-            cdf_1 = LinearInterpolator([0.0; collect(cdf[1:max_a_i]./cdf[max_a_i])], [1; collect(1:max_a_i)]);
+            cdf_1 = linear_interpolation([0.0; collect(cdf[1:max_a_i]./cdf[max_a_i])], [1; collect(1:max_a_i)], extrapolation_bc = Flat());
             p2 = plot(collect(range(0.0;stop=1.0,length=120)),cdf_1.(collect(range(0.0;stop=1.0,length=120))))
         catch e2
-            display(plot(p0,p1,legend=false))
-            throw(e)
+            display(plot(p_3,p_2,p_1,p0,p1,legend=false))
+            throw(e2)
         end
     end
 
@@ -697,7 +679,7 @@ if !calc_mean_quantile
                  barglyphs=BarGlyphs('|','█', ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇'],' ','|',),
                  barlen=25)
 end
-for i = 1:2
+Threads.@threads for i = 1:2
     ss = ss_1
     Output = Output_1
     if i == 2
@@ -720,7 +702,7 @@ for i = 1:2
 
     unlimited_capital_choice = capital_d.<(lambda.*(ss[1][3].*ones(size(capital_d))))
 
-    for h = 1:5 # [2] = All, W, SP, EMP, ENT
+    Threads.@threads for h = 1:5 # [2] = All, W, SP, EMP, ENT
         #if h == 1 #All
         choice = ones(size(ss[1][22]))
         if h == 2 #W
@@ -745,7 +727,7 @@ for i = 1:2
 
         next!(p)
 
-        for s = 1:4 # [1] = income, earnings, wealth, consumption
+        Threads.@threads for s = 1:4 # [1] = income, earnings, wealth, consumption
             # if s == 1
             stat_distr = ss[1][23] .- ones(size(ss[1][5])).*ss[1][3]
             if s == 2
@@ -786,6 +768,16 @@ for i = 1:2
             coef_of_variation[s,h,i] = sqrt( vars[s,h,i] )/avgs[s,h,i]
 
             next!(p)
+
+            if h!=5 && calc_mean_quantile
+                try
+                    quantile_means[:,h,s,i] .= quantile_mean(stat_choice, density_distr_choice)
+                catch e
+                    throw(e)
+                    quantile_means[:,h,s,i] .= NaN
+                end
+                next!(p)
+            end
         end
         #=
         if h>2
@@ -830,16 +822,17 @@ for i = 1:2
         end
         =#
 
-        if h!=5 && calc_mean_quantile
-            quantile_mean_wealth[:,h,i] .= quantile_mean(ones(size(ss[1][5])).*ss[1][3], density_distr.*choice)
-            next!(p)
-            quantile_mean_income[:,h,i] .= quantile_mean(ss[1][23] .- ones(size(ss[1][5])).*ss[1][3], density_distr.*choice)
-            next!(p)
-            quantile_mean_earnings[:,h,i] .= quantile_mean(ss[1][24], density_distr.*choice)
-            next!(p)
-            quantile_mean_consumption[:,h,i] .= quantile_mean(ss[1][23] .- ss[1][4], density_distr.*choice)
-            next!(p)
-        end
+        # if h!=5 && calc_mean_quantile
+        #     quantile_mean_wealth[:,h,i] .= quantile_mean(ones(size(ss[1][5])).*ss[1][3], density_distr.*choice)
+        #     next!(p)
+        #     quantile_mean_income[:,h,i] .= quantile_mean(ss[1][23] .- ones(size(ss[1][5])).*ss[1][3], density_distr.*choice)
+        #     next!(p)
+        #     quantile_mean_earnings[:,h,i] .= quantile_mean(ss[1][24], density_distr.*choice)
+        #     next!(p)
+        #     quantile_mean_consumption[:,h,i] .= quantile_mean(ss[1][23] .- ss[1][4], density_distr.*choice)
+        #     next!(p)
+        # end
+        
     end
     agg_c_e = ss[5][7]*sum(density_distr.*Float64.(ss[1][22].==3.0))
     share_W_earnings_in_output[i] = sum(ss[1][24] .* density_distr.*Float64.(ss[1][22].==1.0))/(Output-agg_c_e)
@@ -996,7 +989,7 @@ Threads.@threads for t=1:T
 
     unlimited_capital_choice = capital_d.<(lambda.*(asset_grid.*ones(size(capital_d))))
 
-    for h = 1:5 # [2] = All, W, SP, EMP, ENT
+    Threads.@threads for h = 1:5 # [2] = All, W, SP, EMP, ENT
         #if h == 1 #All
         choice = ones(size(occ_choice))
         if h == 2 #W
@@ -1020,7 +1013,7 @@ Threads.@threads for t=1:T
         end
         next!(p)
 
-        for s = 1:4 # [1] = income, earnings, wealth, consumption
+        Threads.@threads for s = 1:4 # [1] = income, earnings, wealth, consumption
             # if s == 1
             stat_distr = income .- ones(size(capital_s_distr_s[t,:,:,:,:,:])).*asset_grid
             if s == 2
@@ -1059,6 +1052,14 @@ Threads.@threads for t=1:T
             avgs_s[s,h,t] /= sum(density_distr.*choice)
             =#
             next!(p)
+            if h!=5 && calc_mean_quantile
+                try
+                    quantile_means_s[:,h,s,t] .= quantile_mean(stat_choice, density_distr_choice)
+                catch e
+                    quantile_means_s[:,h,s,t] .= NaN
+                end
+                next!(p)
+            end
         end
 
         #=
@@ -1102,16 +1103,16 @@ Threads.@threads for t=1:T
         end
         =#
 
-        if h!=5 && calc_mean_quantile
-            quantile_mean_wealth_s[:,h,t] .= quantile_mean(asset_grid.*ones(size(density_distr)), density_distr.*choice)
-            next!(p)
-            quantile_mean_income_s[:,h,t] .= quantile_mean(income .- ones(size(capital_s_distr_s[t,:,:,:,:,:])).*asset_grid, density_distr.*choice)
-            next!(p)
-            quantile_mean_earnings_s[:,h,t] .= quantile_mean(earnings, density_distr.*choice)
-            next!(p)
-            quantile_mean_consumption_s[:,h,t] .= quantile_mean(income .- policy_s[t,:,:,:,:,:], density_distr.*choice)
-            next!(p)
-        end
+        # if h!=5 && calc_mean_quantile
+        #     quantile_mean_wealth_s[:,h,t] .= quantile_mean(asset_grid.*ones(size(density_distr)), density_distr.*choice)
+        #     next!(p)
+        #     quantile_mean_income_s[:,h,t] .= quantile_mean(income .- ones(size(capital_s_distr_s[t,:,:,:,:,:])).*asset_grid, density_distr.*choice)
+        #     next!(p)
+        #     quantile_mean_earnings_s[:,h,t] .= quantile_mean(earnings, density_distr.*choice)
+        #     next!(p)
+        #     quantile_mean_consumption_s[:,h,t] .= quantile_mean(income .- policy_s[t,:,:,:,:,:], density_distr.*choice)
+        #     next!(p)
+        # end
     end
 
     agg_c_e = c_e*sum(density_distr.*Float64.(occ_choice.==3.0))
@@ -1357,23 +1358,11 @@ end
 
 if calc_mean_quantile
     LABELS=["1st","2nd","3rd","4th","5th"]
-    for stat = [1,4]#1:4 # wealth, income, earnings, consumption
-        stat_name = "Wealth"
-        qm = quantile_mean_wealth
-        qm_s = quantile_mean_wealth_s
-        if stat == 2
-            stat_name = "Income"
-            qm = quantile_mean_income
-            qm_s = quantile_mean_income_s
-        elseif stat == 3
-            stat_name = "Earnings"
-            qm = quantile_mean_earnings
-            qm_s = quantile_mean_earnings_s
-        elseif stat == 4
-            stat_name = "Consumption"
-            qm = quantile_mean_consumption
-            qm_s = quantile_mean_consumption_s
-        end
+    stat_names = ["Income", "Earnings", "Wealth", "Consumption"]
+    for stat = 1:4#[1,4]#
+        stat_name = stat_names[stat]
+        qm = quantile_means[:,:,stat,:]
+        qm_s = quantile_means_s[:,:,stat,:]
 
         LEGENDPOS = false
         plt = create_combined_plot(collect(1:T),"Time (Years)", [qm_s[1,1,:],qm_s[2,1,:],qm_s[3,1,:],qm_s[4,1,:],qm_s[5,1,:]],LABELS,""#="Mean of $(stat_name) (quantiles)"=#, [qm[1,1,1],qm[2,1,1],qm[3,1,1],qm[4,1,1],qm[5,1,1]], [qm[1,1,2],qm[2,1,2],qm[3,1,2],qm[4,1,2],qm[5,1,2]], false,["H","W","SP","EMP","ENT"], LEGENDPOS)
