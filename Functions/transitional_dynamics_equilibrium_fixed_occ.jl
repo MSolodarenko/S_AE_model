@@ -453,6 +453,8 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
         guess_Ws = collect(range(ss_star[3]; stop=ss_starstar[3], length=T))
         guess_Ws[end-2:end] .= guess_Ws[end-2]
     end
+    # Rs[3:end] = max.(Rs[3:end],ss_starstar[2])
+    # Ws[2:end] = min.(Ws[2:end],ss_starstar[3])
     plot_iter_results(Rs,Ws, guess_Rs,guess_Ws, Rs,Ws, zeros(T),zeros(T), zeros(T),zeros(T))
 
 
@@ -475,6 +477,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
         new_Rs = Rs .+ (new_Rs.-Rs).*relax_R.*r_border_width./maximum(abs,new_Rs.-Rs)
     end
     new_Rs = min.(max.(r_min, new_Rs), r_max)#.*relax_r .+ (1-relax_r).*Rs
+    # new_Rs[3:end] = max.(ss_starstar[2], new_Rs[3:end])
     #new_Rs[3:end] = min.(max.(ss_starstar[2], new_Rs[3:end]), Rs[2])
     #=for t = 3:T   # non-increasing zero-order derivative
         new_Rs[t] = min(max(ss_starstar[2], new_Rs[t]), new_Rs[t-1])
@@ -491,7 +494,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
         new_Ws = Ws .+ (new_Ws.-Ws).*relax_W.*w_border_width./maximum(abs,new_Ws.-Ws)
     end
     new_Ws = min.(max.(w_min, new_Ws), w_max)#.*relax_w .+ (1-relax_w).*Ws
-    #new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
+    # new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
     #=for t = 2:T
         new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), ss_starstar[3])
     end=#
@@ -618,6 +621,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                 new_Rs = Rs .+ (new_Rs.-Rs).*relax_R.*r_border_width./maximum(abs,new_Rs.-Rs)
             end
             new_Rs = min.(max.(r_min, new_Rs), r_max)#.*relax_R .+ (1-relax_R).*Rs
+            # new_Rs[3:end] = max.(ss_starstar[2], new_Rs[3:end])
             #new_Rs[3:end] = min.(max.(ss_starstar[2], new_Rs[3:end]), Rs[2])
             #=for t = 3:T
                 new_Rs[t] = min(max(ss_starstar[2], new_Rs[t]), new_Rs[t-1])
@@ -638,7 +642,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                 new_Ws = Ws .+ (new_Ws.-Ws).*relax_W.*w_border_width./maximum(abs,new_Ws.-Ws)
             end
             new_Ws = min.(max.(w_min, new_Ws), w_max)#.*relax_W .+ (1-relax_W).*Ws
-            #new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
+            # new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
             #=for t = 2:T
                 new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), ss_starstar[3])
             end=#
@@ -649,10 +653,10 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
             new_Ws = max.(new_Ws, guess_Ws)
             #new_Ws[end] = ss_starstar[3]
 
-            plot_iter_results(Rs,Ws, new_Rs,new_Ws, best_Rs,best_Ws, len_Rs,len_Ws, best_len_Rs,best_len_Ws)
             # save best candidates according to different metrics
 
             if total_len < best_total_len
+                plot_iter_results(Rs,Ws, new_Rs,new_Ws, best_Rs,best_Ws, len_Rs,len_Ws, best_len_Rs,best_len_Ws)
                 best_Rs = copy(Rs)
                 best_Ws = copy(Ws)
                 best_res = copy(res)
@@ -698,6 +702,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                 #=for t = 3:T
                     cand_best_Rs[t] = min(max(ss_starstar[2], cand_best_Rs[t]), cand_best_Rs[t-1])
                 end=#
+                # cand_best_Rs[3:end] = max.(ss_starstar[2], cand_best_Rs[3:end])
                 cand_best_Rs[3] = min(max(ss_starstar[2], cand_best_Rs[3]), cand_best_Rs[2])
                 for t = 4:T     # non-decreasing first-order derivative
                     cand_best_Rs[t] = max(2*cand_best_Rs[t-1]-cand_best_Rs[t-2], min(cand_best_Rs[t], cand_best_Rs[t-1]))
@@ -707,6 +712,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                 #=for t = 2:T
                     cand_best_Ws[t] = min(max(cand_best_Ws[t-1], cand_best_Ws[t]), ss_starstar[3])
                 end=#
+                # cand_best_Ws[2:end] = min.(cand_best_Ws[2:end],ss_starstar[3])
                 cand_best_Ws[2] = min(max(cand_best_Ws[1], cand_best_Ws[2]), ss_starstar[3])
                 for t = 3:T
                     cand_best_Ws[t] = min(max(cand_best_Ws[t-1], cand_best_Ws[t]), 2*cand_best_Ws[t-1]-cand_best_Ws[t-2])
@@ -714,6 +720,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                 cand_best_Ws = max.(cand_best_Ws, guess_Ws)
 
                 if is_best_updated
+                    plot_iter_results(Rs,Ws, cand_best_Rs,cand_best_Ws, best_Rs,best_Ws, len_Rs,len_Ws, best_len_Rs,best_len_Ws)
                     #println_sameline("#$(rw_iters) - update the candidate for the best")
                     cand_best_res = partial_equilibrium_transition(cand_best_Rs, cand_best_Ws)
                     cand_best_len_Rs = copy(cand_best_res[1])
@@ -724,7 +731,6 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                     cand_best_abs_len_r = maximum(abs,cand_best_len_Rs)
                     cand_best_abs_len_w = maximum(abs,cand_best_len_Ws)
                     println_sameline("#$(rw_iters) - cand_total_len:$(round(cand_best_total_len;digits=6)) - cand_total_len_Rs:$(round(sum(abs,cand_best_len_Rs);digits=6)) - cand_total_len_Ws:$(round(sum(abs,cand_best_len_Ws);digits=6)) - cand_abs_len_r:$(round(cand_best_abs_len_r;digits=6)) - cand_abs_len_w:$(round(cand_best_abs_len_w;digits=6))")
-                    plot_iter_results(cand_best_Rs,cand_best_Ws, new_Rs,new_Ws, best_Rs,best_Ws, cand_best_len_Rs,cand_best_len_Ws, best_len_Rs,best_len_Ws)
                     if cand_best_total_len < total_len
                         Rs = copy(cand_best_Rs)
                         len_Rs = copy(cand_best_len_Rs)
@@ -743,6 +749,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                             new_Rs = cand_best_Rs .+ (new_Rs.-cand_best_Rs).*relax_R.*r_border_width./maximum(abs,new_Rs.-cand_best_Rs)
                         end
                         new_Rs = min.(max.(r_min, new_Rs), r_max)#.*relax_R .+ (1-relax_R).*best_Rs
+                        # new_Rs[3:end] = max.(ss_starstar[2], new_Rs[3:end])
                         #new_Rs[3:end] = min.(max.(ss_starstar[2], new_Rs[3:end]), Rs[2])
                         #=for t = 3:T
                             new_Rs[t] = min(max(ss_starstar[2], new_Rs[t]), new_Rs[t-1])
@@ -759,7 +766,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                             new_Ws = cand_best_Ws .+ (new_Ws.-cand_best_Ws).*relax_W.*w_border_width./maximum(abs,new_Ws.-cand_best_Ws)
                         end
                         new_Ws = min.(max.(w_min, new_Ws), w_max)#.*relax_W .+ (1-relax_W).*best_Ws
-                        #new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
+                        # new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
                         #=for t = 2:T
                             new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), ss_starstar[3])
                         end=#
@@ -772,6 +779,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
 
                     end
                     if cand_best_total_len < best_total_len
+                        plot_iter_results(Rs,Ws, new_Rs,new_Ws, best_Rs,best_Ws, len_Rs,len_Ws, best_len_Rs,best_len_Ws)
                         best_Rs = copy(cand_best_Rs)
                         best_Ws = copy(cand_best_Ws)
                         best_res = copy(cand_best_res)
@@ -822,6 +830,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                         end
 
                         new_Rs = min.(max.(r_min, new_Rs), r_max)#.*relax_R .+ (1-relax_R).*Rs
+                        # new_Rs[3:end] = max.(ss_starstar[2], new_Rs[3:end])
                         #new_Rs[3:end] = min.(max.(ss_starstar[2], new_Rs[3:end]), Rs[2])
                         #=for t = 3:T
                             new_Rs[t] = min(max(ss_starstar[2], new_Rs[t]), new_Rs[t-1])
@@ -838,7 +847,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                             new_Ws = Ws .+ (new_Ws.-Ws).*relax_W.*w_border_width./maximum(abs,new_Ws.-Ws)
                         end
                         new_Ws = min.(max.(w_min, new_Ws), w_max)#.*relax_W .+ (1-relax_W).*Ws
-                        #new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
+                        # new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
                         #=for t = 2:T
                             new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), ss_starstar[3])
                         end=#
@@ -849,6 +858,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                         new_Ws = max.(new_Ws, guess_Ws)
                         #new_Ws[end] = ss_starstar[3]
 
+                        plot_iter_results(Rs,Ws, new_Rs,new_Ws, best_Rs,best_Ws, len_Rs,len_Ws, best_len_Rs,best_len_Ws)
                     end
                     is_best_updated = false
                 else
@@ -890,6 +900,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                     end
 
                     new_Rs = min.(max.(r_min, new_Rs), r_max)#.*relax_R .+ (1-relax_R).*Rs
+                    # new_Rs[3:end] = max.(ss_starstar[2], new_Rs[3:end])
                     #new_Rs[3:end] = min.(max.(ss_starstar[2], new_Rs[3:end]), Rs[2])
                     #=for t = 3:T
                         new_Rs[t] = min(max(ss_starstar[2], new_Rs[t]), new_Rs[t-1])
@@ -906,7 +917,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                         new_Ws = Ws .+ (new_Ws.-Ws).*relax_W.*w_border_width./maximum(abs,new_Ws.-Ws)
                     end
                     new_Ws = min.(max.(w_min, new_Ws), w_max)#.*relax_W .+ (1-relax_W).*Ws
-                    #new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
+                    # new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
                     #=for t = 2:T
                         new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), ss_starstar[3])
                     end=#
@@ -916,6 +927,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                     end
                     new_Ws = max.(new_Ws, guess_Ws)
                     #new_Ws[end] = ss_starstar[3]
+                    plot_iter_results(Rs,Ws, new_Rs,new_Ws, best_Rs,best_Ws, len_Rs,len_Ws, best_len_Rs,best_len_Ws)
 
                     #rw_iters -= 1
                 end
@@ -961,6 +973,7 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
                 new_Rs = Rs .+ (new_Rs.-Rs).*relax_R.*r_border_width./maximum(abs,new_Rs.-Rs)
             end
             new_Rs = min.(max.(r_min, new_Rs), r_max)
+            # new_Rs[3:end] = max.(ss_starstar[2], new_Rs[3:end])
             #new_Rs[3:end] = min.(max.(ss_starstar[2], new_Rs[3:end]), Rs[2])
             #=for t = 3:T
                 new_Rs[t] = min(max(ss_starstar[2], new_Rs[t]), new_Rs[t-1])
@@ -973,11 +986,11 @@ function transitional_dynamics(lambda_s, ss_star, ss_starstar, global_params, gl
             #new_Rs[end] = ss_starstar[2]
 
             new_Ws = Ws .+ relax_conv.*len_Ws
-            #new_Ws = min.(max.(w_min, new_Ws), w_max)
+            new_Ws = min.(max.(w_min, new_Ws), w_max)
             if relax_W.*w_border_width./maximum(abs,new_Ws.-Ws) < 1.0
                 new_Ws = Ws .+ (new_Ws.-Ws).*relax_W.*w_border_width./maximum(abs,new_Ws.-Ws)
             end
-            #new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
+            # new_Ws[2:end] = min.(max.(ss_star[3], new_Ws[2:end]), ss_starstar[3])
             #=for t = 2:T
                 new_Ws[t] = min(max(new_Ws[t-1], new_Ws[t]), ss_starstar[3])
             end=#

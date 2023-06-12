@@ -8,10 +8,9 @@ using JLD2
 print_sameline("Loading functions for transitional_dynamics procedure")
 include("Functions/transitional_dynamics_equilibrium_fixed_occ.jl")
 
-country = "Italy"
-LOCAL_DIR = "$(@__DIR__)/Results/Lambda_grid_big_grid/$(country)_SS_2092_69/General/"
+LOCAL_DIR = "$(@__DIR__)/Results/Stationary/GE_lambda_fixed_occ/General/"
 if Sys.iswindows()
-    LOCAL_DIR = "$(@__DIR__)\\Results\\Lambda_grid_big_grid\\$(country)_SS_2092_69\\General\\"
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Stationary\\GE_lambda_fixed_occ\\General\\"
 end
 @load "$(LOCAL_DIR)SSS.jld2" SSS
 
@@ -77,9 +76,9 @@ text_output = false
 fig_output = false
 calc_add_results = false
 
-LAMBDA_GE_DIR = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/Italy_updated/"
+LAMBDA_GE_DIR = "$(@__DIR__)/Results/Stationary/GE_lambda_fixed_occ/"
 if Sys.iswindows()
-   LAMBDA_GE_DIR = "$(@__DIR__)\\Results\\Fixed_occ_shares\\Lambda_grid\\Italy_updated\\"
+   LAMBDA_GE_DIR = "$(@__DIR__)\\Results\\Stationary\\GE_lambda_fixed_occ\\"
 end
 # Step 2
 # ss_star = [res, r, w, approx_object, params]
@@ -113,9 +112,9 @@ if lambda_i == 3
     ss_local = copy(ss_3)
 end
 
-LOCAL_DIR = "$(@__DIR__)/Results/Transitional_dynamics_fixed_occ/$(country)/"
+LOCAL_DIR = "$(@__DIR__)/Results/Transitionary/TDE_fixed_occ/"
 if Sys.iswindows()
-   LOCAL_DIR = "$(@__DIR__)\\Results\\Transitional_dynamics_fixed_occ\\$(country)\\"
+   LOCAL_DIR = "$(@__DIR__)\\Results\\Transitionary\\TDE_fixed_occ\\"
 end
 mkpath(LOCAL_DIR)
 

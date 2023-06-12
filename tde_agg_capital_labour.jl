@@ -15,11 +15,9 @@ using JLD2
 using ProgressMeter
 using SchumakerSpline
 
-CODENAME = "SS_2092_69"
-country = "Italy"
-LOCAL_DIR = "$(@__DIR__)/Results/Transitional_dynamics_big_grid/$(country)_$(CODENAME)/"
+LOCAL_DIR = "$(@__DIR__)/Results/Transitionary/TDE/"
 if Sys.iswindows()
-    LOCAL_DIR = "$(@__DIR__)\\Results\\Transitional_dynamics_big_grid\\$(country)_$(CODENAME)\\"
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Transitionary\\TDE\\"
 end
 
 TIME_PERIODS = 50#100

@@ -8,43 +8,48 @@ using JLD2
 print_sameline("Loading functions for transitional_dynamics procedure")
 include("Functions/transitional_dynamics_equilibrium.jl")
 
+LOCAL_DIR = "$(@__DIR__)/Results/Stationary/GE_lambda/General/"
+if Sys.iswindows()
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Stationary\\GE_lambda\\General\\"
+end
+@load "$(LOCAL_DIR)SSS.jld2" SSS
+
 # global parameters of the model's code
 #                   1           2           3       4
 #                gen_tol_x, gen_tol_f, distr_tol, val_tol
-GLOBAL_PARAMS = [1e-6, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-9, 1e-7]#[1e-8, 1e-4, 1e-12, 1e-9]#[1e-8, 1e-4, 1e-7, 1e-5]#
-
+GLOBAL_PARAMS = SSS[10][1][46]
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
-GLOBAL_APPROX_PARAMS = [15,3,3,3,6,3]#[49,3,3,3,6,3]#[25,5,5,3,6,3]#
+GLOBAL_APPROX_PARAMS = SSS[10][1][47]
 
 # parameters of the model's economy (Italy)
-LAMBDA = 1.513028#1.548387
-BETA = 0.917506#0.859906
-DELTA = 0.1
-GAMMA = 0.16
-ETA = 0.3
-THETA = 0.54
+MODEL_PARAMS_INIT = SSS[10][1][48]
+LAMBDA =            MODEL_PARAMS_INIT[1]
+BETA =              MODEL_PARAMS_INIT[2]
+DELTA =             MODEL_PARAMS_INIT[3]
+GAMMA =             MODEL_PARAMS_INIT[4]
+ETA =               MODEL_PARAMS_INIT[5]
+THETA =             MODEL_PARAMS_INIT[6]
 
-C_E = 0.007001#0.036321
-RHO_M = 0.710266#0.849951
-RHO_W = 0.96
-SIGMA_EPS_M = 1.022857#0.942809
-RHO_EPS_M_W = 0.361605#0.384691
-SIGMA_ZETA = 0.091089#0.151709
-P_ALPHA = 0.024445#0.043692
-ETA_ALPHA = 5.896035#5.202754
-PROB_NODE1_ALPHA = 0.39
-MU_M_ALPHA = -4.817675#-3.909137
-RHO_ALPHA_M_W = 0.181454#0.095903
-SIGMA_ALPHA_W = 0.12
-SIGMA_EPS_W = 0.021947#0.285519
+C_E =               MODEL_PARAMS_INIT[7]
+RHO_M =             MODEL_PARAMS_INIT[8]
+RHO_W =             MODEL_PARAMS_INIT[9]
+SIGMA_EPS_M =       MODEL_PARAMS_INIT[10]
+RHO_EPS_M_W =       MODEL_PARAMS_INIT[11]
+SIGMA_ZETA =        MODEL_PARAMS_INIT[12]
+P_ALPHA =           MODEL_PARAMS_INIT[13]
+ETA_ALPHA =         MODEL_PARAMS_INIT[14]
+PROB_NODE1_ALPHA =  MODEL_PARAMS_INIT[15]
+MU_M_ALPHA =        MODEL_PARAMS_INIT[16]
+RHO_ALPHA_M_W =     MODEL_PARAMS_INIT[17]
+SIGMA_ALPHA_W =     MODEL_PARAMS_INIT[18]
+SIGMA_EPS_W =       MODEL_PARAMS_INIT[19]
 
-# if you change CRRA dynamically, check the code beforehand
-CRRA = 1.0 # >0.0
+CRRA =              MODEL_PARAMS_INIT[20]
 
-R_ = -0.005338#-0.069128
-W_ = 0.230294#0.393906
+R_ =                SSS[10][2]
+W_ =                SSS[10][3]
 
 gen_tol_x = GLOBAL_PARAMS[1]
 gen_tol_f = GLOBAL_PARAMS[2]
@@ -54,8 +59,8 @@ r_min = -DELTA#-delta
 r_max = 1/BETA-1#1/beta-1
 
 # wage bounds #### NOT DONE!!! ########
-w_min = 0.18#0.25
-w_max = 0.3#0.5
+W_MIN = 0.01
+W_MAX = 0.47
 
 optimal_r = R_#(r_min+r_max)/2#r#
 optimal_w = W_#(w_min+w_max)/2#w#
@@ -64,30 +69,32 @@ text_output = false
 fig_output = false
 calc_add_results = false
 
-country = "Italy"#"Brazil"
-LAMBDA_GE_DIR = "$(@__DIR__)/Results/Lambda_grid/$(country)/"
+LAMBDA_GE_DIR = "$(@__DIR__)/Results/Stationary/GE_lambda/"
 if Sys.iswindows()
-   LAMBDA_GE_DIR = "$(@__DIR__)\\Results\\Lambda_grid\\$(country)\\"
+   LAMBDA_GE_DIR = "$(@__DIR__)\\Results\\Stationary\\GE_lambda\\"
 end
 # Step 2
 # ss_star = [res, r, w, approx_object, params]
-@load "$(LAMBDA_GE_DIR)SS_lambda_1.51.jld2" SS
+@load "$(LAMBDA_GE_DIR)SS_lambda_1.67.jld2" SS
 lambda_1 = SS[5][1]
 ss_1 = copy(SS)
 #@time ss_star = steady_state(lambda_star)
 
-@load "$(LAMBDA_GE_DIR)SS_lambda_2.6.jld2" SS
+#@load "$(LAMBDA_GE_DIR)SS_lambda_2.6.jld2" SS
+@load "$(LAMBDA_GE_DIR)SS_lambda_10.0.jld2" SS
 lambda_2 = SS[5][1]
 ss_2 = copy(SS)
 #@time ss_starstar = steady_state(lambda_2)
-
+#=
 @load "$(LAMBDA_GE_DIR)SS_lambda_1.67.jld2" SS
 lambda_3 = SS[5][1]
 ss_3 = copy(SS)
 #@time ss_starstar = steady_state(lambda_2)
-
-MAXITERS = 75#111#50#500#100#
-TIME_PERIODS = 100#150#20#50#200#
+=#
+MAXITERS = 100#50#75#111#500#100#
+############ change to 100
+TIME_PERIODS = 50#
+############
 SMOOTHING = false#true
 RUNWAY = 0# Int64(round(TIME_PERIODS/2; digits=0))
 lambda_i = 2#=,3=#
@@ -98,9 +105,9 @@ if lambda_i == 3
     ss_local = copy(ss_3)
 end
 
-LOCAL_DIR = "$(@__DIR__)/Results/Transitional_dynamics/$(country)/"
+LOCAL_DIR = "$(@__DIR__)/Results/Transitionary/TDE/"
 if Sys.iswindows()
-   LOCAL_DIR = "$(@__DIR__)\\Results\\Transitional_dynamics\\$(country)\\"
+   LOCAL_DIR = "$(@__DIR__)\\Results\\Transitionary\\TDE\\"
 end
 mkpath(LOCAL_DIR)
 
@@ -112,8 +119,8 @@ MODEL_PARAMS = [lambda_1, BETA, DELTA, GAMMA, ETA, THETA, C_E, RHO_M, RHO_W, SIG
 trans_res = open("$(LOCAL_DIR)trans_$(TIME_PERIODS)_results.txt", "w") do F
     #1         2        3            4              5                     6             7          8         9
     #lambda_s, ss_star, ss_starstar, GLOBAL_PARAMS, GLOBAL_APPROX_PARAMS, model_params, file_name, GUESS_RS, maxiters
-    #                                 1         2    3         4             5                     6             7  8     9
-    @time res = transitional_dynamics(LAMBDA_S, ss_1,ss_local, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS, F, true, MAXITERS)
+    #                                 1         2    3         4             5                     6             7  8     9         10
+    @time res = transitional_dynamics(LAMBDA_S, ss_1,ss_local, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS, F, true, MAXITERS, LOCAL_DIR)
     (res)
 end
 
@@ -126,72 +133,3 @@ ss_2_temp = copy(ss_2)
 ss_2 = copy(ss_local)
 @save "$(LOCAL_DIR)trans_$(TIME_PERIODS)_results.jld2" trans_res ss_1 ss_2
 ss_2 = copy(ss_2_temp)
-
-#=
-println_sameline("Experiments")
-
-
-for (TIME_PERIODS, SMOOTHING, lambda_i) = collect(Iterators.product([#=20,50,=#100#=,200=#], [#=true, =#false], [2#=,3=#]))
-    for RUNWAY = [0#=, Int64(round(TIME_PERIODS/2; digits=0))=#]
-        global ss_2, ss_3
-
-        lambda_local = lambda_2
-        ss_local = copy(ss_2)
-        if lambda_i == 3
-            lambda_local = lambda_3
-            ss_local = copy(ss_3)
-        end
-
-        print("T$(TIME_PERIODS)")
-        print(" $(SMOOTHING ? "- smooth" : "")")
-        print(" - Lambda - $(lambda_local)")
-        println_sameline(" $(RUNWAY==0 ? "- 1. Natural Convergence" : "- 2. Augmented Convergence Process (RUNWAY path))") ")
-        # one-time change
-        LAMBDA_S = ones(TIME_PERIODS-RUNWAY).*lambda_local
-        LAMBDA_S[1] = lambda_1
-
-        trans_res = open("Results/Experiments/trans_$(lambda_local)_$(RUNWAY==0 ? "nat" : "aug")$(SMOOTHING ? "_smooth" : "")_$(TIME_PERIODS).txt", "w") do F
-            #1     2       3         4          5         6         7        8
-            #FILE, RUNWAY, GUESS_RS, SMOOTHING, maxiters, lambda_s, ss_star, ss_starstar
-            #                                       1  2       3     4          5        6         7    8
-            @time res = transitional_dynamics(F, RUNWAY, true, SMOOTHING, MAXITERS,LAMBDA_S, ss_1,ss_local)
-            (res)
-        end
-
-        ss_2_temp = copy(ss_2)
-        ss_2 = copy(ss_local)
-        @save "Results/Experiments/trans_$(lambda_local)_$(RUNWAY==0 ? "nat" : "aug")$(SMOOTHING ? "_smooth" : "")_$(TIME_PERIODS).jld2" trans_res ss_1 ss_2
-        ss_2 = copy(ss_2_temp)
-    end
-end
-=#
-
-#=
-##       1  2         3    4    5           6                  7         8             9         10          11                12           13        14               15          16          17         18
-#return [T, lambda_s, r_s, w_s, asset_grid, capital_s_distr_s, policy_s, occ_choice_s, income_s, earnings_s, capital_excess_s, capital_d_s, credit_s, labour_excess_s, labour_d_s, labour_s_s, deposit_s, output_s]
-@time trans_res = transitional_dynamics(true, true,true, MAXITERS,LAMBDA_S, ss_1,ss_2)
-@save "Results/trans_oneTimeChange_$(TIME_PERIODS).jld2" trans_res ss_1 ss_2
-
-# Linear change
-println_sameline("Linear change for $(TIME_PERIODS) time periods")
-LAMBDA_S = collect(range(lambda_1; stop=lambda_2, length=TIME_PERIODS))
-##       1  2         3    4    5           6                  7         8             9         10          11                12           13        14               15          16          17         18
-#return [T, lambda_s, r_s, w_s, asset_grid, capital_s_distr_s, policy_s, occ_choice_s, income_s, earnings_s, capital_excess_s, capital_d_s, credit_s, labour_excess_s, labour_d_s, labour_s_s, deposit_s, output_s]
-@time trans_res = transitional_dynamics(true, false,true, MAXITERS,LAMBDA_S, ss_1,ss_2)
-@save "Results/trans_linearChange_$(TIME_PERIODS).jld2" trans_res ss_1 ss_2
-
-
-# Change every STEP years
-for STEP = [5,10]
-    println_sameline("Change every $(STEP) years for $(TIME_PERIODS) time periods")
-    temp_lambda = collect(range(lambda_1; stop=lambda_2, length=Int64(floor(((TIME_PERIODS)/STEP);digits=0)) ))
-    LAMBDA_S = ones(TIME_PERIODS).*lambda_2
-    for i in 1:length(temp_lambda)
-        LAMBDA_S[STEP*(i-1)+1:STEP*(i-1)+STEP] .= temp_lambda[i]
-    end
-    ##       1  2         3    4    5           6                  7         8             9         10          11                12           13        14               15          16          17         18
-    #return [T, lambda_s, r_s, w_s, asset_grid, capital_s_distr_s, policy_s, occ_choice_s, income_s, earnings_s, capital_excess_s, capital_d_s, credit_s, labour_excess_s, labour_d_s, labour_s_s, deposit_s, output_s]
-    @time trans_res = transitional_dynamics(true, false,false, MAXITERS,LAMBDA_S, ss_1,ss_2)
-    @save "Results/trans_Change$(STEP)Years_$(TIME_PERIODS).jld2" trans_res ss_1 ss_2
-end
-=#

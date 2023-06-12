@@ -8,11 +8,10 @@ using Interpolations
 
 include("Functions/profit.jl")
 
-country = "Italy"
 TIME_PERIODS = 50#100
-LOCAL_DIR = "$(@__DIR__)/Results/Transitional_dynamics_fixed_occ/$(country)/"
+LOCAL_DIR = "$(@__DIR__)/Results/Transitionary/TDE_fixed_occ/"
 if Sys.iswindows()
-    LOCAL_DIR = "$(@__DIR__)\\Results\\Transitional_dynamics_fixed_occ\\$(country)\\"
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Transitionary\\TDE_fixed_occ\\"
 end
 mkpath(LOCAL_DIR)
 
@@ -44,7 +43,6 @@ open("$(LOCAL_DIR_GENERAL)table_stats.txt", "w") do f
     write(f, "Gini for workers' income       & $(round(ss_1[1][20]; digits=2)) & $(round(ss_2[1][20]; digits=2))                            \n")
     write(f, "Gini for entrepreneurs' income & $(round(ss_1[1][21]; digits=2)) & $(round(ss_2[1][21]; digits=2))      					   \n")
     write(f, "hline    \n")
-
 end
 
 T = trans_res[1]

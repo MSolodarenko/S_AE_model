@@ -14,11 +14,9 @@ print_sameline("Initialising libraries")
 using JLD2
 using ProgressMeter
 
-CODENAME = "SS_2092_69"
-country = "Italy"
-LOCAL_DIR = "$(@__DIR__)/Results/Lambda_grid_big_grid/$(country)_$(CODENAME)/"
+LOCAL_DIR = "$(@__DIR__)/Results/Stationary/SS/"
 if Sys.iswindows()
-    LOCAL_DIR = "$(@__DIR__)\\Results\\Lambda_grid_big_grid\\$(country)_$(CODENAME)\\"
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Stationary\\SS\\"
 end
 
 LAMBDA =            1.665907#10.0#

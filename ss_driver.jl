@@ -8,25 +8,23 @@ using JLD2
 print_sameline("Loading functions for steady_state procedure")
 include("Functions/steady_state.jl")
 
-country = "Italy"
-LOCAL_DIR = "$(@__DIR__)/Results/LAMBDA_grid_big_grid/$(country)_SS_2092_69/General/"
+LOCAL_DIR = "$(@__DIR__)/Results/Stationary/SS/"
 if Sys.iswindows()
-    LOCAL_DIR = "$(@__DIR__)\\Results\\LAMBDA_grid_big_grid\\$(country)_SS_2092_69\\General\\"
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Stationary\\SS\\"
 end
-@load "$(LOCAL_DIR)SSS.jld2" SSS
+@load "$(LOCAL_DIR)SS_lambda_1.67.jld2" SS
 
-lambda_i = 11
 # global parameters of the model's code
 #                   1           2           3       4
 #                gen_tol_x, gen_tol_f, distr_tol, val_tol
-GLOBAL_PARAMS = SSS[lambda_i][1][46]
+GLOBAL_PARAMS = SS[1][46]
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
-GLOBAL_APPROX_PARAMS = SSS[lambda_i][1][47]
+GLOBAL_APPROX_PARAMS = SS[1][47]
 
 # parameters of the model's economy (Italy)
-MODEL_PARAMS_INIT = SSS[lambda_i][1][48]
+MODEL_PARAMS_INIT = SS[1][48]
 LAMBDA =            MODEL_PARAMS_INIT[1]
 BETA =              MODEL_PARAMS_INIT[2]
 DELTA =             MODEL_PARAMS_INIT[3]
@@ -50,8 +48,8 @@ SIGMA_EPS_W =       MODEL_PARAMS_INIT[19]
 
 CRRA =              MODEL_PARAMS_INIT[20]
 
-R_ =                SSS[lambda_i][2]
-W_ =                SSS[lambda_i][3]
+R_ =                SS[2]
+W_ =                SS[3]
 
 gen_tol_x = GLOBAL_PARAMS[1]
 gen_tol_f = GLOBAL_PARAMS[2]
@@ -70,7 +68,6 @@ w_max = 0.47#0.3
 W_MIN = w_min
 W_MAX = w_max
 
-
 optimal_r = R_#(r_min+r_max)/2#r#
 optimal_w = W_#(w_min+w_max)/2#w#
 
@@ -78,41 +75,26 @@ text_output = false
 fig_output = false
 calc_add_results = false
 
-country = "Italy"
-guess_R = 0.015444627627924897#(r_min+r_max)/2#
-guess_W = 0.29488937039113056#(w_min+w_max)/2#
-guess_R = 2.078678700816376/100#R_
-guess_W = 0.1619210016023443#W_
+#country = "Italy"
+guess_R = -6.323809959525245/100#(r_min+r_max)/2#
+guess_W = 0.19983052719342714#(w_min+w_max)/2#
 
-# Generate gen eq'm for different LAMBDAs
+# Generate gen eq'm for different lambdas
+lambda = 1.513028#,2.6,1.6733333333333333
 
-MODEL_PARAMS = zeros(19)
-if country == "Italy"
-    # italy MODEL_PARAMS
-    MODEL_PARAMS = [LAMBDA, BETA, DELTA, GAMMA, ETA, THETA, C_E, RHO_M, RHO_W, SIGMA_EPS_M, RHO_EPS_M_W, SIGMA_ZETA, P_ALPHA, ETA_ALPHA, PROB_NODE1_ALPHA, MU_M_ALPHA, RHO_ALPHA_M_W, SIGMA_ALPHA_W, SIGMA_EPS_W, CRRA]
-else
-    throw(error)
-end
+MODEL_PARAMS = [lambda, BETA, DELTA, GAMMA, ETA, THETA, C_E, RHO_M, RHO_W, SIGMA_EPS_M, RHO_EPS_M_W, SIGMA_ZETA, P_ALPHA, ETA_ALPHA, PROB_NODE1_ALPHA, MU_M_ALPHA, RHO_ALPHA_M_W, SIGMA_ALPHA_W, SIGMA_EPS_W, CRRA]
 
-include("Functions/AllubErosa_fixed_occ.jl")
-OCC_SHARES = [SSS[lambda_i][1][14], SSS[lambda_i][1][15], SSS[lambda_i][1][16]]
-function AllubErosa(r,w,global_params,global_approx_params,model_params,approx_object)
-    return AllubErosa(r,w,global_params,global_approx_params,model_params,approx_object,OCC_SHARES)
-end
 # ss_star = [res, r, w, approx_object, MODEL_PARAMS]
-#@time ss_star = steady_state(guess_R, guess_W, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS)
-APPROX_OBJECT = build_skill_nodes(GLOBAL_APPROX_PARAMS, MODEL_PARAMS)
-@time ss_star = AllubErosa(guess_R, guess_W, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS, APPROX_OBJECT)
+@time ss_star = steady_state(guess_R, guess_W, GLOBAL_PARAMS,GLOBAL_APPROX_PARAMS, MODEL_PARAMS)
 SS = copy(ss_star)
 
-LOCAL_DIR = "$(@__DIR__)/Results/Fixed_occ_shares/"
+LOCAL_DIR = "$(@__DIR__)/Results/Stationary/SS/"
 if Sys.iswindows()
-    LOCAL_DIR = "$(@__DIR__)\\Results\\Fixed_occ_shares\\"
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Stationary\\SS\\"
 end
-mkpath(LOCAL_DIR)
 
-open("$(LOCAL_DIR)res_$(round(LAMBDA;digits=2)).txt", "a") do f
-    write(f, "LAMBDA: $(LAMBDA)\n")
+open("$(LOCAL_DIR)res_$(round(lambda;digits=2)).txt", "a") do f
+    write(f, "Lambda: $(lambda)\n")
 
     write(f, "Interest rate: $(ss_star[2])\n")
     write(f, "Wage: $(ss_star[3])\n")
@@ -142,4 +124,4 @@ open("$(LOCAL_DIR)res_$(round(LAMBDA;digits=2)).txt", "a") do f
     write(f, "Capital productivity (Expenses-to-revenue = (r+delta)*Capital-earnings): $(ss_star[1][43][end])\n")
 end
 
-@save "$(LOCAL_DIR)SS_LAMBDA_$(round(LAMBDA;digits=2)).jld2" SS
+@save "$(LOCAL_DIR)SS_lambda_$(round(lambda;digits=2)).jld2" SS

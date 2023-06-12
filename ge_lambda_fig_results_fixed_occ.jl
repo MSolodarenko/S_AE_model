@@ -13,14 +13,12 @@ using ProgressMeter
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
-GLOBAL_APPROX_PARAMS = [69,3,3,3,6,3]#[35,3,3,3,6,3]
+GLOBAL_APPROX_PARAMS = [69,             3,                3,                3,                 6,                    3]
 
 # parameters of the model's economy (Italy)
-LAMBDA = 1.665907
-country = "Italy"
-LOCAL_DIR = "$(@__DIR__)/Results/Fixed_occ_shares/Lambda_grid/$(country)_updated/"
+LOCAL_DIR = "$(@__DIR__)/Results/Stationary/GE_lambda_fixed_occ/"
 if Sys.iswindows()
-    LOCAL_DIR = "$(@__DIR__)\\Results\\Fixed_occ_shares\\Lambda_grid\\$(country)_updated\\"
+    LOCAL_DIR = "$(@__DIR__)\\Results\\Stationary\\GE_lambda_fixed_occ\\"
 end
 global_approx_params = copy(GLOBAL_APPROX_PARAMS)
 
@@ -192,6 +190,8 @@ end
 # income, earnings, wealth, consumption
 quantile_means = zeros(5,4,4,num_lambdas)
 
+Capital = zeros(num_lambdas)
+
 # ENT, SP, EMP
 TFPis = zeros(3,num_lambdas)
 TFPds = zeros(3,num_lambdas)
@@ -231,6 +231,7 @@ var_MPK = zeros(3,num_lambdas)
     wealth = Array{Any}(undef,3)
     income = Array{Any}(undef,3)
     consumption = Array{Any}(undef,3)
+    capital = Array{Any}(undef,3)
     for occ in 1:3
         wealth[occ] = ones(size(density_distr[occ])).*asset_grid
         income[occ] = ss_star[1][23][occ] .- wealth[occ]
@@ -241,6 +242,7 @@ var_MPK = zeros(3,num_lambdas)
     Outputs[i] = sum( [sum(output[occ] .* density_distr[occ]) for occ in 1:3] )
     Incomes[i] = sum( [sum(income[occ] .* density_distr[occ]) for occ in 1:3] )
     Consumptions[i] = sum( [sum(consumption[occ] .* density_distr[occ]) for occ in 1:3] )
+    Capital[i] = sum( [sum(wealth[occ] .* density_distr[occ]) for occ in 1:3] )
 
     Rs[i] = ss_star[2]
     Ws[i] = ss_star[3]
@@ -1047,5 +1049,6 @@ mean_MPL_fixed_occ = copy(mean_MPL)
 var_MPL_fixed_occ = copy(var_MPL)
 mean_MPK_fixed_occ = copy(mean_MPK)
 var_MPK_fixed_occ = copy(var_MPK)
+Capital_fixed_occ = copy(Capital)
 
-@save "$(LOCAL_DIR_GENERAL)SSS_fixed.jld2" SSS_fixed_occ C_Ys_fixed_occ Outputs_fixed_occ Incomes_fixed_occ Consumptions_fixed_occ Rs_fixed_occ Ws_fixed_occ logcs_fixed_occ loges_fixed_occ giniWs_fixed_occ giniEnts_fixed_occ share_unbound_fixed_occ means_fixed_occ ginis_fixed_occ avglogs_fixed_occ varlogs_fixed_occ avgs_fixed_occ vars_fixed_occ quantile_means_fixed_occ TFPis_fixed_occ TFPds_fixed_occ mean_MPL_fixed_occ var_MPL_fixed_occ mean_MPK_fixed_occ var_MPK_fixed_occ
+@save "$(LOCAL_DIR_GENERAL)SSS_fixed.jld2" SSS_fixed_occ C_Ys_fixed_occ Outputs_fixed_occ Incomes_fixed_occ Consumptions_fixed_occ Rs_fixed_occ Ws_fixed_occ logcs_fixed_occ loges_fixed_occ giniWs_fixed_occ giniEnts_fixed_occ share_unbound_fixed_occ means_fixed_occ ginis_fixed_occ avglogs_fixed_occ varlogs_fixed_occ avgs_fixed_occ vars_fixed_occ quantile_means_fixed_occ TFPis_fixed_occ TFPds_fixed_occ mean_MPL_fixed_occ var_MPL_fixed_occ mean_MPK_fixed_occ var_MPK_fixed_occ Capital_fixed_occ
