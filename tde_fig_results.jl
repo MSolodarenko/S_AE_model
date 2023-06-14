@@ -408,9 +408,9 @@ Output_s = zeros(T)
 Credit_to_Output_1 = ss_1[1][13]
 Credit_to_Output_2 = ss_2[1][13]
 Credit_to_Output_s = zeros(T)
-Capital_1 = sum(ss_1[1][3].*ss_1[1][5])
-Capital_2 = sum(ss_2[1][3].*ss_2[1][5])
-Capital_s = zeros(T)
+# All, W, SP, EMP
+Capital = zeros(4,2)
+Capital_s = zeros(4,T)
 # All, SP, EMP, ENT
 Credit = zeros(4,2)
 Credit_s = zeros(4,T)
@@ -648,7 +648,7 @@ mean_MPL = zeros(3,2)
 var_MPL = zeros(3,2)
 mean_MPK = zeros(3,2)
 var_MPK = zeros(3,2)
-share_unbound = zeros(3,2)
+# share_unbound = zeros(3,2)
 
 TFPis_s = zeros(3,T)
 TFPds_s = zeros(3,T)
@@ -656,7 +656,7 @@ mean_MPL_s = zeros(3,T)
 var_MPL_s = zeros(3,T)
 mean_MPK_s = zeros(3,T)
 var_MPK_s = zeros(3,T)
-share_unbound_s = zeros(3,T)
+# share_unbound_s = zeros(3,T)
 
 # W, SP,EMP, ENT
 avg_w_skill = zeros(4,2)
@@ -685,11 +685,11 @@ share_SP_capital_income_in_output_s = zeros(T)
 share_EMP_capital_income_in_output_s = zeros(T)
 
 # loop for _1 and _2
-p = Progress(2*(5*(1+4)+4*4*number_asset_grid+3+4), dt=0.5,
+p = Progress(2*(5*(1+4)+4*4*number_asset_grid+3+4+4+4), dt=0.5,
              barglyphs=BarGlyphs('|','█', ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇'],' ','|',),
              barlen=25)
 if !calc_mean_quantile
-    p = Progress(2*(5*(1+4)+3+4), dt=0.5,
+    p = Progress(2*(5*(1+4)+3+4+4+4), dt=0.5,
                  barglyphs=BarGlyphs('|','█', ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇'],' ','|',),
                  barlen=25)
 end
@@ -702,6 +702,7 @@ for i = 1:2
     end
 
     lambda = ss[5][1]
+    asset_grid = ss[1][3]
     density_distr = ss[1][5]
     output = ss[1][32]
     capital_d = ss[1][26]
@@ -737,6 +738,10 @@ for i = 1:2
             Credit[h-1,i] = sum(density_distr.*choice .* credit)
             var_Credit[h-1,i] = sum(density_distr.*choice .* (credit .- Credit[h-1,i]).^2)/sum(density_distr.*choice)
             Credit[h-1,i] /= sum(density_distr.*choice)
+        end
+
+        if h!=5
+            Capital[h,i] = sum(density_distr.*choice .* asset_grid)
         end
 
         next!(p)
@@ -783,7 +788,7 @@ for i = 1:2
 
             next!(p)
         end
-        #=
+
         if h>2
             denumerator = sum(choice.*density_distr)
             Y = sum(choice.*density_distr.*output)/denumerator
@@ -802,13 +807,11 @@ for i = 1:2
             mean_MPL[h-2,i] = sum(choice.*density_distr.*(theta.*output.*l_1))/denumerator
             var_MPL[h-2,i] = sum(choice.*density_distr.*(theta.*output.*l_1 .- mean_MPL[h-2,i]*denumerator).^2)/denumerator
 
-            share_unbound[h-2,i] = sum(choice.*density_distr.*unlimited_capital_choice)/sum(choice.*density_distr)
+            # share_unbound[h-2,i] = sum(choice.*density_distr.*unlimited_capital_choice)/sum(choice.*density_distr)
 
             next!(p)
         end
-        =#
 
-        #=
         if h>1
             #[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
             #m = u_i,alpha_m_i,zeta_i
@@ -824,7 +827,6 @@ for i = 1:2
 
             next!(p)
         end
-        =#
 
         if h!=5 && calc_mean_quantile
             quantile_mean_wealth[:,h,i] .= quantile_mean(ones(size(ss[1][5])).*ss[1][3], density_distr.*choice)
@@ -873,11 +875,11 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
 end
 
 #main computation loop
-p = Progress(T*(9+5*5+4*4*number_asset_grid+3+4), dt=0.5,
+p = Progress(T*(9+5*5+4*4*number_asset_grid+3+4+4+4), dt=0.5,
              barglyphs=BarGlyphs('|','█', ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇'],' ','|',),
              barlen=25)
 if !calc_mean_quantile
-    p = Progress(T*(9+5*5+3+4), dt=0.5,
+    p = Progress(T*(9+5*5+3+4+4+4), dt=0.5,
                  barglyphs=BarGlyphs('|','█', ['▁' ,'▂' ,'▃' ,'▄' ,'▅' ,'▆', '▇'],' ','|',),
                  barlen=25)
 end
@@ -912,7 +914,10 @@ Threads.@threads for t=1:T
     Output_s[t] = sum(output .* capital_s_distr_s[t,:,:,:,:,:])
     next!(p)
 
-    Capital_s[t]= sum(asset_grid .* capital_s_distr_s[t,:,:,:,:,:])
+    Capital_s[1,t]= sum(asset_grid .* capital_s_distr_s[t,:,:,:,:,:])
+    Capital_s[2,t]= sum(asset_grid .* capital_s_distr_s[t,:,:,:,:,:] .* Float64.(occ_choice.==1.0))
+    Capital_s[3,t]= sum(asset_grid .* capital_s_distr_s[t,:,:,:,:,:] .* Float64.(occ_choice.==2.0))
+    Capital_s[4,t]= sum(asset_grid .* capital_s_distr_s[t,:,:,:,:,:] .* Float64.(occ_choice.==3.0))
     next!(p)
 
     agg_credit = sum(credit .* capital_s_distr_s[t,:,:,:,:,:])
@@ -1057,7 +1062,6 @@ Threads.@threads for t=1:T
             next!(p)
         end
 
-        #=
         if h>2
             denumerator = sum(choice.*density_distr)
             Y = sum(choice.*density_distr.*output)/denumerator
@@ -1076,12 +1080,10 @@ Threads.@threads for t=1:T
             mean_MPL_s[h-2,t] = sum(choice.*density_distr.*(theta.*output.*l_1))/denumerator
             var_MPL_s[h-2,t] = sum(choice.*density_distr.*(theta.*output.*l_1 .- mean_MPL_s[h-2,t]*denumerator).^2)/denumerator
 
-            share_unbound_s[h-2,t] = sum(choice.*density_distr.*unlimited_capital_choice)/sum(choice.*density_distr)
+            # share_unbound_s[h-2,t] = sum(choice.*density_distr.*unlimited_capital_choice)/sum(choice.*density_distr)
             next!(p)
         end
-        =#
 
-        #=
         if h>1
             #[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
             #m = u_i,alpha_m_i,zeta_i
@@ -1096,7 +1098,6 @@ Threads.@threads for t=1:T
             var_w_skill_s[h-1,t] = sum(w_skill_distr.*(z_w_nodes .- avg_w_skill_s[h-1,t]*sum(density_distr.*choice)).^2)/sum(density_distr.*choice)
             next!(p)
         end
-        =#
 
         if h!=5 && calc_mean_quantile
             quantile_mean_wealth_s[:,h,t] .= quantile_mean(asset_grid.*ones(size(density_distr)), density_distr.*choice)
@@ -1163,10 +1164,6 @@ plt = create_plot(collect(1:T),"Time (Years)", Output_growth_rate_s,"Output grow
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_output_growth_rate.png")
 
-plt = create_plot(collect(1:T),"Time (Years)", Capital_s,"Capital", Capital_1, Capital_2, false)
-display(plt)
-savefig(plt,"$(LOCAL_DIR_GENERAL)time_capitals.png")
-
 plt = create_plot(collect(1:T),"Time (Years)", Capital_growth_rate_s,"Capital growth rate", true)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_capital_growth_rate.png")
@@ -1174,6 +1171,20 @@ savefig(plt,"$(LOCAL_DIR_GENERAL)time_capital_growth_rate.png")
 plt = create_plot(collect(1:T),"Time (Years)", Capital_s./Output_s,""#="Capital/Output"=#, Capital_1/Output_1, Capital_2/Output_2, false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_capital_to_outputs.png")
+
+plt = create_plot(collect(1:T),"Time (Years)", Capital_s[1,:],"Capital", Capital[1,1], Capital_2[1,2], false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_GENERAL)time_capitals.png")
+plt = create_plot(collect(1:T),"Time (Years)", Capital_s[2,:],"Workers' Capital", Capital[2,1], Capital_2[2,2], false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_GENERAL)time_capitals_W.png")
+plt = create_plot(collect(1:T),"Time (Years)", Capital_s[3,:],"Sole Proprietors' Capital", Capital[3,1], Capital_2[3,2], false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_GENERAL)time_capitals_SP.png")
+plt = create_plot(collect(1:T),"Time (Years)", Capital_s[4,:],"Employers' Capital", Capital[4,1], Capital_2[4,2], false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_GENERAL)time_capitals_EMP.png")
+
 plt = create_plot(collect(1:T),"Time (Years)", Credit_s[1,:],""#="Credit"=#, Credit[1,1], Credit[1,2], false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)time_credits.png")
@@ -1233,12 +1244,12 @@ plt = create_combined_plot(collect(1:T),"Time (Years)",[occ_Ws_s,occ_SPs_s,occ_E
 display(plt)
 savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_shares_of_occupations.png")
 =#
-# plt1 = create_plot(collect(1:25),"Time (Years)", occ_Ws_s[1:25],"Share of Workers", occ_Ws_1, occ_Ws_2, true, "W", 5)
-# plt2 = create_plot(collect(1:25),"Time (Years)", occ_SPs_s[1:25],"Share of Sole Proprietors", occ_SPs_1, occ_SPs_2, true, "SP", 5)
-# plt3 = create_plot(collect(1:25),"Time (Years)", occ_EMPs_s[1:25],"Share of Employers", occ_EMPs_1, occ_EMPs_2, true, "EMP", 5)
-# plt = plot(plt1,plt2,plt3, layout=(1,3))
-# display(plt)
-# savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_shares_of_occupations_zoomed_in.png")
+plt1 = create_plot(collect(1:25),"Time (Years)", occ_Ws_s[1:25],"Share of Workers", occ_Ws_1, occ_Ws_2, true, "W", 5)
+plt2 = create_plot(collect(1:25),"Time (Years)", occ_SPs_s[1:25],"Share of Sole Proprietors", occ_SPs_1, occ_SPs_2, true, "SP", 5)
+plt3 = create_plot(collect(1:25),"Time (Years)", occ_EMPs_s[1:25],"Share of Employers", occ_EMPs_1, occ_EMPs_2, true, "EMP", 5)
+plt = plot(plt1,plt2,plt3, layout=(1,3))
+display(plt)
+savefig(plt,"$(LOCAL_DIR_OCCUPATION)time_shares_of_occupations_zoomed_in.png")
 # throw(error)
 #Share of unconstrained ENT, SP,EMP
 #=
@@ -1401,27 +1412,42 @@ end
 mkpath(LOCAL_DIR_PRODUCTIVITY)
 # TFP_ideal, TFP_data, mean and var of MPK and MPL, share_of_unconstrained SP,EMP,ENT
 LABELS=["SP","EMP"]
-#=
+
 plt = create_combined_plot(collect(1:T),"Time (Years)", [TFPis_s[1,:],TFPis_s[2,:]],LABELS,"TFP", [TFPis[1,1],TFPis[2,1]], [TFPis[1,2],TFPis[2,2]], false,LABELS)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_tfp_ideal.png")
+plt = create_plot(collect(1:T),"Time (Years)", TFPis_s[3,:],"TFP for Entrepreneurs", TFPis[3,1],TFPis[3,2], false,"ENT")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_tfp_ideal_ent.png")
 
 plt = create_combined_plot(collect(1:T),"Time (Years)", [mean_MPL_s[1,:],mean_MPL_s[2,:]],LABELS,"Mean of MPL", [mean_MPL[1,1],mean_MPL[2,1]], [mean_MPL[1,2],mean_MPL[2,2]], false,LABELS)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_mean_mpl.png")
+plt = create_plot(collect(1:T),"Time (Years)", mean_MPL_s[3,:],"Mean of MPL for Entrepreneurs", mean_MPL[3,1],mean_MPL[3,2], false,"ENT")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_mean_mpl_ent.png")
 
 plt = create_combined_plot(collect(1:T),"Time (Years)", [var_MPL_s[1,:],var_MPL_s[2,:]],LABELS,"Variance of MPL", [var_MPL[1,1],var_MPL[2,1]], [var_MPL[1,2],var_MPL[2,2]], false,LABELS)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_var_mpl.png")
+plt = create_plot(collect(1:T),"Time (Years)", var_MPL_s[3,:],"Variance of MPL for Entrepreneurs", var_MPL[3,1],var_MPL[3,2], false,"ENT")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_var_mpl_ent.png")
 
 plt = create_combined_plot(collect(1:T),"Time (Years)", [mean_MPK_s[1,:],mean_MPK_s[2,:]],LABELS,"Mean of MPK", [mean_MPK[1,1],mean_MPK[2,1]], [mean_MPK[1,2],mean_MPK[2,2]], false,LABELS)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_mean_mpk.png")
+plt = create_plot(collect(1:T),"Time (Years)", mean_MPK_s[3,:],"Mean of MPK for Entrepreneurs", mean_MPK[3,1],mean_MPK[3,2], false,"ENT")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_mean_mpk_ent.png")
 
 plt = create_combined_plot(collect(1:T),"Time (Years)", [var_MPK_s[1,:],var_MPK_s[2,:]],LABELS,"Variance of MPK", [var_MPK[1,1],var_MPK[2,1]], [var_MPK[1,2],var_MPK[2,2]], false,LABELS)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_var_mpk.png")
-
+plt = create_plot(collect(1:T),"Time (Years)", var_MPK_s[3,:],"Variance of MPK for Entrepreneurs", var_MPK[3,1],var_MPK[3,2], false,"ENT")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_var_mpk_ent.png")
+#=
 plt = create_combined_plot(collect(1:T),"Time (Years)", [share_unbound_s[1,:],share_unbound_s[2,:]],LABELS,"Share of Unconstrained Entrepreneurs", [share_unbound[1,1],share_unbound[2,1]], [share_unbound[1,2],share_unbound[2,2]], false,LABELS)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_share_unconstrained_sp_emp.png")
@@ -1468,7 +1494,7 @@ end
 =#
 #skills
 LABELS=["W", "SP","EMP", "ENT"]
-#=
+
 plt = create_combined_plot(collect(1:T),"Time (Years)", [avg_m_skill_s[1,:],avg_m_skill_s[2,:],avg_m_skill_s[3,:],avg_m_skill_s[4,:]],LABELS,"Average Managerial Skill", [avg_m_skill[1,1],avg_m_skill[2,1],avg_m_skill[3,1],avg_m_skill[4,1]], [avg_m_skill[1,2],avg_m_skill[2,2],avg_m_skill[3,2],avg_m_skill[4,2]], false,LABELS)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_avg_m_skill.png")
@@ -1484,6 +1510,7 @@ savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_var_m_skill.png")
 plt = create_combined_plot(collect(1:T),"Time (Years)", [var_w_skill_s[1,:],var_w_skill_s[2,:],var_w_skill_s[3,:],var_w_skill_s[4,:]],LABELS,"Variance of Working Skill", [var_w_skill[1,1],var_w_skill[2,1],var_w_skill[3,1],var_w_skill[4,1]], [var_w_skill[1,2],var_w_skill[2,2],var_w_skill[3,2],var_w_skill[4,2]], false,LABELS)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)time_combined_var_w_skill.png")
+#=
 CHOICE_NAMES = ["Workers","Sole Proprietors","Employers","Entrepreneurs"]
 LOCAL_COLORS = ["W","SP","EMP","ENT"]
 for h=1:4
@@ -1595,8 +1622,8 @@ trans_SSS =[  [ss_1,ss_2,trans_res],
                     [r_1, r_2, r_s],
 #                    4[1] 4[2] 4[3]
                     [w_1, w_2, w_s],
-#                    5[1]      5[2]       5[3]
-                    [Capital_1,Capital_2, Capital_s],
+#                    5[1]    5[2]     5[3]
+                    [Capital,Capital, Capital_s],
 #                    6[1]          6[2]          6[3]
                     [Consumption_1,Consumption_2,Consumption_s],
 #                    7[1]        7[2]        7[3]
@@ -1626,7 +1653,25 @@ trans_SSS =[  [ss_1,ss_2,trans_res],
 #                    19[1]                                19[2]                                19[3]
                     [share_SP_capital_income_in_output[1],share_SP_capital_income_in_output[2],share_SP_capital_income_in_output_s],
 #                    20[1]                                 20[2]                                 20[3]
-                    [share_EMP_capital_income_in_output[1],share_EMP_capital_income_in_output[2],share_EMP_capital_income_in_output_s]
+                    [share_EMP_capital_income_in_output[1],share_EMP_capital_income_in_output[2],share_EMP_capital_income_in_output_s],
+#                    21[1]       21[2]       21[3]
+                    [TFPis[:,1], TFPis[:,2], TFPis_s],
+#                    22[1]          22[2]          22[3]
+                    [mean_MPL[:,1], mean_MPL[:,2], mean_MPL_s],
+#                    23[1]         23[2]         23[3]
+                    [var_MPL[:,1], var_MPL[:,2], var_MPL_s],
+#                    24[1]          24[2]          24[3]
+                    [mean_MPK[:,1], mean_MPK[:,2], mean_MPK_s],
+#                    25[1]         25[2]         25[3]
+                    [var_MPK[:,1], var_MPK[:,2], var_MPK_s],
+#                    26[1]             26[2]             26[3]
+                    [avg_m_skill[:,1], avg_m_skill[:,2], avg_m_skill_s],
+#                    27[1]             27[2]             27[3]
+                    [avg_w_skill[:,1], avg_w_skill[:,2], avg_w_skill_s],
+#                    28[1]             28[2]             28[3]
+                    [var_m_skill[:,1], var_m_skill[:,2], var_m_skill_s],
+#                    29[1]             29[2]             29[3]
+                    [var_w_skill[:,1], var_w_skill[:,2], var_w_skill_s],
                     ]
 
 @save "$(LOCAL_DIR_GENERAL)trans_SSS_fixed.jld2" trans_SSS

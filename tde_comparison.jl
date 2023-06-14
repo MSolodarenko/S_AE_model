@@ -394,14 +394,23 @@ generate_plots(Time,"Time",trans_SSS[3],trans_SSS_fixed[3],"Interest Rate",LOCAL
 
 generate_plots(Time,"Time",trans_SSS[4],trans_SSS_fixed[4],"Wage",LOCAL_DIR_GENERAL,"time_wage",false)
 
-#Capital
-generate_plots(Time,"Time",trans_SSS[5],trans_SSS_fixed[5],"Capital",LOCAL_DIR_GENERAL,"time_capital",false)
+#Capital - All,W,SP,EMP
+generate_plots(Time,"Time",[trans_SSS[5][1][1],trans_SSS[5][2][1],trans_SSS[5][3][1,:]],[trans_SSS_fixed[5][1][1],trans_SSS_fixed[5][2][1],trans_SSS_fixed[5][3][1,:]],"Capital",LOCAL_DIR_GENERAL,"time_capital",false)
+generate_plots(Time,"Time",[trans_SSS[5][1][2],trans_SSS[5][2][2],trans_SSS[5][3][2,:]],[trans_SSS_fixed[5][1][2],trans_SSS_fixed[5][2][2],trans_SSS_fixed[5][3][2,:]],"Workers' Capital",LOCAL_DIR_GENERAL,"time_capital_W",false)
+generate_plots(Time,"Time",[trans_SSS[5][1][3],trans_SSS[5][2][3],trans_SSS[5][3][3,:]],[trans_SSS_fixed[5][1][3],trans_SSS_fixed[5][2][3],trans_SSS_fixed[5][3][3,:]],"Sole Proprietors' Capital",LOCAL_DIR_GENERAL,"time_capital_SP",false)
+generate_plots(Time,"Time",[trans_SSS[5][1][4],trans_SSS[5][2][4],trans_SSS[5][3][4,:]],[trans_SSS_fixed[5][1][4],trans_SSS_fixed[5][2][4],trans_SSS_fixed[5][3][4,:]],"Employers' Capital",LOCAL_DIR_GENERAL,"time_capital_EMP",false)
+
 #Consumption
 generate_plots(Time,"Time",trans_SSS[6],trans_SSS_fixed[6],"Consumption",LOCAL_DIR_GENERAL,"time_consumption",false)
 #Credit     - All,SP,EMP,ENT
 generate_plots(Time,"Time",[trans_SSS[7][1][1],trans_SSS[7][2][1],trans_SSS[7][3][1,:]],[trans_SSS_fixed[7][1][1],trans_SSS_fixed[7][2][1],trans_SSS_fixed[7][3][1,:]],"Credit",LOCAL_DIR_GENERAL,"time_credit",false)
 #Credit-to-output
 generate_plots(Time,"Time",trans_SSS[8],trans_SSS_fixed[8],"Credit-to-Output",LOCAL_DIR_GENERAL,"time_credit_to_output",false)
+
+#Income
+generate_plots(Time,"Time",trans_SSS[9],trans_SSS_fixed[9],"Income",LOCAL_DIR_GENERAL,"time_income",false)
+#Output
+generate_plots(Time,"Time",trans_SSS[10],trans_SSS_fixed[10],"Output",LOCAL_DIR_GENERAL,"time_output",false)
 
 LOCAL_DIR_INEQUALITY = "$(LOCAL_DIR)/Inequality/"
 if Sys.iswindows()
@@ -501,3 +510,48 @@ generate_plots(Time,"Time",trans_SSS[18],trans_SSS_fixed[18],"Share of output as
 generate_plots(Time,"Time",trans_SSS[19],trans_SSS_fixed[19],"Share of output as Sole Proprietors' Capital Income",LOCAL_DIR_PRODUCTIVITY,"time_share_of_output_SP_capital_income",true)
 
 generate_plots(Time,"Time",trans_SSS[20],trans_SSS_fixed[20],"Share of output as Employers' Capital Income",LOCAL_DIR_PRODUCTIVITY,"time_share_of_output_EMP_capital_income",true)
+
+# TFP_ideal, mean and var of MPK and MPL
+occs = ["SP","EMP","ENT"]
+occupations = ["Sole Proprietors","Employers","Entrepreneurs"]
+for o in 1:length(occs)
+    temp = [trans_SSS[21][1][o],trans_SSS[21][2][o],trans_SSS[21][3][o,:]]
+    temp_fixed_occ = [trans_SSS_fixed[21][1][o],trans_SSS_fixed[21][2][o],trans_SSS_fixed[21][3][o,:]]
+    generate_plots(Time,"Time",temp,temp_fixed_occ,"TFP for $(occupations[o])",LOCAL_DIR_PRODUCTIVITY,"time_tfp_$(occs[o])",true)
+
+    temp = [trans_SSS[22][1][o],trans_SSS[22][2][o],trans_SSS[22][3][o,:]]
+    temp_fixed_occ = [trans_SSS_fixed[22][1][o],trans_SSS_fixed[22][2][o],trans_SSS_fixed[22][3][o,:]]
+    generate_plots(Time,"Time",temp,temp_fixed_occ,"Mean of MPL for $(occupations[o])",LOCAL_DIR_PRODUCTIVITY,"time_mpl_mean_$(occs[o])",true)
+
+    temp = [trans_SSS[23][1][o],trans_SSS[23][2][o],trans_SSS[23][3][o,:]]
+    temp_fixed_occ = [trans_SSS_fixed[23][1][o],trans_SSS_fixed[23][2][o],trans_SSS_fixed[23][3][o,:]]
+    generate_plots(Time,"Time",temp,temp_fixed_occ,"Variance of MPL for $(occupations[o])",LOCAL_DIR_PRODUCTIVITY,"time_mpl_var_$(occs[o])",true)
+
+    temp = [trans_SSS[24][1][o],trans_SSS[24][2][o],trans_SSS[24][3][o,:]]
+    temp_fixed_occ = [trans_SSS_fixed[24][1][o],trans_SSS_fixed[24][2][o],trans_SSS_fixed[24][3][o,:]]
+    generate_plots(Time,"Time",temp,temp_fixed_occ,"Mean of MPK for $(occupations[o])",LOCAL_DIR_PRODUCTIVITY,"time_mpk_mean_$(occs[o])",true)
+
+    temp = [trans_SSS[25][1][o],trans_SSS[25][2][o],trans_SSS[25][3][o,:]]
+    temp_fixed_occ = [trans_SSS_fixed[25][1][o],trans_SSS_fixed[25][2][o],trans_SSS_fixed[25][3][o,:]]
+    generate_plots(Time,"Time",temp,temp_fixed_occ,"Variance of MPK for $(occupations[o])",LOCAL_DIR_PRODUCTIVITY,"time_mpk_var_$(occs[o])",true)
+end
+
+occs = ["W","SP","EMP"]
+occupations = ["Workers","Sole Proprietors","Employers"]
+for o in 1:length(occs)
+    temp = [trans_SSS[26][1][o],trans_SSS[26][2][o],trans_SSS[26][3][o,:]]
+    temp_fixed_occ = [trans_SSS_fixed[26][1][o],trans_SSS_fixed[26][2][o],trans_SSS_fixed[26][3][o,:]]
+    generate_plots(Time,"Time",temp,temp_fixed_occ,"Avg m skill for $(occupations[o])",LOCAL_DIR_PRODUCTIVITY,"time_m_skill_avg_$(occs[o])",true)
+
+    temp = [trans_SSS[27][1][o],trans_SSS[27][2][o],trans_SSS[27][3][o,:]]
+    temp_fixed_occ = [trans_SSS_fixed[27][1][o],trans_SSS_fixed[27][2][o],trans_SSS_fixed[27][3][o,:]]
+    generate_plots(Time,"Time",temp,temp_fixed_occ,"Avg w skill for $(occupations[o])",LOCAL_DIR_PRODUCTIVITY,"time_w_skill_avg_$(occs[o])",true)
+
+    temp = [trans_SSS[28][1][o],trans_SSS[28][2][o],trans_SSS[28][3][o,:]]
+    temp_fixed_occ = [trans_SSS_fixed[28][1][o],trans_SSS_fixed[28][2][o],trans_SSS_fixed[28][3][o,:]]
+    generate_plots(Time,"Time",temp,temp_fixed_occ,"Variance m skill for $(occupations[o])",LOCAL_DIR_PRODUCTIVITY,"time_m_skill_var_$(occs[o])",true)
+
+    temp = [trans_SSS[29][1][o],trans_SSS[29][2][o],trans_SSS[29][3][o,:]]
+    temp_fixed_occ = [trans_SSS_fixed[29][1][o],trans_SSS_fixed[29][2][o],trans_SSS_fixed[29][3][o,:]]
+    generate_plots(Time,"Time",temp,temp_fixed_occ,"Variance w skill for $(occupations[o])",LOCAL_DIR_PRODUCTIVITY,"time_w_skill_var_$(occs[o])",true)
+end
