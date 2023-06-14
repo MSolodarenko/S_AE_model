@@ -236,7 +236,7 @@ LOCAL_DIR_SOURCE = "$(@__DIR__)/Results/Stationary/GE_lambda/General/"
 if Sys.iswindows()
     LOCAL_DIR_SOURCE = "$(@__DIR__)\\Results\\Stationary\\GE_lambda\\General\\"
 end
-@load "$(LOCAL_DIR_SOURCE)SSS.jld2" SSS C_Ys Outputs Incomes Consumptions Rs Ws logcs loges giniWs giniEnts share_unbound means ginis avglogs varlogs avgs vars quantile_means TFPis TFPds mean_MPL var_MPL mean_MPK var_MPK
+@load "$(LOCAL_DIR_SOURCE)SSS.jld2" SSS C_Ys Outputs Incomes Consumptions Rs Ws logcs loges giniWs giniEnts share_unbound means ginis avglogs varlogs avgs vars quantile_means TFPis TFPds mean_MPL var_MPL mean_MPK var_MPK Capital share_W_earnings_in_output share_SP_earnings_in_output share_EMP_earnings_in_output share_W_capital_income_in_output share_SP_capital_income_in_output share_EMP_capital_income_in_output
 
 lambdas = zeros(length(SSS))
 @showprogress for i = 1:length(SSS)
@@ -249,7 +249,7 @@ LOCAL_DIR_SOURCE_fixed = "$(@__DIR__)/Results/Stationary/GE_lambda_fixed_occ/Gen
 if Sys.iswindows()
     LOCAL_DIR_SOURCE_fixed = "\\Results\\Stationary\\GE_lambda_fixed_occ\\General\\"
 end
-@load "$(LOCAL_DIR_SOURCE_fixed)SSS_fixed.jld2" SSS_fixed_occ C_Ys_fixed_occ Outputs_fixed_occ Incomes_fixed_occ Consumptions_fixed_occ Rs_fixed_occ Ws_fixed_occ logcs_fixed_occ loges_fixed_occ giniWs_fixed_occ giniEnts_fixed_occ share_unbound_fixed_occ means_fixed_occ ginis_fixed_occ avglogs_fixed_occ varlogs_fixed_occ avgs_fixed_occ vars_fixed_occ quantile_means_fixed_occ TFPis_fixed_occ TFPds_fixed_occ mean_MPL_fixed_occ var_MPL_fixed_occ mean_MPK_fixed_occ var_MPK_fixed_occ
+@load "$(LOCAL_DIR_SOURCE_fixed)SSS_fixed.jld2" SSS_fixed_occ C_Ys_fixed_occ Outputs_fixed_occ Incomes_fixed_occ Consumptions_fixed_occ Rs_fixed_occ Ws_fixed_occ logcs_fixed_occ loges_fixed_occ giniWs_fixed_occ giniEnts_fixed_occ share_unbound_fixed_occ means_fixed_occ ginis_fixed_occ avglogs_fixed_occ varlogs_fixed_occ avgs_fixed_occ vars_fixed_occ quantile_means_fixed_occ TFPis_fixed_occ TFPds_fixed_occ mean_MPL_fixed_occ var_MPL_fixed_occ mean_MPK_fixed_occ var_MPK_fixed_occ Capital_fixed_occ share_W_earnings_in_output_fixed_occ share_SP_earnings_in_output_fixed_occ share_EMP_earnings_in_output_fixed_occ share_W_capital_income_in_output_fixed_occ share_SP_capital_income_in_output_fixed_occ share_EMP_capital_income_in_output_fixed_occ
 
 LOCAL_DIR = "$(@__DIR__)/Results/Stationary/GE_lambda_comparison/"
 if Sys.iswindows()
@@ -296,6 +296,12 @@ generate_plots(lambdas,"λ",Outputs,Outputs_fixed_occ,"Output",LOCAL_DIR_GENERAL
 generate_plots(lambdas,"λ",Incomes,Incomes_fixed_occ,"Income",LOCAL_DIR_GENERAL,"lambda_Incomes",false)
 
 generate_plots(lambdas,"λ",Consumptions,Consumptions_fixed_occ,"Consumptions",LOCAL_DIR_GENERAL,"lambda_Consumptions",false)
+
+generate_plots(lambdas,"λ",Capital[1,:],Capital_fixed_occ[1,:],"Capital",LOCAL_DIR_GENERAL,"lambda_Capital",false)
+generate_plots(lambdas,"λ",Capital[2,:],Capital_fixed_occ[2,:],"Workers' Capital",LOCAL_DIR_GENERAL,"lambda_Capital_W",false)
+generate_plots(lambdas,"λ",Capital[3,:],Capital_fixed_occ[3,:],"Sole Proprietors' Capital",LOCAL_DIR_GENERAL,"lambda_Capital_SP",false)
+generate_plots(lambdas,"λ",Capital[4,:],Capital_fixed_occ[4,:],"Employers' Capital",LOCAL_DIR_GENERAL,"lambda_Capital_EMP",false)
+
 
 #Interest rate and wage
 generate_plots(lambdas,"λ",Rs,Rs_fixed_occ,"Interest Rate",LOCAL_DIR_GENERAL,"lambda_interest_rate",true)
@@ -465,6 +471,8 @@ end
 mkpath(LOCAL_DIR_PRODUCTIVITY)
 
 # TFP_ideal for SP,EMP
+generate_plots(lambdas,"λ",TFPis[1,:],TFPis_fixed_occ[1,:],"TFP for Entrepreneurs",LOCAL_DIR_PRODUCTIVITY,"lambda_tfp_ideal_ent",false)
+
 generate_plots(lambdas,"λ",TFPis[2,:],TFPis_fixed_occ[2,:],"TFP for Sole Proprietors",LOCAL_DIR_PRODUCTIVITY,"lambda_tfp_ideal_sp",false)
 
 generate_plots(lambdas,"λ",TFPis[3,:],TFPis_fixed_occ[3,:],"TFP for Employers",LOCAL_DIR_PRODUCTIVITY,"lambda_tfp_ideal_emp",false)
@@ -508,6 +516,21 @@ generate_plots(lambdas,"λ",share_unbound[1,:],share_unbound_fixed_occ[1,:],"Sha
 generate_plots(lambdas,"λ",share_unbound[2,:],share_unbound_fixed_occ[2,:],"Share of Unconstrained Sole Proprietors",LOCAL_DIR_PRODUCTIVITY,"lambda_share_se_unbound",true)
 
 generate_plots(lambdas,"λ",share_unbound[3,:],share_unbound_fixed_occ[3,:],"Share of Unconstrained Employers",LOCAL_DIR_PRODUCTIVITY,"lambda_share_emp_unbound",true)
+
+#share of earnings in output
+generate_plots(lambdas,"λ",share_W_earnings_in_output,share_W_earnings_in_output_fixed_occ,"Share of output as Workers' Earnings",LOCAL_DIR_PRODUCTIVITY,"lambda_share_of_output_W_earnings",true)
+
+generate_plots(lambdas,"λ",share_SP_earnings_in_output,share_SP_earnings_in_output_fixed_occ,"Share of output as Sole Proprietors' Earnings",LOCAL_DIR_PRODUCTIVITY,"lambda_share_of_output_SP_earnings",true)
+
+generate_plots(lambdas,"λ",share_EMP_earnings_in_output,share_EMP_earnings_in_output_fixed_occ,"Share of output as Employers' Earnings",LOCAL_DIR_PRODUCTIVITY,"lambda_share_of_output_EMP_earnings",true)
+
+#share of capital income in output
+generate_plots(lambdas,"λ",share_W_capital_income_in_output,share_W_capital_income_in_output_fixed_occ,"Share of output as Workers' Capital Income",LOCAL_DIR_PRODUCTIVITY,"lambda_share_of_output_W_capital_income",true)
+
+generate_plots(lambdas,"λ",share_SP_capital_income_in_output,share_SP_capital_income_in_output_fixed_occ,"Share of output as Sole Proprietors' Capital Income",LOCAL_DIR_PRODUCTIVITY,"lambda_share_of_output_SP_capital_income",true)
+
+generate_plots(lambdas,"λ",share_EMP_capital_income_in_output,share_EMP_capital_income_in_output_fixed_occ,"Share of output as Employers' Capital Income",LOCAL_DIR_PRODUCTIVITY,"lambda_share_of_output_EMP_capital_income",true)
+
 throw(error)
 #ADDITIONAL RESULTS
 # Capital
@@ -523,19 +546,3 @@ throw(error)
 #     Capital_fixed_occ = [ sum([ sum(SSS_fixed_occ[i][1][3].*SSS_fixed_occ[i][1][5][occ]) for occ=1:3]) for i=1:length(SSS_fixed_occ)]
 #
 # end
-
-Capital = [ sum(SSS[i][1][3].*SSS[i][1][5]) for i=1:length(SSS)]
-w_choice = [ Float64.(SSS[i][1][22].==1.0) for i=1:length(SSS)]
-Capital_W = [ sum(SSS[i][1][3].*SSS[i][1][5].*w_choice[i]) for i=1:length(SSS)]
-sp_choice = [ Float64.(SSS[i][1][22].==2.0) for i=1:length(SSS)]
-Capital_SP = [ sum(SSS[i][1][3].*SSS[i][1][5].*sp_choice[i]) for i=1:length(SSS)]
-emp_choice = [ Float64.(SSS[i][1][22].==3.0) for i=1:length(SSS)]
-Capital_EMP = [ sum(SSS[i][1][3].*SSS[i][1][5].*emp_choice[i]) for i=1:length(SSS)]
-
-
-display([sum(SSS_fixed_occ[1][1][5][occ]) for occ=1:3])
-
-Capital_fixed_occ = [ sum([ sum((ones(size(SSS_fixed_occ[i][1][5][occ])).*SSS_fixed_occ[i][1][3]).*SSS_fixed_occ[i][1][5][occ]) for occ=1:3]) for i=1:length(SSS_fixed_occ)]
-Capital_fixed_occ_W = [ sum(SSS_fixed_occ[i][1][3].*SSS_fixed_occ[i][1][5][1]) for i=1:length(SSS_fixed_occ)]
-Capital_fixed_occ_SP = [ sum(SSS_fixed_occ[i][1][3].*SSS_fixed_occ[i][1][5][2]) for i=1:length(SSS_fixed_occ)]
-Capital_fixed_occ_EMP = [ sum(SSS_fixed_occ[i][1][3].*SSS_fixed_occ[i][1][5][3]) for i=1:length(SSS_fixed_occ)]

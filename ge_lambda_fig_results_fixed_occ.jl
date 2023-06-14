@@ -15,6 +15,8 @@ using ProgressMeter
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
 GLOBAL_APPROX_PARAMS = [69,             3,                3,                3,                 6,                    3]
 
+country = "Italy"
+
 # parameters of the model's economy (Italy)
 LOCAL_DIR = "$(@__DIR__)/Results/Stationary/GE_lambda_fixed_occ/"
 if Sys.iswindows()
@@ -190,7 +192,8 @@ end
 # income, earnings, wealth, consumption
 quantile_means = zeros(5,4,4,num_lambdas)
 
-Capital = zeros(num_lambdas)
+# All, W, SP, EMP
+Capital = zeros(4,num_lambdas)
 
 # ENT, SP, EMP
 TFPis = zeros(3,num_lambdas)
@@ -201,6 +204,14 @@ var_MPL = zeros(3,num_lambdas)
 
 mean_MPK = zeros(3,num_lambdas)
 var_MPK = zeros(3,num_lambdas)
+
+# Distribution of output to different channels of earnigs/income to occupations
+share_W_earnings_in_output = zeros(num_lambdas)
+share_SP_earnings_in_output = zeros(num_lambdas)
+share_EMP_earnings_in_output = zeros(num_lambdas)
+share_W_capital_income_in_output = zeros(num_lambdas)
+share_SP_capital_income_in_output = zeros(num_lambdas)
+share_EMP_capital_income_in_output = zeros(num_lambdas)
 #throw(error)
 
 @showprogress for i = 1:num_lambdas
@@ -231,18 +242,19 @@ var_MPK = zeros(3,num_lambdas)
     wealth = Array{Any}(undef,3)
     income = Array{Any}(undef,3)
     consumption = Array{Any}(undef,3)
-    capital = Array{Any}(undef,3)
     for occ in 1:3
         wealth[occ] = ones(size(density_distr[occ])).*asset_grid
         income[occ] = ss_star[1][23][occ] .- wealth[occ]
         consumption[occ] = income[occ] .+ wealth[occ] .- policy[occ]
+
+        Capital[occ+1,i] = sum(wealth[occ] .* density_distr[occ])
     end
 
     C_Ys[i] = ss_star[1][13]
     Outputs[i] = sum( [sum(output[occ] .* density_distr[occ]) for occ in 1:3] )
     Incomes[i] = sum( [sum(income[occ] .* density_distr[occ]) for occ in 1:3] )
     Consumptions[i] = sum( [sum(consumption[occ] .* density_distr[occ]) for occ in 1:3] )
-    Capital[i] = sum( [sum(wealth[occ] .* density_distr[occ]) for occ in 1:3] )
+    Capital[1,i] = sum( Capital[2:4,i] )
 
     Rs[i] = ss_star[2]
     Ws[i] = ss_star[3]
@@ -426,6 +438,14 @@ var_MPK = zeros(3,num_lambdas)
         end
 
     end
+
+    agg_c_e = ss_star[5][7]*sum(density_distr[3])
+    share_W_earnings_in_output[i] = sum(ss_star[1][24][1] .* density_distr[1])/(Outputs[i]-agg_c_e)
+    share_SP_earnings_in_output[i] = sum(ss_star[1][24][2] .* density_distr[2])/(Outputs[i]-agg_c_e)
+    share_EMP_earnings_in_output[i] = sum(ss_star[1][24][3] .* density_distr[3])/(Outputs[i]-agg_c_e)
+    share_W_capital_income_in_output[i] = (ss_star[5][3]+ss_star[1][44])*sum(ones(size(ss_star[1][5][1])).*ss_star[1][3] .* density_distr[1])/(Outputs[i]-agg_c_e)
+    share_SP_capital_income_in_output[i] = (ss_star[5][3]+ss_star[1][44])*sum(ones(size(ss_star[1][5][2])).*ss_star[1][3] .* density_distr[2])/(Outputs[i]-agg_c_e)
+    share_EMP_capital_income_in_output[i] = (ss_star[5][3]+ss_star[1][44])*sum(ones(size(ss_star[1][5][3])).*ss_star[1][3] .* density_distr[3])/(Outputs[i]-agg_c_e)
     #throw(error)
 end
 
@@ -608,6 +628,20 @@ plt = create_plot(lambdas,"λ", Consumptions,"Consumption", false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Consumptions.png")
 
+plt = create_plot(lambdas,"λ", Capital[1,:],"Capital", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Capitals.png")
+
+plt = create_plot(lambdas,"λ", Capital[2,:],"Workers' Capital", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Capitals_W.png")
+plt = create_plot(lambdas,"λ", Capital[3,:],"Sole Proprietors' Capital", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Capitals_SP.png")
+plt = create_plot(lambdas,"λ", Capital[4,:],"Employers' Capital", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Capitals_EMP.png")
+
 #Interest rate and wage
 plt = create_plot(C_Ys,"Credit/Output", Rs,"Interest Rate")
 display(plt)
@@ -770,6 +804,11 @@ if Sys.iswindows()
     LOCAL_DIR_PRODUCTIVITY = "$(LOCAL_DIR)\\Productivity\\"
 end
 mkpath(LOCAL_DIR_PRODUCTIVITY)
+
+# TFP_ideal for ENT
+plt = create_plot(C_Ys,"Credit/Output",TFPis[1,:],"TFP for Entrepreneurs", false, "ENT")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_ideal_ent.png")
 # TFP_ideal for SP,EMP
 plts = create_plots(C_Ys,"Credit/Output", [TFPis[2,:], TFPis[3,:]],["TFP for Sole Proprietors","TFP for Employers"],false,["SP","EMP"])
 for plt in plts
@@ -854,6 +893,17 @@ end
 savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_ent_unbound.png")
 savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_se_unbound.png")
 savefig(plts[3],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_emp_unbound.png")
+
+plts = create_plots(C_Ys,"Credit/Output", [share_W_earnings_in_output, share_SP_earnings_in_output, share_EMP_earnings_in_output, share_W_capital_income_in_output, share_SP_capital_income_in_output, share_EMP_capital_income_in_output],["Share of output as Workers' Earnings","Share of output as Sole Proprietors' Earnings","Share of output as Employers' Earnings","Share of output as Workers' Capital Income","Share of output as Sole Proprietors' Capital Income","Share of output as Employers' Capital Income"],true,["W","SP","EMP","W","SP","EMP"])
+for plt in plts
+    display(plt)
+end
+savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_W_earnings.png")
+savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_SP_earnings.png")
+savefig(plts[3],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_EMP_earnings.png")
+savefig(plts[4],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_W_capital_income.png")
+savefig(plts[5],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_SP_capital_income.png")
+savefig(plts[6],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_EMP_capital_income.png")
 
 # Print statistics for calibrated economy
 
@@ -1050,5 +1100,11 @@ var_MPL_fixed_occ = copy(var_MPL)
 mean_MPK_fixed_occ = copy(mean_MPK)
 var_MPK_fixed_occ = copy(var_MPK)
 Capital_fixed_occ = copy(Capital)
+share_W_earnings_in_output_fixed_occ = copy(share_W_earnings_in_output)
+share_SP_earnings_in_output_fixed_occ = copy(share_SP_earnings_in_output)
+share_EMP_earnings_in_output_fixed_occ = copy(share_EMP_earnings_in_output)
+share_W_capital_income_in_output_fixed_occ = copy(share_W_capital_income_in_output)
+share_SP_capital_income_in_output_fixed_occ = copy(share_SP_capital_income_in_output)
+share_EMP_capital_income_in_output_fixed_occ = copy(share_EMP_capital_income_in_output)
 
-@save "$(LOCAL_DIR_GENERAL)SSS_fixed.jld2" SSS_fixed_occ C_Ys_fixed_occ Outputs_fixed_occ Incomes_fixed_occ Consumptions_fixed_occ Rs_fixed_occ Ws_fixed_occ logcs_fixed_occ loges_fixed_occ giniWs_fixed_occ giniEnts_fixed_occ share_unbound_fixed_occ means_fixed_occ ginis_fixed_occ avglogs_fixed_occ varlogs_fixed_occ avgs_fixed_occ vars_fixed_occ quantile_means_fixed_occ TFPis_fixed_occ TFPds_fixed_occ mean_MPL_fixed_occ var_MPL_fixed_occ mean_MPK_fixed_occ var_MPK_fixed_occ Capital_fixed_occ
+@save "$(LOCAL_DIR_GENERAL)SSS_fixed.jld2" SSS_fixed_occ C_Ys_fixed_occ Outputs_fixed_occ Incomes_fixed_occ Consumptions_fixed_occ Rs_fixed_occ Ws_fixed_occ logcs_fixed_occ loges_fixed_occ giniWs_fixed_occ giniEnts_fixed_occ share_unbound_fixed_occ means_fixed_occ ginis_fixed_occ avglogs_fixed_occ varlogs_fixed_occ avgs_fixed_occ vars_fixed_occ quantile_means_fixed_occ TFPis_fixed_occ TFPds_fixed_occ mean_MPL_fixed_occ var_MPL_fixed_occ mean_MPK_fixed_occ var_MPK_fixed_occ Capital_fixed_occ share_W_earnings_in_output_fixed_occ share_SP_earnings_in_output_fixed_occ share_EMP_earnings_in_output_fixed_occ share_W_capital_income_in_output_fixed_occ share_SP_capital_income_in_output_fixed_occ share_EMP_capital_income_in_output_fixed_occ

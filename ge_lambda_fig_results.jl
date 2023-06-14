@@ -10,6 +10,8 @@ using Statistics
 using JLD2
 using ProgressMeter
 
+country = "Italy"
+
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
@@ -192,7 +194,8 @@ end
 # income, earnings, wealth, consumption
 quantile_means = zeros(5,4,4,num_lambdas)
 
-Capital = zeros(num_lambdas)
+# All, W, SP, EMP
+Capital = zeros(4,num_lambdas)
 
 # ENT, SP, EMP
 TFPis = zeros(3,num_lambdas)
@@ -216,12 +219,6 @@ var_m_skill = zeros(4,num_lambdas)
 sum_w_skill = zeros(4,num_lambdas)
 sum_m_skill = zeros(4,num_lambdas)
 
-output_SPs  = zeros(num_lambdas)
-output_EMPs = zeros(num_lambdas)
-
-share_of_output_SPs  = zeros(num_lambdas)
-share_of_output_EMPs = zeros(num_lambdas)
-
 ratio_of_capitals = zeros(num_lambdas)
 ratio_of_outputs  = zeros(num_lambdas)
 
@@ -231,6 +228,13 @@ Labour_productivity_s = zeros(num_lambdas)
 Capital_productivity_s = zeros(num_lambdas)
 Investment_productivity_s = zeros(num_lambdas)
 
+# Distribution of output to different channels of earnigs/income to occupations
+share_W_earnings_in_output = zeros(num_lambdas)
+share_SP_earnings_in_output = zeros(num_lambdas)
+share_EMP_earnings_in_output = zeros(num_lambdas)
+share_W_capital_income_in_output = zeros(num_lambdas)
+share_SP_capital_income_in_output = zeros(num_lambdas)
+share_EMP_capital_income_in_output = zeros(num_lambdas)
 #throw(error)
 
 @showprogress for i = 1:num_lambdas
@@ -270,7 +274,7 @@ Investment_productivity_s = zeros(num_lambdas)
 
     output = ss_star[1][32]
 
-    Capital[i] = sum(asset_grid.*density_distr)
+    Capital[1,i] = sum(asset_grid.*density_distr)
 
     Outputs[i] = sum(output .* density_distr)
     Incomes[i] = sum(income .* density_distr)
@@ -304,6 +308,10 @@ Investment_productivity_s = zeros(num_lambdas)
         end
     end
     ent_choice = sp_choice.+emp_choice
+
+    Capital[2,i] = sum(asset_grid.*density_distr.*w_choice)
+    Capital[3,i] = sum(asset_grid.*density_distr.*sp_choice)
+    Capital[4,i] = sum(asset_grid.*density_distr.*emp_choice)
 
     # [1] = income, earnings, wealth, consumption
     # [2] = All, W, SP, EMP
@@ -368,12 +376,6 @@ Investment_productivity_s = zeros(num_lambdas)
             end
         end
     end
-
-    output_SPs[i]  = sum(ss_star[1][32].* density_distr.* sp_choice)
-    output_EMPs[i] = sum(ss_star[1][32].* density_distr.*emp_choice)
-
-    share_of_output_SPs[i]  = output_SPs[i]/Outputs[i]
-    share_of_output_EMPs[i] = output_EMPs[i]/Outputs[i]
 
     ratio_of_capitals[i] = ss_star[1][6]
 
@@ -444,6 +446,14 @@ Investment_productivity_s = zeros(num_lambdas)
     Labour_productivity_s[i] = ss_star[1][43][end-2]
     Capital_productivity_s[i] = ss_star[1][43][end-1]
     Investment_productivity_s[i] = ss_star[1][43][end]
+
+    agg_c_e = ss_star[5][7]*sum(density_distr[3])
+    share_W_earnings_in_output[i] = sum(ss_star[1][24] .* density_distr.*w_choice)/(Outputs[i]-agg_c_e)
+    share_SP_earnings_in_output[i] = sum(ss_star[1][24] .* density_distr.*sp_choice)/(Outputs[i]-agg_c_e)
+    share_EMP_earnings_in_output[i] = sum(ss_star[1][24] .* density_distr.*emp_choice)/(Outputs[i]-agg_c_e)
+    share_W_capital_income_in_output[i] = (ss_star[5][3]+ss_star[1][44])*sum(ones(size(ss_star[1][5])).*ss_star[1][3] .* density_distr.*w_choice)/(Outputs[i]-agg_c_e)
+    share_SP_capital_income_in_output[i] = (ss_star[5][3]+ss_star[1][44])*sum(ones(size(ss_star[1][5])).*ss_star[1][3] .* density_distr.*sp_choice)/(Outputs[i]-agg_c_e)
+    share_EMP_capital_income_in_output[i] = (ss_star[5][3]+ss_star[1][44])*sum(ones(size(ss_star[1][5])).*ss_star[1][3] .* density_distr.*emp_choice)/(Outputs[i]-agg_c_e)
     #throw(error)
 end
 
@@ -652,6 +662,21 @@ savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Income_to_outputs.png")
 plt = create_plot(lambdas,"λ", Incomes,"Income", false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Incomes.png")
+
+plt = create_plot(lambdas,"λ", Capital[1,:],"Capital", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Capitals.png")
+
+plt = create_plot(lambdas,"λ", Capital[2,:],"Workers' Capital", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Capitals_W.png")
+plt = create_plot(lambdas,"λ", Capital[3,:],"Sole Proprietors' Capital", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Capitals_SP.png")
+plt = create_plot(lambdas,"λ", Capital[4,:],"Employers' Capital", false)
+display(plt)
+savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Capitals_EMP.png")
+
 #Credit/Output to Income/Output
 plt = create_plot(C_Ys,"Credit/Output", Income_to_outputs,"Income/Output", false)
 display(plt)
@@ -894,6 +919,10 @@ if Sys.iswindows()
     LOCAL_DIR_PRODUCTIVITY = "$(LOCAL_DIR)\\Productivity\\"
 end
 mkpath(LOCAL_DIR_PRODUCTIVITY)
+# TFP_ideal for ENT
+plt = create_plot(C_Ys,"Credit/Output",TFPis[1,:],"TFP for Entrepreneurs",false,"ENT")
+display(plt)
+savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_ideal_ent.png")
 # TFP_ideal for SP,EMP
 plts = create_plots(C_Ys,"Credit/Output", [TFPis[2,:], TFPis[3,:]],["TFP for Sole Proprietors","TFP for Employers"],false,["SP","EMP"])
 for plt in plts
@@ -1100,23 +1129,17 @@ display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_sum_w_skill.png")
 
 
-# output by SP
-plt = create_plot(C_Ys,"Credit/Output", output_SPs,"Aggregate output by Sole Proprietors", false, "SP")
-display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_output_sp.png")
-# output by EMP
-plt = create_plot(C_Ys,"Credit/Output", output_EMPs,"Aggregate output by Employers", false, "EMP")
-display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_output_emp.png")
+plts = create_plots(C_Ys,"Credit/Output", [share_W_earnings_in_output, share_SP_earnings_in_output, share_EMP_earnings_in_output, share_W_capital_income_in_output, share_SP_capital_income_in_output, share_EMP_capital_income_in_output],["Share of output as Workers' Earnings","Share of output as Sole Proprietors' Earnings","Share of output as Employers' Earnings","Share of output as Workers' Capital Income","Share of output as Sole Proprietors' Capital Income","Share of output as Employers' Capital Income"],true,["W","SP","EMP","W","SP","EMP"])
+for plt in plts
+    display(plt)
+end
+savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_W_earnings.png")
+savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_SP_earnings.png")
+savefig(plts[3],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_EMP_earnings.png")
+savefig(plts[4],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_W_capital_income.png")
+savefig(plts[5],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_SP_capital_income.png")
+savefig(plts[6],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_EMP_capital_income.png")
 
-# share of output by SP
-plt = create_plot(C_Ys,"Credit/Output", share_of_output_SPs,"Share of output by Sole Proprietors", true, "SP")
-display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_sp.png")
-# share of output by EMP
-plt = create_plot(C_Ys,"Credit/Output", share_of_output_EMPs,"Share of output by Employers", true, "EMP")
-display(plt)
-savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_emp.png")
 
 # ratio of capital restricted to unrestricted
 plt = create_plot(C_Ys,"Credit/Output", ratio_of_capitals,"Ratio of Restricted Capital to Unrestricted", true)
@@ -1306,4 +1329,4 @@ println("Std of the ratio of C/Earnings for H,W,SP,EMP: $(round.(std_consumption
 println("Mean of the ratio of Savings/Earnings for H,W,SP,EMP: $(round.(mean_savings_to_earnings;digits=2))")
 println("Std of the ratio of Savings/Earnings for H,W,SP,EMP: $(round.(std_savings_to_earnings;digits=2))")
 
-@save "$(LOCAL_DIR_GENERAL)SSS.jld2" SSS C_Ys Outputs Incomes Consumptions Rs Ws logcs loges giniWs giniEnts share_unbound means ginis avglogs varlogs avgs vars quantile_means TFPis TFPds mean_MPL var_MPL mean_MPK var_MPK Capital
+@save "$(LOCAL_DIR_GENERAL)SSS.jld2" SSS C_Ys Outputs Incomes Consumptions Rs Ws logcs loges giniWs giniEnts share_unbound means ginis avglogs varlogs avgs vars quantile_means TFPis TFPds mean_MPL var_MPL mean_MPK var_MPK Capital share_W_earnings_in_output share_SP_earnings_in_output share_EMP_earnings_in_output share_W_capital_income_in_output share_SP_capital_income_in_output share_EMP_capital_income_in_output
