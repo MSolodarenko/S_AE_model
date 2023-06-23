@@ -1674,4 +1674,4 @@ trans_SSS =[  [ss_1,ss_2,trans_res],
                     [var_w_skill[:,1], var_w_skill[:,2], var_w_skill_s],
                     ]
 
-@save "$(LOCAL_DIR_GENERAL)trans_SSS_fixed.jld2" trans_SSS
+@save "$(LOCAL_DIR_GENERAL)trans_SSS.jld2" trans_SSS

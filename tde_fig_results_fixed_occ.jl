@@ -640,6 +640,11 @@ Threads.@threads for i = 1:2
 
     z_m_nodes = ss[4][1]
     z_w_nodes = ss[4][2]
+    #[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
+    #m = u_i,alpha_m_i,zeta_i
+    m_skill_distr = [permutedims(sum(density_distr[occ], dims=[1,5])[1,:,:,:,1], [1,3,2]) for occ in 1:3]
+    #w = u_i,alpha_m_i,alpha_w_i
+    w_skill_distr = [sum(density_distr[occ], dims=[1,3])[1,:,1,:,:] for occ in 1:3]
 
     unlimited_capital_choice = Array{Any}(undef,3)
     Threads.@threads for occ = 1:3
@@ -749,12 +754,12 @@ Threads.@threads for i = 1:2
             denumerator = sum([sum(density_distr[occ]) for occ=list_of_occs])
             Y = sum([sum(density_distr[occ].*output[occ]) for occ=list_of_occs])/denumerator
             K = sum([sum(density_distr[occ].*capital_d[occ]) for occ=list_of_occs])/denumerator
-            K = sum([sum(density_distr[occ].*labour_d[occ]) for occ=list_of_occs])/denumerator
+            L = sum([sum(density_distr[occ].*labour_d[occ]) for occ=list_of_occs])/denumerator
             TFPis[h-2,i] = Y/(K^eta*L^theta)
             TFPds[h-2,i] = Y/K^(eta/(theta+eta))
 
             mean_MPK[h-2,i] = sum([sum(density_distr[occ].*( eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
-            var_MPK[h-2,i] = sum([sum(density_distr[occ].*(eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) - mean_MPK[h-2,i]*denumerator).^2 ) for occ=list_of_occs])/denumerator
+            var_MPK[h-2,i] = sum([sum(density_distr[occ].*(eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) .- mean_MPK[h-2,i]*denumerator).^2 ) for occ=list_of_occs])/denumerator
 
             mean_MPL[h-2,i] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
             var_MPL[h-2,i] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) .- mean_MPL[h-2,i]*denumerator ).^2) for occ=list_of_occs])/denumerator
@@ -764,11 +769,6 @@ Threads.@threads for i = 1:2
 
         if h>1
             denumerator = sum([sum(density_distr[occ]) for occ=list_of_occs])
-            #[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
-            #m = u_i,alpha_m_i,zeta_i
-            m_skill_distr = [permutedims(sum(density_distr[occ], dims=[1,5])[1,:,:,:,1], [1,3,2]) for occ in list_of_occs]
-            #w = u_i,alpha_m_i,alpha_w_i
-            w_skill_distr = [sum(density_distr[occ], dims=[1,3])[1,:,1,:,:] for occ in list_of_occs]
 
             avg_m_skill[h-1,i] = sum([ sum(m_skill_distr[occ].*z_m_nodes) for occ in list_of_occs])/denumerator
             avg_w_skill[h-1,i] = sum([ sum(w_skill_distr[occ].*z_w_nodes) for occ in list_of_occs])/denumerator
@@ -884,6 +884,11 @@ Threads.@threads for t=1:T
 
     z_m_nodes = ss_1[4][1]
     z_w_nodes = ss_1[4][2]
+    #[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
+    #m = u_i,alpha_m_i,zeta_i
+    m_skill_distr = [permutedims(sum(density_distr[occ], dims=[1,5])[1,:,:,:,1], [1,3,2]) for occ in 1:3]
+    #w = u_i,alpha_m_i,alpha_w_i
+    w_skill_distr = [sum(density_distr[occ], dims=[1,3])[1,:,1,:,:] for occ in 1:3]
 
     unlimited_capital_choice = Array{Any}(undef,3)
     Threads.@threads for occ = 1:3
@@ -981,32 +986,27 @@ Threads.@threads for t=1:T
             denumerator = sum([sum(density_distr[occ]) for occ=list_of_occs])
             Y = sum([sum(density_distr[occ].*output[occ]) for occ=list_of_occs])/denumerator
             K = sum([sum(density_distr[occ].*capital_d[occ]) for occ=list_of_occs])/denumerator
-            K = sum([sum(density_distr[occ].*labour_d[occ]) for occ=list_of_occs])/denumerator
-            TFPis_s[h-2,i] = Y/(K^eta*L^theta)
-            TFPds_s[h-2,i] = Y/K^(eta/(theta+eta))
+            L = sum([sum(density_distr[occ].*labour_d[occ]) for occ=list_of_occs])/denumerator
+            TFPis_s[h-2,t] = Y/(K^eta*L^theta)
+            TFPds_s[h-2,t] = Y/K^(eta/(theta+eta))
 
-            mean_MPK_s[h-2,i] = sum([sum(density_distr[occ].*( eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
-            var_MPK_s[h-2,i] = sum([sum(density_distr[occ].*(eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) - mean_MPK_s[h-2,i]*denumerator).^2 ) for occ=list_of_occs])/denumerator
+            mean_MPK_s[h-2,t] = sum([sum(density_distr[occ].*( eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
+            var_MPK_s[h-2,t] = sum([sum(density_distr[occ].*(eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) .- mean_MPK_s[h-2,t]*denumerator).^2 ) for occ=list_of_occs])/denumerator
 
-            mean_MPL_s[h-2,i] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
-            var_MPL_s[h-2,i] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) .- mean_MPL_s[h-2,i]*denumerator ).^2) for occ=list_of_occs])/denumerator
+            mean_MPL_s[h-2,t] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
+            var_MPL_s[h-2,t] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) .- mean_MPL_s[h-2,t]*denumerator ).^2) for occ=list_of_occs])/denumerator
 
             next!(p)
         end
 
         if h>1
             denumerator = sum([sum(density_distr[occ]) for occ=list_of_occs])
-            #[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
-            #m = u_i,alpha_m_i,zeta_i
-            m_skill_distr = [permutedims(sum(density_distr[occ], dims=[1,5])[1,:,:,:,1], [1,3,2]) for occ in list_of_occs]
-            #w = u_i,alpha_m_i,alpha_w_i
-            w_skill_distr = [sum(density_distr[occ], dims=[1,3])[1,:,1,:,:] for occ in list_of_occs]
 
-            avg_m_skill_s[h-1,i] = sum([ sum(m_skill_distr[occ].*z_m_nodes) for occ in list_of_occs])/denumerator
-            avg_w_skill_s[h-1,i] = sum([ sum(w_skill_distr[occ].*z_w_nodes) for occ in list_of_occs])/denumerator
+            avg_m_skill_s[h-1,t] = sum([ sum(m_skill_distr[occ].*z_m_nodes) for occ in list_of_occs])/denumerator
+            avg_w_skill_s[h-1,t] = sum([ sum(w_skill_distr[occ].*z_w_nodes) for occ in list_of_occs])/denumerator
 
-            var_m_skill_s[h-1,i] = sum([ sum(m_skill_distr[occ].*(z_m_nodes .- avg_m_skill_s[h-1,i]*denumerator).^2) for occ in list_of_occs])/denumerator
-            var_w_skill_s[h-1,i] = sum([ sum(w_skill_distr[occ].*(z_w_nodes .- avg_w_skill_s[h-1,i]*denumerator).^2) for occ in list_of_occs])/denumerator
+            var_m_skill_s[h-1,t] = sum([ sum(m_skill_distr[occ].*(z_m_nodes .- avg_m_skill_s[h-1,t]*denumerator).^2) for occ in list_of_occs])/denumerator
+            var_w_skill_s[h-1,t] = sum([ sum(w_skill_distr[occ].*(z_w_nodes .- avg_w_skill_s[h-1,t]*denumerator).^2) for occ in list_of_occs])/denumerator
 
             next!(p)
         end

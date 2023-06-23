@@ -351,6 +351,7 @@ if Sys.iswindows()
 end
 mkpath(LOCAL_DIR)
 
+country = "Italy"
 TIME_PERIODS = 50#100
 Time = collect(1:TIME_PERIODS)
 

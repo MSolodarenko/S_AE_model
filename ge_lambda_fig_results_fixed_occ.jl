@@ -16,7 +16,8 @@ using ProgressMeter
 GLOBAL_APPROX_PARAMS = [69,             3,                3,                3,                 6,                    3]
 
 country = "Italy"
-
+# parameters of the model's economy (Italy)
+LAMBDA =            1.665907
 # parameters of the model's economy (Italy)
 LOCAL_DIR = "$(@__DIR__)/Results/Stationary/GE_lambda_fixed_occ/"
 if Sys.iswindows()

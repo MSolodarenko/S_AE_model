@@ -866,7 +866,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_log$(stat_name).png")
     end
 end
-
+#=
 # output by SP
 plt = create_plot(C_Ys,"Credit/Output", output_SPs,"Aggregate output by Sole Proprietors", false, "SP")
 display(plt)
@@ -884,7 +884,7 @@ savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_share_of_output_sp.
 plt = create_plot(C_Ys,"Credit/Output", share_of_output_EMPs,"Share of output by Employers", true, "EMP")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_share_of_output_emp.png")
-
+=#
 
 ratio_of_capitals = ratio_of_capitals./ratio_of_capitals[num_lambdas]
 ratio_of_outputs = Outputs./Outputs[num_lambdas]

@@ -231,6 +231,7 @@ function create_combined_plot(Xs,XLABEL::String,Ys,YLABELs,YLABEL, IS_Y_PERCENTA
     return plt
 end
 
+country = "italy"
 
 LOCAL_DIR_SOURCE = "$(@__DIR__)/Results/Stationary/GE_lambda/General/"
 if Sys.iswindows()
@@ -267,25 +268,25 @@ mkpath(LOCAL_DIR_GENERAL)
 function generate_plots(X,XLABEL,Y,Y_fixed_occ,YLABEL,PATHDIR,FILENAME,IS_PERCENTAGE::Bool=false)
 
     plt = create_combined_plot(X,XLABEL, [Y, Y_fixed_occ],["w occ mob", "wo occ mob"],YLABEL, IS_PERCENTAGE, :bottomright)
-    # display(plt)
-    # savefig(plt,"$(PATHDIR)$(country)_$(FILENAME).png")
+    display(plt)
+    savefig(plt,"$(PATHDIR)$(country)_$(FILENAME).png")
 
     if !IS_PERCENTAGE
         plt = create_plot(X,XLABEL, (Y.-Y_fixed_occ)./Y,YLABEL, true)
-        # display(plt)
-        # savefig(plt,"$(PATHDIR)$(country)_$(FILENAME)_diff.png")
+        display(plt)
+        savefig(plt,"$(PATHDIR)$(country)_$(FILENAME)_diff.png")
 
         plt = create_plot(X,XLABEL, (Y.-(Y[calibrated_lambda]-Y_fixed_occ[calibrated_lambda]).-Y_fixed_occ)./Y,YLABEL, true)
-        # display(plt)
-        # savefig(plt,"$(PATHDIR)$(country)_$(FILENAME)_did.png")
+        display(plt)
+        savefig(plt,"$(PATHDIR)$(country)_$(FILENAME)_did.png")
     else
         plt = create_plot(X,XLABEL, (Y.-Y_fixed_occ),YLABEL, true)
-        # display(plt)
-        # savefig(plt,"$(PATHDIR)$(country)_$(FILENAME)_diff.png")
+        display(plt)
+        savefig(plt,"$(PATHDIR)$(country)_$(FILENAME)_diff.png")
 
         plt = create_plot(X,XLABEL, (Y.-(Y[calibrated_lambda]-Y_fixed_occ[calibrated_lambda]).-Y_fixed_occ),YLABEL, true)
-        # display(plt)
-        # savefig(plt,"$(PATHDIR)$(country)_$(FILENAME)_did.png")
+        display(plt)
+        savefig(plt,"$(PATHDIR)$(country)_$(FILENAME)_did.png")
     end
 end
 
@@ -347,8 +348,8 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
             LABEL = "Mean of $(CHOICE_NAMES[h])' $(stat_name) (quantiles) wo occ mob"
             plt2 = create_combined_plot(lambdas,"λ", [quantile_means_fixed_occ[1,h,s,:],quantile_means_fixed_occ[2,h,s,:],quantile_means_fixed_occ[3,h,s,:],quantile_means_fixed_occ[4,h,s,:],quantile_means_fixed_occ[5,h,s,:]],LABELS,LABEL, false, ["H","W","SP","EMP","ENT"])
             plt = plot(plt1,plt2,legend=false)
-            # display(plt)
-            # savefig(plt,"$(LOCAL_DIR_INEQUALITY)lambda_combined_mean_$(stat_name)_$(OCCS[h])_quantiles.png")
+            display(plt)
+            savefig(plt,"$(LOCAL_DIR_INEQUALITY)lambda_combined_mean_$(stat_name)_$(OCCS[h])_quantiles.png")
 
             LABEL = "Mean of $(CHOICE_NAMES[h])' $(stat_name) (quantiles) diff"
             plot_mat = Array{Any}(undef,5)
@@ -356,8 +357,8 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
                 plot_mat[iii] = (quantile_means[iii,h,s,:].-quantile_means_fixed_occ[iii,h,s,:])./quantile_means[iii,h,s,:]
             end
             plt = create_combined_plot(lambdas,"λ", plot_mat,LABELS,LABEL, true, ["H","W","SP","EMP","ENT"])
-            # display(plt)
-            # savefig(plt,"$(LOCAL_DIR_INEQUALITY)lambda_combined_mean_$(stat_name)_$(OCCS[h])_quantiles_diff.png")
+            display(plt)
+            savefig(plt,"$(LOCAL_DIR_INEQUALITY)lambda_combined_mean_$(stat_name)_$(OCCS[h])_quantiles_diff.png")
 
             LABEL = "Mean of $(CHOICE_NAMES[h])' $(stat_name) (quantiles) did"
             plot_mat = Array{Any}(undef,5)
@@ -365,8 +366,8 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
                 plot_mat[iii] = (quantile_means[iii,h,s,:].-(quantile_means[iii,h,s,calibrated_lambda]-quantile_means_fixed_occ[iii,h,s,calibrated_lambda]).-quantile_means_fixed_occ[iii,h,s,:])./quantile_means[iii,h,s,:]
             end
             plt = create_combined_plot(lambdas,"λ", plot_mat,LABELS,LABEL, true, ["H","W","SP","EMP","ENT"])
-            # display(plt)
-            # savefig(plt,"$(LOCAL_DIR_INEQUALITY)lambda_combined_mean_$(stat_name)_$(OCCS[h])_quantiles_did.png")
+            display(plt)
+            savefig(plt,"$(LOCAL_DIR_INEQUALITY)lambda_combined_mean_$(stat_name)_$(OCCS[h])_quantiles_did.png")
         catch e
             println_sameline("Mean of $(CHOICE_NAMES[h])' $(stat_name) (quantiles) have not been generated")
         end
@@ -375,14 +376,11 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     # calculate mean
     #means[s,h,i]
     LABELS = ["Mean of $cn' $stat_name" for cn in CHOICE_NAMES]
-    #plts = create_plots(C_Ys,"Credit/Output", [means[s,1,:], means[s,2,:], means[s,3,:], means[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:4
-        # display(plts[h])
         choice_name = CHOICE_NAMES[h]
         if h==3
             choice_name = "SoleProprietors"
         end
-        # # savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_mean_$(choice_name)_$(stat_name)_full.png")
 
         generate_plots(lambdas,"λ",means[s,h,:],means_fixed_occ[s,h,:],LABELS[h],LOCAL_DIR_INEQUALITY,"lambda_mean_$(choice_name)_$(stat_name)",false)
     end
@@ -390,42 +388,33 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     # calculate gini coefficent
     #ginis[s,h,i]
     LABELS = ["Gini of $cn' $stat_name" for cn in CHOICE_NAMES]
-    # plts = create_plots(C_Ys,"Credit/Output", [ginis[s,1,:], ginis[s,2,:], ginis[s,3,:], ginis[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:4
-        # display(plts[h])
         choice_name = CHOICE_NAMES[h]
         if h==3
             choice_name = "SoleProprietors"
         end
-        # # savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_gini_$(choice_name)_$(stat_name)_full.png")
 
         generate_plots(lambdas,"λ",ginis[s,h,:],ginis_fixed_occ[s,h,:],LABELS[h],LOCAL_DIR_INEQUALITY,"lambda_gini_$(choice_name)_$(stat_name)",true)
     end
     # calculate variance of log-s
     #avgs[s,h,i]
     LABELS = ["Average of $cn' $stat_name" for cn in CHOICE_NAMES]
-    # plts = create_plots(C_Ys,"Credit/Output", [avgs[s,1,:], avgs[s,2,:], avgs[s,3,:], avgs[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:4
-        # display(plts[h])
         choice_name = CHOICE_NAMES[h]
         if h==3
             choice_name = "SoleProprietors"
         end
-        # # savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_$(stat_name)_full.png")
 
         generate_plots(lambdas,"λ",avgs[s,h,:],avgs_fixed_occ[s,h,:],LABELS[h],LOCAL_DIR_INEQUALITY,"lambda_avg_$(choice_name)_$(stat_name)",false)
     end
 
     #vars[s,h,i]
     LABELS = ["Variance of $cn' $stat_name" for cn in CHOICE_NAMES]
-    # plts = create_plots(C_Ys,"Credit/Output", [vars[s,1,:], vars[s,2,:], vars[s,3,:], vars[s,4,:]],LABELS,false,["H","W","SP","EMP"], 0.0)
     for h in 1:4
-        # display(plts[h])
         choice_name = CHOICE_NAMES[h]
         if h==3
             choice_name = "SoleProprietors"
         end
-        # # savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_$(stat_name)_full.png")
 
         generate_plots(lambdas,"λ",vars[s,h,:],vars_fixed_occ[s,h,:],LABELS[h],LOCAL_DIR_INEQUALITY,"lambda_var_$(choice_name)_$(stat_name)",false)
     end
@@ -433,14 +422,11 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     # calculate variance of log-s
     #avglogs[s,h,i]
     LABELS = ["Average of $cn' Log-$stat_name" for cn in CHOICE_NAMES]
-    # plts = create_plots(C_Ys,"Credit/Output", [avglogs[s,1,:], avglogs[s,2,:], avglogs[s,3,:], avglogs[s,4,:]],LABELS,false,["H","W","SP","EMP"])
     for h in 1:4
-        # display(plts[h])
         choice_name = CHOICE_NAMES[h]
         if h==3
             choice_name = "SoleProprietors"
         end
-        # # savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_log$(stat_name)_full.png")
 
         generate_plots(lambdas,"λ",avglogs[s,h,:],avglogs_fixed_occ[s,h,:],LABELS[h],LOCAL_DIR_INEQUALITY,"lambda_avg_$(choice_name)_log$(stat_name)",false)
     end
@@ -451,14 +437,11 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     else
         LABELS = ["Variance of $cn' $stat_name" for cn in CHOICE_NAMES]
     end
-    # plts = create_plots(C_Ys,"Credit/Output", [varlogs[s,1,:], varlogs[s,2,:], varlogs[s,3,:], varlogs[s,4,:]],LABELS,false,["H","W","SP","EMP"], 0.0)
     for h in 1:4
-        # display(plts[h])
         choice_name = CHOICE_NAMES[h]
         if h==3
             choice_name = "SoleProprietors"
         end
-        # # savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_log$(stat_name)_full.png")
 
         generate_plots(lambdas,"λ",varlogs[s,h,:],varlogs_fixed_occ[s,h,:],LABELS[h],LOCAL_DIR_INEQUALITY,"lambda_var_$(choice_name)_log$(stat_name)",false)
     end
@@ -530,19 +513,3 @@ generate_plots(lambdas,"λ",share_W_capital_income_in_output,share_W_capital_inc
 generate_plots(lambdas,"λ",share_SP_capital_income_in_output,share_SP_capital_income_in_output_fixed_occ,"Share of output as Sole Proprietors' Capital Income",LOCAL_DIR_PRODUCTIVITY,"lambda_share_of_output_SP_capital_income",true)
 
 generate_plots(lambdas,"λ",share_EMP_capital_income_in_output,share_EMP_capital_income_in_output_fixed_occ,"Share of output as Employers' Capital Income",LOCAL_DIR_PRODUCTIVITY,"lambda_share_of_output_EMP_capital_income",true)
-
-throw(error)
-#ADDITIONAL RESULTS
-# Capital
-# Capital = []
-# Capital_fixed_occ = []
-# try
-#     @load "$(LOCAL_DIR_SOURCE)SSS.jld2" Capital
-#     @load "$(LOCAL_DIR_SOURCE_fixed)SSS_fixed.jld2" Capital_fixed_occ
-# catch e
-#
-#     Capital = [ sum(SSS[i][1][3].*SSS[i][1][5]) for i=1:length(SSS)]
-#
-#     Capital_fixed_occ = [ sum([ sum(SSS_fixed_occ[i][1][3].*SSS_fixed_occ[i][1][5][occ]) for occ=1:3]) for i=1:length(SSS_fixed_occ)]
-#
-# end
