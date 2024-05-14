@@ -20,7 +20,7 @@ if Sys.iswindows()
     LOCAL_DIR = "$(@__DIR__)\\Results\\Transitionary\\TDE\\"
 end
 
-function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::Bool=false, OCCUPATION::String="H", TICKSFONTSIZE::Int64=9)
+function create_plot_trans_prob(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::Bool=false, OCCUPATION::String="H", TICKSFONTSIZE::Int64=9, NUM_YTICKS::Int64=10)
     COLOR="blue"
     if OCCUPATION=="W"
         COLOR="purple"
@@ -39,10 +39,157 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::B
     end
     XTICKS = [1; XTICKS[2:end]]
 
-    NUM_YTICKS = 10
+    # NUM_YTICKS = 10
     YLIMS1 = minimum([Y; Y1; Y2])
     YLIMS2 = maximum([Y; Y1; Y2])
     #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
+
+    #=
+    Y12low = minimum([Y1; Y2])
+    Y12high = maximum([Y1; Y2])
+    SHARElow = (Y12low-YLIMS1)/(YLIMS2-YLIMS1)
+    SHAREmid = (Y12high-Y12low)/(YLIMS2-YLIMS1)
+    SHAREup = (YLIMS2-Y12high)/(YLIMS2-YLIMS1)
+    #display([SHAREup; SHAREmid; SHARElow])
+
+    LOWLENGTH = Int64(round(NUM_YTICKS*SHARElow))
+    YTICKSlow = [YLIMS1]
+    if LOWLENGTH>1
+        YTICKSlow = collect(range(YLIMS1; stop=Y12low, length=LOWLENGTH))
+        STEP = abs(YTICKSlow[2]-YTICKSlow[1])
+        YTICKSlow = YTICKSlow[1:end-1]
+    end
+
+    MIDLENGTH = Int64(round(NUM_YTICKS*SHAREmid))
+    YTICKSmid = []
+    if MIDLENGTH>1
+        YTICKSmid = collect(range(Y12low; stop=Y12high, length=MIDLENGTH))
+        STEP = abs(YTICKSmid[2]-YTICKSmid[1])
+        YTICKSmid = YTICKSmid[2:end-1]
+        YLIMS1 = Y12low-LOWLENGTH*STEP
+        YTICKSlow = collect(range(Y12low; stop=YLIMS1, step=-STEP))[end:-1:1]
+    end
+
+    HIGHLENGTH = Int64(round(NUM_YTICKS*SHAREup))
+    YTICKShigh = []
+    if LOWLENGTH+MIDLENGTH<3
+        YTICKShigh = collect(range(Y12high; stop=YLIMS2, length=HIGHLENGTH))
+    else
+        if HIGHLENGTH==0 && YLIMS2!=Y12high
+            YTICKShigh = [YLIMS2]
+        else
+            YLIMS2 = Y12high+HIGHLENGTH*STEP
+            YTICKShigh = collect(range(Y12high; stop=YLIMS2, step=STEP))
+        end
+    end
+    #YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUM_YTICKS))
+    YTICKS = [YTICKSlow; YTICKSmid; YTICKShigh]
+
+    if YTICKS[1] > minimum([Y; Y1; Y2])
+        YTICKS[1] = minimum([Y; Y1; Y2])
+        YLIMS1 = minimum([Y; Y1; Y2])
+    end
+    if YTICKS[end] < maximum([Y; Y1; Y2])
+        YTICKS[end] = maximum([Y; Y1; Y2])
+        YLIMS2 = maximum([Y; Y1; Y2])
+    end
+    =#
+
+    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUM_YTICKS))
+
+    YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
+    YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
+    #=
+    YPOS = mean(YTICKS[end-1:end])
+    if maximum(Y[calibrated_lambda:calibrated_lambda+4]) > YTICKS[end-1]
+        YPOS = mean(YTICKS[1:2])
+    end
+    =#
+    if IS_Y_PERCENTAGE
+        DIGITS = Int(max(2, round(log10(0.01/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
+        YTICKS = (YTICKS, ["$(round(100*y;digits=DIGITS))%" for y in YTICKS])
+    else
+        DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]))+0.5;digits=0) ))
+        YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
+    end
+
+    Y1line = ones(length(Y)).*Y1
+    Y2line = ones(length(Y)).*Y2
+    if length(Y) == 50
+        Y1line[10+1:end] .= NaN
+        Y2line[1:40-1] .= NaN
+    elseif length(Y) == 10
+        Y1line[3+1:end] .= NaN
+        Y2line[1:8-1] .= NaN
+    end
+    plt = plot(collect(X), collect.([Y, Y1line,Y2line]),
+                    #color=[COLOR "green" "red"],
+                    color=[COLOR COLOR COLOR],
+                    linestyle=[:solid :dot :dash],
+                    legend=false,
+                    xlabel=XLABEL,
+                    ylabel=YLABEL,
+                    xtickfontsize=TICKSFONTSIZE,
+                    ytickfontsize=TICKSFONTSIZE,
+                    xguidefontsize=TICKSFONTSIZE,
+                    yguidefontsize=TICKSFONTSIZE,
+                    xticks=XTICKS,
+                    yticks = YTICKS,
+                    ylims = YLIMS )
+    # text annotation
+    #=if Y1 != Y2
+        if IS_Y_PERCENTAGE
+            TEXT1 = "Economy at λ=$(round(lambda_1;digits=2)) ($(round(Y1*100;digits=DIGITS+1))%)"
+        else
+            TEXT1 = "Economy at λ=$(round(lambda_1;digits=2)) ($(round(Y1;digits=DIGITS+1)))"
+        end
+        POS = Y1+YLIMMARGIN*1.25
+        if Y1 < Y2
+            POS = Y1-YLIMMARGIN*1.25
+            if POS < YLIMS1-YLIMMARGIN
+                POS = Y1+YLIMMARGIN*1.25
+            end
+        end
+        annotate!([X[end]], POS, text(TEXT1, COLOR, :right, 7))
+
+        if IS_Y_PERCENTAGE
+            TEXT2 = "Economy at λ=$(round(lambda_2;digits=2)) ($(round(Y2*100;digits=DIGITS+1))%)"
+        else
+            TEXT2 = "Economy at λ=$(round(lambda_2;digits=2)) ($(round(Y2;digits=DIGITS+1)))"
+        end
+        POS = Y2-YLIMMARGIN*1.25
+        if POS < YLIMS1-YLIMMARGIN || Y1 < Y2
+            POS = Y2+YLIMMARGIN*1.25
+        end
+        annotate!([X[end]], POS, text(TEXT2, COLOR, :right, 7))
+    end=#
+    return plt
+end
+function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::Bool=false, OCCUPATION::String="H", TICKSFONTSIZE::Int64=9, NUM_YTICKS::Int64=10)
+    COLOR="blue"
+    if OCCUPATION=="W"
+        COLOR="purple"
+    elseif OCCUPATION=="SP"
+        COLOR="red"
+    elseif OCCUPATION=="EMP"
+        COLOR="green"
+    elseif OCCUPATION=="ENT"
+        COLOR="brown"
+    end
+
+    NUM_XTICKS = 6
+    XTICKS = Int64.(round.(collect(range(0;stop=T,length=NUM_XTICKS))))
+    if length(X) <= 10
+        XTICKS = Int64.(round.(collect(range(1;stop=T,step=1))))
+    end
+    XTICKS = [1; XTICKS[2:end]]
+
+    # NUM_YTICKS = 10
+    YLIMS1 = minimum([Y; Y1; Y2])
+    YLIMS2 = maximum([Y; Y1; Y2])
+    #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
+
+
     Y12low = minimum([Y1; Y2])
     Y12high = maximum([Y1; Y2])
     SHARElow = (Y12low-YLIMS1)/(YLIMS2-YLIMS1)
@@ -92,6 +239,9 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::B
         YLIMS2 = maximum([Y; Y1; Y2])
     end
 
+
+    # YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUM_YTICKS))
+
     YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
     YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
     #=
@@ -126,6 +276,8 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::B
                     ylabel=YLABEL,
                     xtickfontsize=TICKSFONTSIZE,
                     ytickfontsize=TICKSFONTSIZE,
+                    xguidefontsize=TICKSFONTSIZE,
+                    yguidefontsize=TICKSFONTSIZE,
                     xticks=XTICKS,
                     yticks = YTICKS,
                     ylims = YLIMS )
@@ -158,7 +310,8 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String,Y1,Y2, IS_Y_PERCENTAGE::B
     end=#
     return plt
 end
-function create_plot(X,XLABEL::String,Y,YLABEL::String, IS_Y_PERCENTAGE::Bool=false, OCCUPATION::String="H", TICKSFONTSIZE::Int64=9)
+
+function create_plot(X,XLABEL::String,Y,YLABEL::String, IS_Y_PERCENTAGE::Bool=false, OCCUPATION::String="H", TICKSFONTSIZE::Int64=9, NUM_YTICKS::Int64=10)
     COLOR="blue"
     if OCCUPATION=="W"
         COLOR="purple"
@@ -177,7 +330,7 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String, IS_Y_PERCENTAGE::Bool=fa
     end
     XTICKS = [1; XTICKS[2:end]]
 
-    NUM_YTICKS = 10
+    # NUM_YTICKS = 10
     YLIMS1 = minimum([Y; 0.0])
     YLIMS2 = maximum([Y; 0.0])
     #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
@@ -216,6 +369,8 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String, IS_Y_PERCENTAGE::Bool=fa
                     ylabel=YLABEL,
                     xtickfontsize=TICKSFONTSIZE,
                     ytickfontsize=TICKSFONTSIZE,
+                    xguidefontsize=TICKSFONTSIZE,
+                    yguidefontsize=TICKSFONTSIZE,
                     xticks=XTICKS,
                     yticks = YTICKS,
                     ylims = YLIMS )
@@ -248,13 +403,14 @@ function create_plot(X,XLABEL::String,Y,YLABEL::String, IS_Y_PERCENTAGE::Bool=fa
     end=#
     return plt
 end
-function create_combined_plot(X,XLABEL::String,Ys,YLABELs,YLABEL,Y1s,Y2s, IS_Y_PERCENTAGE::Bool=false, OCCUPATION=["SP","EMP"], LEGENDPOS=false)
+
+function create_combined_plot(X,XLABEL::String,Ys,YLABELs,YLABEL,Y1s,Y2s, IS_Y_PERCENTAGE::Bool=false, OCCUPATION=["SP","EMP"], LEGENDPOS=false, TICKSFONTSIZE::Int64=9, NUMYTICKS::Int64=10)
     NUM_XTICKS = 6
     XTICKS = Int64.(round.(collect(range(0;stop=T,length=NUM_XTICKS))))
 
     XTICKS = [1; XTICKS[2:end]]
 
-    NUMYTICKS = 10
+    # NUMYTICKS = 10
     YLIMS1 = minimum([minimum.(Ys); minimum.(Y1s); minimum.(Y2s)])
     YLIMS2 = maximum([maximum.(Ys); maximum.(Y1s); maximum.(Y2s)])
     YTICKSlow = []
@@ -321,8 +477,13 @@ function create_combined_plot(X,XLABEL::String,Ys,YLABELs,YLABEL,Y1s,Y2s, IS_Y_P
                         color=[COLORS[y_i] "black"],
                         linestyle=[:solid :dot],
                         legend=LEGENDPOS,
+                        legendfontsize=ceil(Int64,TICKSFONTSIZE*0.72),
                         xlabel=XLABEL,
                         label=[YLABELs[y_i] ""],
+                        xtickfontsize=TICKSFONTSIZE,
+                        ytickfontsize=TICKSFONTSIZE,
+                        xguidefontsize=TICKSFONTSIZE,
+                        yguidefontsize=TICKSFONTSIZE,
                         ylabel = YLABEL,
                         xticks = XTICKS,
                         yticks = YTICKS,
@@ -1018,7 +1179,7 @@ for (i,j) = collect(Iterators.product(1:3,1:3))
     #plts_otm[i,j] = plot(0:T, occ_trans_matrix[1:T+1,i,j], legend=false,ylabel="$(occ_text[i])->$(occ_text[j])")
 
     plts_otm[i,j] = create_plot(1:T, "Time (Years)",occ_trans_matrix[2:T+1,i,j],""#="$(occ_text[i])->$(occ_text[j])"=#,occ_trans_matrix[1,i,j],occ_trans_matrix[T+1,i,j], true,OCC_)
-    plts_otm_zoom[i,j] = create_plot(1:10, "Time (Years)",occ_trans_matrix[2:10+1#=T+1=#,i,j],""#="$(occ_text[i])->$(occ_text[j])"=#,occ_trans_matrix[1,i,j],occ_trans_matrix[T+1,i,j], true,OCC_)
+    plts_otm_zoom[i,j] = create_plot_trans_prob(1:10, "Time (Years)",occ_trans_matrix[2:10+1#=T+1=#,i,j],""#="$(occ_text[i])->$(occ_text[j])"=#,occ_trans_matrix[1,i,j],occ_trans_matrix[T+1,i,j], true,OCC_, 18,5)
 
 end
 
@@ -1142,7 +1303,7 @@ for m = 1:6
         if m==6
             LEGENDPOS = :topright
         end
-        plt = create_combined_plot(collect(1:T),"Time (Years)", [cum_diff_percent_hm[1][2:end],cum_diff_percent_hm[2][2:end],cum_diff_percent_hm[3][2:end]], ["W","SP","EMP"], ""#="$(inequality_measures[im]) $(measures[m]) (diff%)"=#, [cum_diff_percent_hm[1][1],cum_diff_percent_hm[2][1],cum_diff_percent_hm[3][1]],[cum_diff_percent_hm[1][end],cum_diff_percent_hm[2][end],cum_diff_percent_hm[3][end]],true, ["W","SP","EMP"],LEGENDPOS)
+        plt = create_combined_plot(collect(1:T),"Time (Years)", [cum_diff_percent_hm[1][2:end],cum_diff_percent_hm[2][2:end],cum_diff_percent_hm[3][2:end]], ["W","SP","EMP"], ""#="$(inequality_measures[im]) $(measures[m]) (diff%)"=#, [cum_diff_percent_hm[1][1],cum_diff_percent_hm[2][1],cum_diff_percent_hm[3][1]],[cum_diff_percent_hm[1][end],cum_diff_percent_hm[2][end],cum_diff_percent_hm[3][end]],true, ["W","SP","EMP"],LEGENDPOS, 18,5)
         display(plt)
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_$(inequality_measures[im])_$(measures[m])_diff_percent.png")
 
@@ -1155,3 +1316,5 @@ for m = 1:6
         # savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_$(inequality_measures[im])_$(measures[m])_diff.png")
     end
 end
+
+@save "$(LOCAL_DIR_INEQUALITY)trans_occ_mob.jld2" cum_occ_trans_matrix ss_cum_occ_trans_matrix occ_trans_matrix cum_household_measures ss_cum_household_measures cum_trans_household_measures ss_cum_trans_household_measures

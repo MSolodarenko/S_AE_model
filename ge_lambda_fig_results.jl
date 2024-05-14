@@ -63,14 +63,14 @@ Consumptions = zeros(num_lambdas)
 Income_to_outputs = zeros(num_lambdas)
 
 # income, earnings, wealth, consumption
-# All, W, SP, EMP
+# All, W, SP, EMP, ENT
 # lambdas
-means = zeros(4,4,num_lambdas)
-ginis = zeros(4,4,num_lambdas)
-avglogs = zeros(4,4,num_lambdas)
-varlogs = zeros(4,4,num_lambdas)
-avgs = zeros(4,4,num_lambdas)
-vars = zeros(4,4,num_lambdas)
+means = zeros(4,5,num_lambdas)
+ginis = zeros(4,5,num_lambdas)
+avglogs = zeros(4,5,num_lambdas)
+varlogs = zeros(4,5,num_lambdas)
+avgs = zeros(4,5,num_lambdas)
+vars = zeros(4,5,num_lambdas)
 
 function quantile_mean(stat, distr)
     distr ./= sum(distr)
@@ -309,9 +309,9 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
     end
     ent_choice = sp_choice.+emp_choice
 
-    Capital[2,i] = sum(asset_grid.*density_distr.*w_choice)
-    Capital[3,i] = sum(asset_grid.*density_distr.*sp_choice)
-    Capital[4,i] = sum(asset_grid.*density_distr.*emp_choice)
+    Capital[2,i] = sum(asset_grid.* (density_distr.*w_choice)./sum(density_distr.*w_choice) )
+    Capital[3,i] = sum(asset_grid.* (density_distr.*sp_choice)./sum(density_distr.*sp_choice) )
+    Capital[4,i] = sum(asset_grid.* (density_distr.*emp_choice)./sum(density_distr.*emp_choice) )
 
     # [1] = income, earnings, wealth, consumption
     # [2] = All, W, SP, EMP
@@ -328,7 +328,7 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
             stat_distr = copy(consumption)
         end
 
-        for h = 1:4 # [2] = All, W, SP, EMP
+        for h = 1:5 # [2] = All, W, SP, EMP, ENT
             choice = copy(occ_choice)
             if h == 1 #All
                 choice = choice.*0.0 .+ 1.0
@@ -338,10 +338,12 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
                 choice = copy(sp_choice)
             elseif h == 4 #EMP
                 choice = copy(emp_choice)
+            elseif h == 5 #ENT
+                choice = copy(ent_choice)
             end
 
             # calculate mean
-            means[s,h,i] = sum(stat_distr .* density_distr.*choice)/sum(density_distr.*choice)
+            means[s,h,i] = sum(stat_distr .* (density_distr.*choice)/sum(density_distr.*choice) )
 
             # calculate gini coefficent
             density_distr_choice = (density_distr.*choice)./sum(density_distr.*choice)
@@ -356,23 +358,31 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
             ginis[s,h,i] = sum([ density_distr_choice_vec_non_zero[y_i]*density_distr_choice_vec_non_zero[y_j]*abs(stat_choice_vec_non_zero[y_i]-stat_choice_vec_non_zero[y_j]) for y_i=1:length(density_distr_choice_vec_non_zero), y_j=1:length(density_distr_choice_vec_non_zero) ]) / (2*sum(stat_choice_vec_non_zero.*density_distr_choice_vec_non_zero))
 
             # calculate variance of log-s
-            avglogs[s,h,i] = sum(density_distr.*choice.*log.(max.(1e-12,stat_distr))   )
-            varlogs[s,h,i] = sum(density_distr.*choice.*(log.(max.(1e-12,stat_distr)).-avglogs[s,h,i]).^2)/sum(density_distr.*choice)
-            avglogs[s,h,i] /= sum(density_distr.*choice)
+            # avglogs[s,h,i] = sum(density_distr.*choice.*log.(max.(1e-12,stat_distr))   )
+            # varlogs[s,h,i] = sum(density_distr.*choice.*(log.(max.(1e-12,stat_distr)).-avglogs[s,h,i]).^2)/sum(density_distr.*choice)
+            # avglogs[s,h,i] /= sum(density_distr.*choice)
+            avglogs[s,h,i] = sum( (density_distr.*choice./sum(density_distr.*choice)) .* log.(max.(1e-12,stat_distr)) )
+            varlogs[s,h,i] = sum( (density_distr.*choice./sum(density_distr.*choice)) .* (log.(max.(1e-12,stat_distr)) .- avglogs[s,h,i]).^2 )
             if s==3
-                avglogs[s,h,i] = sum(density_distr.*choice.*max.(1e-12,stat_distr)   )
-                varlogs[s,h,i] = sum(density_distr.*choice.*(max.(1e-12,stat_distr).- avglogs[s,h,i]).^2)/sum(density_distr.*choice)
-                avglogs[s,h,i] /= sum(density_distr.*choice)
+                # avglogs[s,h,i] = sum(density_distr.*choice.*max.(1e-12,stat_distr)   )
+                # varlogs[s,h,i] = sum(density_distr.*choice.*(max.(1e-12,stat_distr).- avglogs[s,h,i]).^2)/sum(density_distr.*choice)
+                # avglogs[s,h,i] /= sum(density_distr.*choice)
+                avglogs[s,h,i] = sum( (density_distr.*choice./sum(density_distr.*choice)) .* max.(1e-12,stat_distr) )
+                varlogs[s,h,i] = sum( (density_distr.*choice./sum(density_distr.*choice)) .* (max.(1e-12,stat_distr) .- avglogs[s,h,i]).^2 )
             end
 
-            avgs[s,h,i] = sum(density_distr.*choice.*max.(1e-12,stat_distr)   )
-            vars[s,h,i] = sum(density_distr.*choice.*(max.(1e-12,stat_distr).- avgs[s,h,i]).^2)/sum(density_distr.*choice)
-            avgs[s,h,i] /= sum(density_distr.*choice)
+            # avgs[s,h,i] = sum(density_distr.*choice.*max.(1e-12,stat_distr)   )
+            # vars[s,h,i] = sum(density_distr.*choice.*(max.(1e-12,stat_distr).- avgs[s,h,i]).^2)/sum(density_distr.*choice)
+            # avgs[s,h,i] /= sum(density_distr.*choice)
+            avgs[s,h,i] = sum( (density_distr.*choice./sum(density_distr.*choice)) .* max.(1e-12,stat_distr) )
+            vars[s,h,i] = sum( (density_distr.*choice./sum(density_distr.*choice)) .* (max.(1e-12,stat_distr) .- avgs[s,h,i]).^2 )
 
-            try
-                quantile_means[:,h,s,i] .= quantile_mean(stat_distr, density_distr.*choice)
-            catch e
-                quantile_means[:,h,s,i] .= NaN
+            if h!=5
+                try
+                    quantile_means[:,h,s,i] .= quantile_mean(stat_distr, density_distr.*choice)
+                catch e
+                    quantile_means[:,h,s,i] .= NaN
+                end
             end
         end
     end
@@ -401,26 +411,30 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
             #if c==2
             #    denumerator = sum(choice.*density_distr)
             #end
-            Y = sum(choice.*density_distr.*output)/denumerator
-            K = sum(choice.*density_distr.*capital_d)/denumerator
-            L = sum(choice.*density_distr.*labour_d)/denumerator
+            Y = sum( (choice.*density_distr./denumerator) .* output)
+            K = sum( (choice.*density_distr./denumerator) .* capital_d)
+            L = sum( (choice.*density_distr./denumerator) .* labour_d)
             TFPis[c-1,i] = Y/(K^eta*L^theta)
             TFPds[c-1,i] = Y/K^(eta/(theta+eta))
 
             c_1 = capital_d.^(-1.0)
             replace!(c_1,Inf=>0.0)
-            mean_MPK[c-1,i] = sum(choice.*density_distr.*(eta.*output.*c_1))/denumerator
-            var_MPK[c-1,i] = sum(choice.*density_distr.*(eta.*output.*c_1 .- mean_MPK[c-1,i]*denumerator).^2)/denumerator
+            # mean_MPK[c-1,i] = sum(choice.*density_distr.*(eta.*output.*c_1))/denumerator
+            # var_MPK[c-1,i] = sum(choice.*density_distr.*(eta.*output.*c_1 .- mean_MPK[c-1,i]*denumerator).^2)/denumerator
+            mean_MPK[c-1,i] = sum( (choice.*density_distr./denumerator) .* (eta.*output.*c_1) )
+            var_MPK[c-1,i] = sum( (choice.*density_distr./denumerator) .* (eta.*output.*c_1 .- mean_MPK[c-1,i]).^2 )
 
             l_1 = labour_d.^(-1.0)
             replace!(l_1,Inf=>0.0)
-            mean_MPL[c-1,i] = sum(choice.*density_distr.*(theta.*output.*l_1))/denumerator
-            var_MPL[c-1,i] = sum(choice.*density_distr.*(theta.*output.*l_1 .- mean_MPL[c-1,i]*denumerator).^2)/denumerator
+            # mean_MPL[c-1,i] = sum(choice.*density_distr.*(theta.*output.*l_1))/denumerator
+            # var_MPL[c-1,i] = sum(choice.*density_distr.*(theta.*output.*l_1 .- mean_MPL[c-1,i]*denumerator).^2)/denumerator
+            mean_MPL[c-1,i] = sum( (choice.*density_distr./denumerator) .* (theta.*output.*l_1) )
+            var_MPL[c-1,i] = sum( (choice.*density_distr./denumerator) .* (theta.*output.*l_1 .- mean_MPL[c-1,i]).^2 )
 
             #if c==2
             #    choice = ent_choice
             #end
-            share_unbound[c-1,i] = sum(choice.*density_distr.*unlimited_capital_choice)/sum(choice.*density_distr)
+            share_unbound[c-1,i] = sum( (choice.*density_distr./sum(choice.*density_distr)) .* unlimited_capital_choice)
         end
 
         #[a_i,u_i,zeta_i,alpha_m_i,alpha_w_i]
@@ -429,13 +443,16 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
         #w = u_i,alpha_m_i,alpha_w_i
         w_skill_distr = sum(density_distr.*choice, dims=[1,3])[1,:,1,:,:]
 
-        avg_m_skill[c,i] = sum(m_skill_distr.*z_m_nodes)/denumerator
-        avg_w_skill[c,i] = sum(w_skill_distr.*z_w_nodes)/denumerator
-
-        var_m_skill[c,i] = sum(m_skill_distr.*(z_m_nodes .- avg_m_skill[c,i]*denumerator).^2)/denumerator
-        var_w_skill[c,i] = sum(w_skill_distr.*(z_w_nodes .- avg_w_skill[c,i]*denumerator).^2)/denumerator
-
+        # avg_m_skill[c,i] = sum(m_skill_distr.*z_m_nodes)/denumerator
+        # var_m_skill[c,i] = sum(m_skill_distr.*(z_m_nodes .- avg_m_skill[c,i]*denumerator).^2)/denumerator
+        avg_m_skill[c,i] = sum( (m_skill_distr./denumerator) .* z_m_nodes )
+        var_m_skill[c,i] = sum( (m_skill_distr./denumerator) .* (z_m_nodes .- avg_m_skill[c,i]).^2 )
         sum_m_skill[c,i] = sum(m_skill_distr.*z_m_nodes)
+
+        # avg_w_skill[c,i] = sum(w_skill_distr.*z_w_nodes)/denumerator
+        # var_w_skill[c,i] = sum(w_skill_distr.*(z_w_nodes .- avg_w_skill[c,i]*denumerator).^2)/denumerator
+        avg_w_skill[c,i] = sum( (w_skill_distr./denumerator) .* z_w_nodes )
+        var_w_skill[c,i] = sum( (w_skill_distr./denumerator) .* (z_w_nodes .- avg_w_skill[c,i]).^2 )
         sum_w_skill[c,i] = sum(w_skill_distr.*z_w_nodes)
 
         #display([avg_w_skill[c,i],avg_m_skill[c,i], var_w_skill[c,i],var_m_skill[c,i]])
@@ -447,7 +464,7 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
     Capital_productivity_s[i] = ss_star[1][43][end-1]
     Investment_productivity_s[i] = ss_star[1][43][end]
 
-    agg_c_e = ss_star[5][7]*sum(density_distr[3])
+    agg_c_e = ss_star[5][7]*sum(density_distr.*emp_choice)
     share_W_earnings_in_output[i] = sum(ss_star[1][24] .* density_distr.*w_choice)/(Outputs[i]-agg_c_e)
     share_SP_earnings_in_output[i] = sum(ss_star[1][24] .* density_distr.*sp_choice)/(Outputs[i]-agg_c_e)
     share_EMP_earnings_in_output[i] = sum(ss_star[1][24] .* density_distr.*emp_choice)/(Outputs[i]-agg_c_e)
@@ -476,9 +493,9 @@ end
 #policy = SSS[l][1][4]
 num_lambdas_sp = findfirst(x -> x>0.75, C_Ys)-1
 
-#throw(error)
+throw(error)
 
-function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL::String, IS_Y_PERCENTAGE::Bool=true, OCCUPATION::String="H", LOW_LIMIT=-Inf)
+function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL::String, IS_Y_PERCENTAGE::Bool=true, TICKSFONTSIZE::Int64=9, NUM_YTICKS::Int64=10, OCCUPATION::String="H", LOW_LIMIT=-Inf)
     COLOR="blue"
     if OCCUPATION=="W"
         COLOR="purple"
@@ -493,7 +510,10 @@ function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL
     #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
     YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
     YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
-    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
+    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUM_YTICKS))
+    # YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
+
+
     DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]));digits=0) ))
     YPOS = mean(YTICKS[end-1:end])
     if maximum(Y[calibrated_lambda:calibrated_lambda+4]) > YTICKS[end-1]
@@ -509,7 +529,11 @@ function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL
                     color=COLOR,
                     legend=false,
                     xlabel=XLABEL,
-                    ylabel=YLABEL,
+                    # ylabel=YLABEL,
+                    xtickfontsize=TICKSFONTSIZE,
+                    ytickfontsize=TICKSFONTSIZE,
+                    xguidefontsize=TICKSFONTSIZE,
+                    yguidefontsize=TICKSFONTSIZE,
                     yticks = YTICKS,
                     ylims = YLIMS )
     vline!([X[calibrated_lambda]], color="grey")
@@ -522,7 +546,7 @@ function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL
     annotate!([X[calibrated_lambda]], YPOS, text(TEXT, :grey, :left, 7))
     return plt
 end
-function create_plots(X::Vector{Float64},XLABEL::String,Ys,YLABELs, IS_Y_PERCENTAGE::Bool=true, OCCUPATION=["H", "W", "SP", "EMP"], LOW_LIMIT=-Inf)
+function create_plots(X::Vector{Float64},XLABEL::String,Ys,YLABELs, IS_Y_PERCENTAGE::Bool=true, TICKSFONTSIZE::Int64=9, NUM_YTICKS::Int64=10, OCCUPATION=["H", "W", "SP", "EMP"], LOW_LIMIT=-Inf)
     plts = []
     half_range = maximum([ maximum(filter(!isnan,copy(Ys[i])))-minimum(filter(!isnan,copy(Ys[i]))) for i in 1:length(Ys)])/2.0
     for y_i = 1:length(Ys)
@@ -539,7 +563,9 @@ function create_plots(X::Vector{Float64},XLABEL::String,Ys,YLABELs, IS_Y_PERCENT
         YLIMS2 = YLIMS1+2*half_range
         YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
         YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
-        YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
+        YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUM_YTICKS))
+        # YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
+
         DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]));digits=0) ))+1
         YPOS = mean(YTICKS[end-1:end])
         if maximum(filter(!isnan,copy(Y[calibrated_lambda:calibrated_lambda+4]))) > YTICKS[end-1]
@@ -563,8 +589,13 @@ function create_plots(X::Vector{Float64},XLABEL::String,Ys,YLABELs, IS_Y_PERCENT
                         #=regression=true,=#
                         color = COLOR,
                         legend = false,
+                        legendfontsize=ceil(Int64,TICKSFONTSIZE*0.72),
                         xlabel = XLABEL,
-                        ylabel = YLABEL,
+                        # ylabel = YLABEL,
+                        xtickfontsize=TICKSFONTSIZE,
+                        ytickfontsize=TICKSFONTSIZE,
+                        xguidefontsize=TICKSFONTSIZE,
+                        yguidefontsize=TICKSFONTSIZE,
                         yticks = YTICKS,
                         ylims = YLIMS )
         vline!([X[calibrated_lambda]], color="grey")
@@ -578,7 +609,7 @@ function create_plots(X::Vector{Float64},XLABEL::String,Ys,YLABELs, IS_Y_PERCENT
     end
     return plts
 end
-function create_combined_plot(X::Vector{Float64},XLABEL::String,Ys,YLABELs,YLABEL, IS_Y_PERCENTAGE::Bool=true, OCCUPATION=["H", "W", "SP", "EMP"], LOW_LIMIT=-Inf)
+function create_combined_plot(X::Vector{Float64},XLABEL::String,Ys,YLABELs,YLABEL, IS_Y_PERCENTAGE::Bool=true, TICKSFONTSIZE::Int64=9, NUM_YTICKS::Int64=10, OCCUPATION=["H", "W", "SP", "EMP"], LOW_LIMIT=-Inf, LEGEND=:outertopright)
 
 
     YLIMS1 = max(minimum(minimum.(Ys)), LOW_LIMIT)
@@ -586,7 +617,9 @@ function create_combined_plot(X::Vector{Float64},XLABEL::String,Ys,YLABELs,YLABE
     #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
     YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
     YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
-    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
+    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUM_YTICKS))
+    # YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
+
     DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]));digits=0) ))
     YPOS = mean(YTICKS[end-1:end])
 
@@ -625,9 +658,14 @@ function create_combined_plot(X::Vector{Float64},XLABEL::String,Ys,YLABELs,YLABE
         plt = scatter!(X,Ys[y_i],
                         #=regression=true,=#
                         color=COLORS[y_i],
-                        legend=:outertopright,
-                        xlabel=XLABEL,
-                        ylabel=YLABEL,
+                        legend=LEGEND,
+                        legendfontsize=ceil(Int64,TICKSFONTSIZE*0.72),
+                        xlabel = XLABEL,
+                        # ylabel = YLABEL,
+                        xtickfontsize=TICKSFONTSIZE,
+                        ytickfontsize=TICKSFONTSIZE,
+                        xguidefontsize=TICKSFONTSIZE,
+                        yguidefontsize=TICKSFONTSIZE,
                         label=YLABELs[y_i],
                         yticks = YTICKS,
                         ylims = YLIMS )
@@ -642,24 +680,24 @@ if Sys.iswindows()
 end
 mkpath(LOCAL_DIR_GENERAL)
 #Interest rate and wage
-plt = create_plot(C_Ys,"Credit/Output", Rs,"Interest Rate")
+plt = create_plot(C_Ys,"Credit/Output", Rs,"Interest Rate", true, 12,7)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_credit_to_gdp_interest_rate.png")
-plt = create_plot(C_Ys,"Credit/Output", Ws,"Wage", false)
+plt = create_plot(C_Ys,"Credit/Output", Ws,"Wage", false, 12,7)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_credit_to_gdp_interest_wage.png")
 
 #lambda to: Output, Consumption, Income/Output, Income
-plt = create_plot(lambdas,"λ", Outputs,"Output", false)
+plt = create_plot(lambdas,"λ", Outputs,"Output", false, 12,7)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Outputs.png")
-plt = create_plot(lambdas,"λ", Consumptions,"Consumption", false)
+plt = create_plot(lambdas,"λ", Consumptions,"Consumption", false, 12,7)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Consumptions.png")
 plt = create_plot(lambdas,"λ", Income_to_outputs,"Income/Output", false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Income_to_outputs.png")
-plt = create_plot(lambdas,"λ", Incomes,"Income", false)
+plt = create_plot(lambdas,"λ", Incomes,"Income", false, 12,7)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_Incomes.png")
 
@@ -683,7 +721,7 @@ display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_credit_to_gdp_Income_to_outputs.png")
 
 #lambda to Credit/Output, Credit/Output to Capital/Output
-plt = create_plot(lambdas,"λ", C_Ys,"Credit/Output", false)
+plt = create_plot(lambdas,"λ", C_Ys,"Credit/Output", false, 12,7)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_lambda_credit_to_gdp.png")
 plt = create_plot(C_Ys,"Credit/Output", K_Ys,"Capital/Output", false)
@@ -696,7 +734,7 @@ if Sys.iswindows()
 end
 mkpath(LOCAL_DIR_OCCUPATION)
 #Crdit/Output to share of W, SP, EMP
-plts = create_plots(C_Ys,"Credit/Output", [occENTs, occSEs, occEMPs, occWs],["Share of Entrepreneurs","Share of Sole Proprietors","Share of Employers","Share of Workers"],true,["ENT","SP","EMP","W"])
+plts = create_plots(C_Ys,"Credit/Output", [occENTs, occSEs, occEMPs, occWs],["Share of Entrepreneurs","Share of Sole Proprietors","Share of Employers","Share of Workers"],true, 12,7,["ENT","SP","EMP","W"])
 display(plts[1])
 savefig(plts[1],"$(LOCAL_DIR_OCCUPATION)$(country)_credit_to_gdp_entrepreneurs.png")
 display(plts[2])
@@ -712,16 +750,16 @@ if Sys.iswindows()
 end
 mkpath(LOCAL_DIR_INEQUALITY)
 #Credit/Output to: log-consumption, log-earnings
-plt = create_plot(C_Ys,"Credit/Output", logcs,"Variance of log-consumption", false)
+plt = create_plot(C_Ys,"Credit/Output", logcs,"Variance of log-consumption", false, 12,7)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_log_consumption.png")
 
-plt = create_plot(C_Ys,"Credit/Output", loges,"Variance of log-earnings", false)
+plt = create_plot(C_Ys,"Credit/Output", loges,"Variance of log-earnings", false, 12,7)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_log_earnings.png")
 
 #Crdit/Output to Gini Workers and Entrepreneurs
-plts = create_plots(C_Ys,"Credit/Output", [giniWs, giniEnts],["Gini for workers' income","Gini for entrepreneurs' income"],false,["W","ENT"])
+plts = create_plots(C_Ys,"Credit/Output", [giniWs, giniEnts],["Gini for workers' income","Gini for entrepreneurs' income"],false, 12,7,["W","ENT"])
 for i in 1:length(plts)
     display(plts[i])
     if i==1
@@ -743,7 +781,6 @@ plt = plot(p2, title="Policy functions (high vs low fixed effects)")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_GENERAL)$(country)_policy_hvsl_fixed_lambda.png")
 
-
 for s = 1:4 # [1] = income, earnings, wealth, consumption
     # if s == 1
     stat_name = "Income"
@@ -756,13 +793,17 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     end
 
     CHOICE_NAMES = ["Households","Workers","Sole Proprietors","Employers","Entrepreneurs"]
-    OCCS = ["H","W","SP","EMP"]
+    OCCS = ["H","W","SP","EMP","ENT"]
 
     LABELS=["1st","2nd","3rd","4th","5th"]
-    for h=1:4
+    for h=1:5
         LABEL = "Mean of $(CHOICE_NAMES[h])' $(stat_name) (quantiles)"
+        LEGENDPOS = false
+        if h==4
+            LEGENDPOS = :topright
+        end
         try
-            plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_means[1,h,s,:],quantile_means[2,h,s,:],quantile_means[3,h,s,:],quantile_means[4,h,s,:],quantile_means[5,h,s,:]],LABELS,LABEL, false, ["H","W","SP","EMP","ENT"])
+            plt = create_combined_plot(C_Ys,"Credit/Output", [quantile_means[1,h,s,:],quantile_means[2,h,s,:],quantile_means[3,h,s,:],quantile_means[4,h,s,:],quantile_means[5,h,s,:]],LABELS,LABEL, false, 12,7, ["H","W","SP","EMP","ENT"], -Inf, LEGENDPOS)
             display(plt)
             savefig(plt,"$(LOCAL_DIR_INEQUALITY)time_combined_mean_$(stat_name)_$(OCCS[h])_quantiles.png")
         catch e
@@ -772,7 +813,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     # calculate mean
     #means[s,h,i]
     LABELS = ["Mean of $cn' $stat_name" for cn in CHOICE_NAMES]
-    plts = create_plots(C_Ys,"Credit/Output", [means[s,1,:], means[s,2,:], means[s,3,:], means[s,4,:]],LABELS,false,["H","W","SP","EMP"])
+    plts = create_plots(C_Ys,"Credit/Output", [means[s,1,:], means[s,2,:], means[s,3,:], means[s,4,:], means[s,5,:]],LABELS,false, 12,7,["H","W","SP","EMP","ENT"])
     for h in 1:length(plts)
         display(plts[h])
         choice_name = CHOICE_NAMES[h]
@@ -781,14 +822,14 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_mean_$(choice_name)_$(stat_name)_full.png")
 
-        plt = create_plot(C_Ys,"Credit/Output", means[s,h,:],LABELS[h],false,OCCS[h])
+        plt = create_plot(C_Ys,"Credit/Output", means[s,h,:],LABELS[h],false, 12,7,OCCS[h])
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_mean_$(choice_name)_$(stat_name).png")
     end
 
     # calculate gini coefficent
     #ginis[s,h,i]
     LABELS = ["Gini of $cn' $stat_name" for cn in CHOICE_NAMES]
-    plts = create_plots(C_Ys,"Credit/Output", [ginis[s,1,:], ginis[s,2,:], ginis[s,3,:], ginis[s,4,:]],LABELS,false,["H","W","SP","EMP"])
+    plts = create_plots(C_Ys,"Credit/Output", [ginis[s,1,:], ginis[s,2,:], ginis[s,3,:], ginis[s,4,:], ginis[s,5,:]],LABELS,false, 12,7,["H","W","SP","EMP","ENT"])
     for h in 1:length(plts)
         display(plts[h])
         choice_name = CHOICE_NAMES[h]
@@ -797,13 +838,13 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_gini_$(choice_name)_$(stat_name)_full.png")
 
-        plt = create_plot(C_Ys,"Credit/Output", ginis[s,h,:],LABELS[h],false,OCCS[h])
+        plt = create_plot(C_Ys,"Credit/Output", ginis[s,h,:],LABELS[h],false, 12,7,OCCS[h])
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_gini_$(choice_name)_$(stat_name).png")
     end
     # calculate variance of log-s
     #avgs[s,h,i]
     LABELS = ["Average of $cn' $stat_name" for cn in CHOICE_NAMES]
-    plts = create_plots(C_Ys,"Credit/Output", [avgs[s,1,:], avgs[s,2,:], avgs[s,3,:], avgs[s,4,:]],LABELS,false,["H","W","SP","EMP"])
+    plts = create_plots(C_Ys,"Credit/Output", [avgs[s,1,:], avgs[s,2,:], avgs[s,3,:], avgs[s,4,:], avgs[s,5,:]],LABELS,false, 12,7,["H","W","SP","EMP","ENT"])
     for h in 1:length(plts)
         display(plts[h])
         choice_name = CHOICE_NAMES[h]
@@ -812,13 +853,13 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_$(stat_name)_full.png")
 
-        plt = create_plot(C_Ys,"Credit/Output", avgs[s,h,:],LABELS[h],false,OCCS[h])
+        plt = create_plot(C_Ys,"Credit/Output", avgs[s,h,:],LABELS[h],false, 12,7,OCCS[h])
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_$(stat_name).png")
     end
 
     #vars[s,h,i]
     LABELS = ["Variance of $cn' $stat_name" for cn in CHOICE_NAMES]
-    plts = create_plots(C_Ys,"Credit/Output", [vars[s,1,:], vars[s,2,:], vars[s,3,:], vars[s,4,:]],LABELS,false,["H","W","SP","EMP"], 0.0)
+    plts = create_plots(C_Ys,"Credit/Output", [vars[s,1,:], vars[s,2,:], vars[s,3,:], vars[s,4,:], vars[s,5,:]],LABELS,false, 12,7,["H","W","SP","EMP","ENT"], 0.0)
     for h in 1:length(plts)
         display(plts[h])
         choice_name = CHOICE_NAMES[h]
@@ -827,14 +868,14 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_$(stat_name)_full.png")
 
-        plt = create_plot(C_Ys,"Credit/Output", vars[s,h,:],LABELS[h],false,OCCS[h])
+        plt = create_plot(C_Ys,"Credit/Output", vars[s,h,:],LABELS[h],false, 12,7,OCCS[h])
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_$(stat_name).png")
     end
 
     # calculate variance of log-s
     #avglogs[s,h,i]
     LABELS = ["Average of $cn' Log-$stat_name" for cn in CHOICE_NAMES]
-    plts = create_plots(C_Ys,"Credit/Output", [avglogs[s,1,:], avglogs[s,2,:], avglogs[s,3,:], avglogs[s,4,:]],LABELS,false,["H","W","SP","EMP"])
+    plts = create_plots(C_Ys,"Credit/Output", [avglogs[s,1,:], avglogs[s,2,:], avglogs[s,3,:], avglogs[s,4,:], avglogs[s,5,:]],LABELS,false, 12,7,["H","W","SP","EMP","ENT"])
     for h in 1:length(plts)
         display(plts[h])
         choice_name = CHOICE_NAMES[h]
@@ -843,7 +884,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_log$(stat_name)_full.png")
 
-        plt = create_plot(C_Ys,"Credit/Output", avglogs[s,h,:],LABELS[h],false,OCCS[h])
+        plt = create_plot(C_Ys,"Credit/Output", avglogs[s,h,:],LABELS[h],false, 12,7,OCCS[h])
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_avg_$(choice_name)_log$(stat_name).png")
     end
 
@@ -853,7 +894,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
     else
         LABELS = ["Variance of $cn' $stat_name" for cn in CHOICE_NAMES]
     end
-    plts = create_plots(C_Ys,"Credit/Output", [varlogs[s,1,:], varlogs[s,2,:], varlogs[s,3,:], varlogs[s,4,:]],LABELS,false,["H","W","SP","EMP"], 0.0)
+    plts = create_plots(C_Ys,"Credit/Output", [varlogs[s,1,:], varlogs[s,2,:], varlogs[s,3,:], varlogs[s,4,:], varlogs[s,5,:]],LABELS,false, 12,7,["H","W","SP","EMP","ENT"], 0.0)
     for h in 1:length(plts)
         display(plts[h])
         choice_name = CHOICE_NAMES[h]
@@ -862,7 +903,7 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         end
         savefig(plts[h],"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_log$(stat_name)_full.png")
 
-        plt = create_plot(C_Ys,"Credit/Output", varlogs[s,h,:],LABELS[h],false,OCCS[h])
+        plt = create_plot(C_Ys,"Credit/Output", varlogs[s,h,:],LABELS[h],false, 12,7,OCCS[h])
         savefig(plt,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_var_$(choice_name)_log$(stat_name).png")
     end
 end
@@ -914,24 +955,25 @@ annotate!([C_Ys[calibrated_lambda]], Outputs[num_lambdas], text(" Calibrated eco
 display(plt2)
 savefig(plt2,"$(LOCAL_DIR_INEQUALITY)$(country)_credit_to_gdp_Outputs_modified.png")
 =#
+
 LOCAL_DIR_PRODUCTIVITY = "$(LOCAL_DIR)/Productivity/"
 if Sys.iswindows()
     LOCAL_DIR_PRODUCTIVITY = "$(LOCAL_DIR)\\Productivity\\"
 end
 mkpath(LOCAL_DIR_PRODUCTIVITY)
 # TFP_ideal for ENT
-plt = create_plot(C_Ys,"Credit/Output",TFPis[1,:],"TFP for Entrepreneurs",false,"ENT")
+plt = create_plot(C_Ys,"Credit/Output",TFPis[1,:],"TFP for Entrepreneurs",false, 12,7,"ENT")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_ideal_ent.png")
 # TFP_ideal for SP,EMP
-plts = create_plots(C_Ys,"Credit/Output", [TFPis[2,:], TFPis[3,:]],["TFP for Sole Proprietors","TFP for Employers"],false,["SP","EMP"])
+plts = create_plots(C_Ys,"Credit/Output", [TFPis[2,:], TFPis[3,:]],["TFP for Sole Proprietors","TFP for Employers"],false, 12,7,["SP","EMP"])
 for plt in plts
     display(plt)
 end
 savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_ideal_sp.png")
 savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_ideal_emp.png")
 # TFP_data for SP,EMP
-plts = create_plots(C_Ys,"Credit/Output", [TFPds[2,:], TFPds[3,:]],["TFP_data for Sole Proprietors","TFP_data for Employers"],false,["SP","EMP"])
+plts = create_plots(C_Ys,"Credit/Output", [TFPds[2,:], TFPds[3,:]],["TFP_data for Sole Proprietors","TFP_data for Employers"],false, 12,7,["SP","EMP"])
 for plt in plts
     display(plt)
 end
@@ -940,67 +982,67 @@ savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_data_emp.
 
 
 # mean of MPL for ENT, SP,EMP
-plt = create_plot(C_Ys,"Credit/Output",mean_MPL[1,:],"Mean of MPL for Entrepreneurs", false, "ENT")
+plt = create_plot(C_Ys,"Credit/Output",mean_MPL[1,:],"Mean of MPL for Entrepreneurs", false, 12,7, "ENT")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_mean_mpl_ent.png")
-plts = create_plots(C_Ys,"Credit/Output", [mean_MPL[2,:], mean_MPL[3,:]],["Mean of MPL for Sole Proprietors","Mean of MPL for Employers"],false,["SP","EMP"])
+plts = create_plots(C_Ys,"Credit/Output", [mean_MPL[2,:], mean_MPL[3,:]],["Mean of MPL for Sole Proprietors","Mean of MPL for Employers"],false, 12,7,["SP","EMP"])
 for plt in plts
     display(plt)
 end
 savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_mean_mpl_sp.png")
 savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_mean_mpl_emp.png")
 LABELS = ["SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [mean_MPL[2,:], mean_MPL[3,:]],LABELS,"Mean of MPL",false,["SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [mean_MPL[2,:], mean_MPL[3,:]],LABELS,"Mean of MPL",false, 12,7,["SP","EMP"])
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_credit_to_gdp_mean_mpl.png")
 
 # variance of MPL for ENT, SP,EMP
-plt = create_plot(C_Ys,"Credit/Output",var_MPL[1,:],"Variance of MPL for Entrepreneurs", false, "ENT", 0.0)
+plt = create_plot(C_Ys,"Credit/Output",var_MPL[1,:],"Variance of MPL for Entrepreneurs", false, 12,7, "ENT", 0.0)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_var_mpl_ent.png")
-plts = create_plots(C_Ys,"Credit/Output", [var_MPL[2,:], var_MPL[3,:]],["Variance of MPL for Sole Proprietors","Variance of MPL for Employers"],false,["SP","EMP"],0.0)
+plts = create_plots(C_Ys,"Credit/Output", [var_MPL[2,:], var_MPL[3,:]],["Variance of MPL for Sole Proprietors","Variance of MPL for Employers"],false, 12,7,["SP","EMP"],0.0)
 for plt in plts
     display(plt)
 end
 savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_var_mpl_sp.png")
 savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_var_mpl_emp.png")
 LABELS = ["SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [var_MPL[2,:], var_MPL[3,:]],LABELS,"Variance of MPL",false,["SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [var_MPL[2,:], var_MPL[3,:]],LABELS,"Variance of MPL",false, 12,7,["SP","EMP"])
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_credit_to_gdp_var_mpl.png")
 
 # mean of MPK for ENT, SP,EMP
-plt = create_plot(C_Ys,"Credit/Output",mean_MPK[1,:],"Mean of MPK for Entrepreneurs", false, "ENT")
+plt = create_plot(C_Ys,"Credit/Output",mean_MPK[1,:],"Mean of MPK for Entrepreneurs", false, 12,7, "ENT")
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_mean_mpk_ent.png")
-plts = create_plots(C_Ys,"Credit/Output", [mean_MPK[2,:], mean_MPK[3,:]],["Mean of MPK for Sole Proprietors","Mean of MPK for Employers"],false,["SP","EMP"])
+plts = create_plots(C_Ys,"Credit/Output", [mean_MPK[2,:], mean_MPK[3,:]],["Mean of MPK for Sole Proprietors","Mean of MPK for Employers"],false, 12,7,["SP","EMP"])
 for plt in plts
     display(plt)
 end
 savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_mean_mpk_sp.png")
 savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_mean_mpk_emp.png")
 LABELS = ["SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [mean_MPK[2,:], mean_MPK[3,:]],LABELS,"Mean of MPK",false,["SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [mean_MPK[2,:], mean_MPK[3,:]],LABELS,"Mean of MPK",false, 12,7,["SP","EMP"])
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_credit_to_gdp_mean_mpk.png")
 
 # variance of MPK for ENT, SP,EMP
-plt = create_plot(C_Ys,"Credit/Output",var_MPK[1,:],"Variance of MPK for Entrepreneurs", false, "ENT", 0.0)
+plt = create_plot(C_Ys,"Credit/Output",var_MPK[1,:],"Variance of MPK for Entrepreneurs", false, 12,7, "ENT", 0.0)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_var_mpk_ent.png")
-plts = create_plots(C_Ys,"Credit/Output", [var_MPK[2,:], var_MPK[3,:]],["Variance of MPK for Sole Proprietors","Variance of MPK for Employers"],false,["SP","EMP"],0.0)
+plts = create_plots(C_Ys,"Credit/Output", [var_MPK[2,:], var_MPK[3,:]],["Variance of MPK for Sole Proprietors","Variance of MPK for Employers"],false, 12,7,["SP","EMP"],0.0)
 for plt in plts
     display(plt)
 end
 savefig(plts[1],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_var_mpk_sp.png")
 savefig(plts[2],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_var_mpk_emp.png")
 LABELS = ["SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [var_MPK[2,:], var_MPK[3,:]],LABELS,"Variance of MPK",false,["SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [var_MPK[2,:], var_MPK[3,:]],LABELS,"Variance of MPK",false, 12,7,["SP","EMP"])
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_credit_to_gdp_var_mpk.png")
 
 # share of unbound ENT, SP,EMP
-plts = create_plots(C_Ys,"Credit/Output", [share_unbound[1,:], share_unbound[2,:], share_unbound[3,:]],["Share of Unconstrained Entrepreneurs","Share of Unconstrained Sole Proprietors","Share of Unconstrained Employers"],true,["ENT","SP","EMP"])
+plts = create_plots(C_Ys,"Credit/Output", [share_unbound[1,:], share_unbound[2,:], share_unbound[3,:]],["Share of Unconstrained Entrepreneurs","Share of Unconstrained Sole Proprietors","Share of Unconstrained Employers"],true, 12,7,["ENT","SP","EMP"])
 for plt in plts
     display(plt)
 end
@@ -1011,7 +1053,7 @@ savefig(plts[3],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_emp_unb
 # average and variance of working and managerial skills across occupations
 CHOICE_NAMES = ["Workers","Entrepreneurs","Sole Proprietors","Employers"]
 LABELS = ["Average Managerial Skill across $(occup)" for occup in CHOICE_NAMES]
-plts = create_plots(C_Ys,"Credit/Output", [avg_m_skill[1,:], avg_m_skill[2,:], avg_m_skill[3,:], avg_m_skill[4,:]],LABELS,false,["W","ENT","SP","EMP"])
+plts = create_plots(C_Ys,"Credit/Output", [avg_m_skill[1,:], avg_m_skill[2,:], avg_m_skill[3,:], avg_m_skill[4,:]],LABELS,false, 12,7,["W","ENT","SP","EMP"])
 for h in 1:length(plts)
     display(plts[h])
     occup = CHOICE_NAMES[h]
@@ -1021,17 +1063,17 @@ for h in 1:length(plts)
     savefig(plts[h],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_avg_m_skill_$(occup).png")
 end
 LABELS = ["W","ENT","SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [avg_m_skill[1,:], avg_m_skill[2,:], avg_m_skill[3,:], avg_m_skill[4,:]],LABELS,"Average Managerial Skill",false,["W","ENT","SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [avg_m_skill[1,:], avg_m_skill[2,:], avg_m_skill[3,:], avg_m_skill[4,:]],LABELS,"Average Managerial Skill",false, 12,7,["W","ENT","SP","EMP"],-Inf, false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_avg_m_skill_with_ENT.png")
 LABELS = ["W","SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [avg_m_skill[1,:], avg_m_skill[3,:], avg_m_skill[4,:]],LABELS,"Average Managerial Skill",false,["W","SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [avg_m_skill[1,:], avg_m_skill[3,:], avg_m_skill[4,:]],LABELS,"Average Managerial Skill",false, 12,7,["W","SP","EMP"])
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_avg_m_skill.png")
 
 
 LABELS = ["Average Working Skill across $(occup)" for occup in CHOICE_NAMES]
-plts = create_plots(C_Ys,"Credit/Output", [avg_w_skill[1,:], avg_w_skill[2,:], avg_w_skill[3,:], avg_w_skill[4,:]],LABELS,false,["W","ENT","SP","EMP"])
+plts = create_plots(C_Ys,"Credit/Output", [avg_w_skill[1,:], avg_w_skill[2,:], avg_w_skill[3,:], avg_w_skill[4,:]],LABELS,false, 12,7,["W","ENT","SP","EMP"])
 for h in 1:length(plts)
     display(plts[h])
     occup = CHOICE_NAMES[h]
@@ -1041,17 +1083,17 @@ for h in 1:length(plts)
     savefig(plts[h],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_avg_w_skill_$(occup).png")
 end
 LABELS = ["W","ENT","SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [avg_w_skill[1,:], avg_w_skill[2,:], avg_w_skill[3,:], avg_w_skill[4,:]],LABELS,"Average Working Skill",false,["W","ENT","SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [avg_w_skill[1,:], avg_w_skill[2,:], avg_w_skill[3,:], avg_w_skill[4,:]],LABELS,"Average Working Skill",false, 12,7,["W","ENT","SP","EMP"],-Inf, false)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_avg_w_skill_with_ENT.png")
 LABELS = ["W","SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [avg_w_skill[1,:], avg_w_skill[3,:], avg_w_skill[4,:]],LABELS,"Average Working Skill",false,["W","SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [avg_w_skill[1,:], avg_w_skill[3,:], avg_w_skill[4,:]],LABELS,"Average Working Skill",false, 12,7,["W","SP","EMP"])
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_avg_w_skill.png")
 
 
 LABELS = ["Variance of Managerial Skill across $(occup)" for occup in CHOICE_NAMES]
-plts = create_plots(C_Ys,"Credit/Output", [var_m_skill[1,:], var_m_skill[2,:], var_m_skill[3,:], var_m_skill[4,:]],LABELS,false,["W","ENT","SP","EMP"], 0.0)
+plts = create_plots(C_Ys,"Credit/Output", [var_m_skill[1,:], var_m_skill[2,:], var_m_skill[3,:], var_m_skill[4,:]],LABELS,false, 12,7,["W","ENT","SP","EMP"], 0.0)
 for h in 1:length(plts)
     display(plts[h])
     occup = CHOICE_NAMES[h]
@@ -1061,17 +1103,17 @@ for h in 1:length(plts)
     savefig(plts[h],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_var_m_skill_$(occup).png")
 end
 LABELS = ["W","ENT","SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [var_m_skill[1,:], var_m_skill[2,:], var_m_skill[3,:], var_m_skill[4,:]],LABELS,"Variance of Managerial Skill",false,["W","ENT","SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [var_m_skill[1,:], var_m_skill[2,:], var_m_skill[3,:], var_m_skill[4,:]],LABELS,"Variance of Managerial Skill",false, 12,7,["W","ENT","SP","EMP"],0.0, :right)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_var_m_skill_with_ENT.png")
 LABELS = ["W","SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [var_m_skill[1,:], var_m_skill[3,:], var_m_skill[4,:]],LABELS,"Variance of Managerial Skill",false,["W","SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [var_m_skill[1,:], var_m_skill[3,:], var_m_skill[4,:]],LABELS,"Variance of Managerial Skill",false, 12,7,["W","SP","EMP"])
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_var_m_skill.png")
 
 
 LABELS = ["Variance of Working Skill across $(occup)" for occup in CHOICE_NAMES]
-plts = create_plots(C_Ys,"Credit/Output", [var_w_skill[1,:], var_w_skill[2,:], var_w_skill[3,:], var_w_skill[4,:]],LABELS,false,["W","ENT","SP","EMP"], 0.0)
+plts = create_plots(C_Ys,"Credit/Output", [var_w_skill[1,:], var_w_skill[2,:], var_w_skill[3,:], var_w_skill[4,:]],LABELS,false, 12,7,["W","ENT","SP","EMP"])
 for h in 1:length(plts)
     display(plts[h])
     occup = CHOICE_NAMES[h]
@@ -1081,16 +1123,16 @@ for h in 1:length(plts)
     savefig(plts[h],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_var_w_skill_$(occup).png")
 end
 LABELS = ["W","ENT","SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [var_w_skill[1,:], var_w_skill[2,:], var_w_skill[3,:], var_w_skill[4,:]],LABELS,"Variance of Working Skill",false,["W","ENT","SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [var_w_skill[1,:], var_w_skill[2,:], var_w_skill[3,:], var_w_skill[4,:]],LABELS,"Variance of Working Skill",false, 12,7,["W","ENT","SP","EMP"], 0.0, :topright)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_var_w_skill_with_ENT.png")
 LABELS = ["W","SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [var_w_skill[1,:], var_w_skill[3,:], var_w_skill[4,:]],LABELS,"Variance of Working Skill",false,["W","SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [var_w_skill[1,:], var_w_skill[3,:], var_w_skill[4,:]],LABELS,"Variance of Working Skill",false, 12,7,["W","SP","EMP"])
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_var_w_skill.png")
 
 LABELS = ["Sum of Managerial Skill across $(occup)" for occup in CHOICE_NAMES]
-plts = create_plots(C_Ys,"Credit/Output", [sum_m_skill[1,:], sum_m_skill[2,:], sum_m_skill[3,:], sum_m_skill[4,:]],LABELS,false,["W","ENT","SP","EMP"])
+plts = create_plots(C_Ys,"Credit/Output", [sum_m_skill[1,:], sum_m_skill[2,:], sum_m_skill[3,:], sum_m_skill[4,:]],LABELS,false, 12,7,["W","ENT","SP","EMP"])
 for h in 1:length(plts)
     display(plts[h])
     occup = CHOICE_NAMES[h]
@@ -1100,17 +1142,17 @@ for h in 1:length(plts)
     savefig(plts[h],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_sum_m_skill_$(occup).png")
 end
 LABELS = ["W","ENT","SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [sum_m_skill[1,:], sum_m_skill[2,:], sum_m_skill[3,:], sum_m_skill[4,:]],LABELS,"Sum of Managerial Skill",false,["W","ENT","SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [sum_m_skill[1,:], sum_m_skill[2,:], sum_m_skill[3,:], sum_m_skill[4,:]],LABELS,"Sum of Managerial Skill",false, 12,7,["W","ENT","SP","EMP"])
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_sum_m_skill_with_ENT.png")
 LABELS = ["W","SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [sum_m_skill[1,:], sum_m_skill[3,:], sum_m_skill[4,:]],LABELS,"Sum of Managerial Skill",false,["W","SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [sum_m_skill[1,:], sum_m_skill[3,:], sum_m_skill[4,:]],LABELS,"Sum of Managerial Skill",false, 12,7,["W","SP","EMP"])
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_sum_m_skill.png")
 
 
 LABELS = ["Sum of Working Skill across $(occup)" for occup in CHOICE_NAMES]
-plts = create_plots(C_Ys,"Credit/Output", [sum_w_skill[1,:], sum_w_skill[2,:], sum_w_skill[3,:], sum_w_skill[4,:]],LABELS,false,["W","ENT","SP","EMP"])
+plts = create_plots(C_Ys,"Credit/Output", [sum_w_skill[1,:], sum_w_skill[2,:], sum_w_skill[3,:], sum_w_skill[4,:]],LABELS,false, 12,7,["W","ENT","SP","EMP"])
 for h in 1:length(plts)
     display(plts[h])
     occup = CHOICE_NAMES[h]
@@ -1120,16 +1162,16 @@ for h in 1:length(plts)
     savefig(plts[h],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_sum_w_skill_$(occup).png")
 end
 LABELS = ["W","ENT","SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [sum_w_skill[1,:], sum_w_skill[2,:], sum_w_skill[3,:], sum_w_skill[4,:]],LABELS,"Sum of Working Skill",false,["W","ENT","SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [sum_w_skill[1,:], sum_w_skill[2,:], sum_w_skill[3,:], sum_w_skill[4,:]],LABELS,"Sum of Working Skill",false, 12,7,["W","ENT","SP","EMP"])
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_sum_w_skill_with_ENT.png")
 LABELS = ["W","SP","EMP"]
-plt = create_combined_plot(C_Ys,"Credit/Output", [sum_w_skill[1,:], sum_w_skill[3,:], sum_w_skill[4,:]],LABELS,"Sum of Working Skill",false,["W","SP","EMP"])
+plt = create_combined_plot(C_Ys,"Credit/Output", [sum_w_skill[1,:], sum_w_skill[3,:], sum_w_skill[4,:]],LABELS,"Sum of Working Skill",false, 12,7,["W","SP","EMP"])
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_combined_sum_w_skill.png")
 
 
-plts = create_plots(C_Ys,"Credit/Output", [share_W_earnings_in_output, share_SP_earnings_in_output, share_EMP_earnings_in_output, share_W_capital_income_in_output, share_SP_capital_income_in_output, share_EMP_capital_income_in_output],["Share of output as Workers' Earnings","Share of output as Sole Proprietors' Earnings","Share of output as Employers' Earnings","Share of output as Workers' Capital Income","Share of output as Sole Proprietors' Capital Income","Share of output as Employers' Capital Income"],true,["W","SP","EMP","W","SP","EMP"])
+plts = create_plots(C_Ys,"Credit/Output", [share_W_earnings_in_output, share_SP_earnings_in_output, share_EMP_earnings_in_output, share_W_capital_income_in_output, share_SP_capital_income_in_output, share_EMP_capital_income_in_output],["Share of output as Workers' Earnings","Share of output as Sole Proprietors' Earnings","Share of output as Employers' Earnings","Share of output as Workers' Capital Income","Share of output as Sole Proprietors' Capital Income","Share of output as Employers' Capital Income"],true, 12,7,["W","SP","EMP","W","SP","EMP"])
 for plt in plts
     display(plt)
 end
@@ -1152,7 +1194,7 @@ savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_ratio_of_output.p
 
 
 #TFP_ideal, TFP_data
-plt = create_plot(C_Ys,"Credit/Output", old_TFPis,"TFP", false)
+plt = create_plot(C_Ys,"Credit/Output", old_TFPis,"TFP", false, 12,7)
 display(plt)
 savefig(plt,"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_tfp_ideal.png")
 plt = create_plot(C_Ys,"Credit/Output", old_TFPds,"TFP_data", false)

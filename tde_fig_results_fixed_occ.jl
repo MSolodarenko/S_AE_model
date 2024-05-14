@@ -666,17 +666,21 @@ Threads.@threads for i = 1:2
         end
 
         if h==1
-            Credit[h,i] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
-            var_Credit[h,i] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit[h,i]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
-            Credit[h,i] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
+            # Credit[h,i] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
+            # var_Credit[h,i] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit[h,i]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            # Credit[h,i] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
+            Credit[h,i] = sum([sum( (density_distr[occ]./sum([sum(density_distr[occ]) for occ=list_of_occs])) .* credit[occ]) for occ=list_of_occs])
+            var_Credit[h,i] = sum([sum( (density_distr[occ]./sum([sum(density_distr[occ]) for occ=list_of_occs])) .* (credit[occ] .- Credit[h,i]).^2 ) for occ=list_of_occs])
         elseif h!=2
-            Credit[h-1,i] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
-            var_Credit[h-1,i] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit[h-1,i]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
-            Credit[h-1,i] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
+            # Credit[h-1,i] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
+            # var_Credit[h-1,i] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit[h-1,i]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            # Credit[h-1,i] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
+            Credit[h-1,i] = sum([sum( (density_distr[occ]./sum([sum(density_distr[occ]) for occ=list_of_occs])) .* credit[occ]) for occ=list_of_occs])
+            var_Credit[h-1,i] = sum([sum( (density_distr[occ]./sum([sum(density_distr[occ]) for occ=list_of_occs])) .* (credit[occ] .- Credit[h-1,i]).^2 ) for occ=list_of_occs])
         end
 
         if h!=5
-            Capital[h,i] = sum([sum(density_distr[occ] .* asset_grid) for occ=list_of_occs])
+            Capital[h,i] = sum([sum( (density_distr[occ]./sum([sum(density_distr[occ]) for occ=list_of_occs])) .* asset_grid) for occ=list_of_occs])
         end
 
         next!(p)
@@ -696,7 +700,7 @@ Threads.@threads for i = 1:2
             end
 
             # calculate mean
-            means[s,h,i] = sum([sum(stat_distr[occ] .* density_distr[occ]) for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            means[s,h,i] = sum([sum( stat_distr[occ] .* (density_distr[occ]./sum([sum(density_distr[occ]) for occ=list_of_occs])) ) for occ=list_of_occs])
             next!(p)
 
             # calculate gini coefficent
@@ -733,10 +737,13 @@ Threads.@threads for i = 1:2
             end
             next!(p)
 
-            avgs[s,h,i] = sum([sum(density_distr[occ].*max.(1e-12,stat_distr[occ])) for occ = list_of_occs])
-            vars[s,h,i] = sum([sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).- avgs[s,h,i]).^2) for occ = list_of_occs])/sum([sum(density_distr[occ]) for occ = list_of_occs])
-            avgs[s,h,i] /= sum([sum(density_distr[occ]) for occ = list_of_occs])
-            coef_of_variation[s,h,i] = sqrt( vars[s,h,i] )/avgs[s,h,i]
+            # avgs[s,h,i] = sum([sum(density_distr[occ].*max.(1e-12,stat_distr[occ])) for occ = list_of_occs])
+            # vars[s,h,i] = sum([sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).- avgs[s,h,i]).^2) for occ = list_of_occs])/sum([sum(density_distr[occ]) for occ = list_of_occs])
+            # avgs[s,h,i] /= sum([sum(density_distr[occ]) for occ = list_of_occs])
+            # coef_of_variation[s,h,i] = sqrt( vars[s,h,i] )/avgs[s,h,i]
+            avgs[s,h,i] = sum([sum( (density_distr[occ]./sum([sum(density_distr[occ]) for occ = list_of_occs])) .* max.(1e-12,stat_distr[occ])) for occ = list_of_occs])
+            vars[s,h,i] = sum([sum( (density_distr[occ]./sum([sum(density_distr[occ]) for occ = list_of_occs])) .* (max.(1e-12,stat_distr[occ]) .- avgs[s,h,i]).^2 ) for occ = list_of_occs])
+            coef_of_variation[s,h,i] = sqrt( vars[s,h,i] )
             next!(p)
 
             if h!=5 && calc_mean_quantile
@@ -752,17 +759,21 @@ Threads.@threads for i = 1:2
 
         if h>2
             denumerator = sum([sum(density_distr[occ]) for occ=list_of_occs])
-            Y = sum([sum(density_distr[occ].*output[occ]) for occ=list_of_occs])/denumerator
-            K = sum([sum(density_distr[occ].*capital_d[occ]) for occ=list_of_occs])/denumerator
-            L = sum([sum(density_distr[occ].*labour_d[occ]) for occ=list_of_occs])/denumerator
+            Y = sum([sum( (density_distr[occ]./denumerator) .*output[occ]) for occ=list_of_occs])
+            K = sum([sum( (density_distr[occ]./denumerator) .*capital_d[occ]) for occ=list_of_occs])
+            L = sum([sum( (density_distr[occ]./denumerator) .*labour_d[occ]) for occ=list_of_occs])
             TFPis[h-2,i] = Y/(K^eta*L^theta)
             TFPds[h-2,i] = Y/K^(eta/(theta+eta))
 
-            mean_MPK[h-2,i] = sum([sum(density_distr[occ].*( eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
-            var_MPK[h-2,i] = sum([sum(density_distr[occ].*(eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) .- mean_MPK[h-2,i]*denumerator).^2 ) for occ=list_of_occs])/denumerator
+            # mean_MPK[h-2,i] = sum([sum(density_distr[occ].*( eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
+            # var_MPK[h-2,i] = sum([sum(density_distr[occ].*(eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) .- mean_MPK[h-2,i]*denumerator).^2 ) for occ=list_of_occs])/denumerator
+            mean_MPK[h-2,i] = sum([sum( (density_distr[occ]./denumerator) .* ( eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])
+            var_MPK[h-2,i] = sum([sum( (density_distr[occ]./denumerator) .* ( eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) .- mean_MPK[h-2,i]).^2 ) for occ=list_of_occs])
 
-            mean_MPL[h-2,i] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
-            var_MPL[h-2,i] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) .- mean_MPL[h-2,i]*denumerator ).^2) for occ=list_of_occs])/denumerator
+            # mean_MPL[h-2,i] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
+            # var_MPL[h-2,i] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) .- mean_MPL[h-2,i]*denumerator ).^2) for occ=list_of_occs])/denumerator
+            mean_MPL[h-2,i] = sum([sum( (density_distr[occ]./denumerator) .* (theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])
+            var_MPL[h-2,i] = sum([sum( (density_distr[occ]./denumerator) .* (theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) .- mean_MPL[h-2,i]).^2 ) for occ=list_of_occs])
 
             next!(p)
         end
@@ -770,11 +781,15 @@ Threads.@threads for i = 1:2
         if h>1
             denumerator = sum([sum(density_distr[occ]) for occ=list_of_occs])
 
-            avg_m_skill[h-1,i] = sum([ sum(m_skill_distr[occ].*z_m_nodes) for occ in list_of_occs])/denumerator
-            avg_w_skill[h-1,i] = sum([ sum(w_skill_distr[occ].*z_w_nodes) for occ in list_of_occs])/denumerator
+            # avg_m_skill[h-1,i] = sum([ sum(m_skill_distr[occ].*z_m_nodes) for occ in list_of_occs])/denumerator
+            # var_m_skill[h-1,i] = sum([ sum(m_skill_distr[occ].*(z_m_nodes .- avg_m_skill[h-1,i]*denumerator).^2) for occ in list_of_occs])/denumerator
+            avg_m_skill[h-1,i] = sum([ sum( (m_skill_distr[occ]./denumerator) .* z_m_nodes) for occ in list_of_occs])
+            var_m_skill[h-1,i] = sum([ sum( (m_skill_distr[occ]./denumerator) .* (z_m_nodes .- avg_m_skill[h-1,i]).^2 ) for occ in list_of_occs])
 
-            var_m_skill[h-1,i] = sum([ sum(m_skill_distr[occ].*(z_m_nodes .- avg_m_skill[h-1,i]*denumerator).^2) for occ in list_of_occs])/denumerator
-            var_w_skill[h-1,i] = sum([ sum(w_skill_distr[occ].*(z_w_nodes .- avg_w_skill[h-1,i]*denumerator).^2) for occ in list_of_occs])/denumerator
+            # avg_w_skill[h-1,i] = sum([ sum(w_skill_distr[occ].*z_w_nodes) for occ in list_of_occs])/denumerator
+            # var_w_skill[h-1,i] = sum([ sum(w_skill_distr[occ].*(z_w_nodes .- avg_w_skill[h-1,i]*denumerator).^2) for occ in list_of_occs])/denumerator
+            avg_w_skill[h-1,i] = sum([ sum( (w_skill_distr[occ]./denumerator) .*z_w_nodes) for occ in list_of_occs])
+            var_w_skill[h-1,i] = sum([ sum( (w_skill_distr[occ]./denumerator) .*(z_w_nodes .- avg_w_skill[h-1,i]).^2 ) for occ in list_of_occs])
 
             next!(p)
         end
@@ -855,9 +870,9 @@ Threads.@threads for t=1:T
     Output_s[t] = sum([sum(output[occ] .* capital_s_distr_s[occ][t,:,:,:,:,:]) for occ=1:3])
 
     Capital_s[1,t]= sum([sum(asset_grid .* capital_s_distr_s[occ][t,:,:,:,:,:]) for occ=1:3])
-    Capital_s[2,t]= sum([sum(asset_grid .* capital_s_distr_s[occ][t,:,:,:,:,:]) for occ=1])
-    Capital_s[3,t]= sum([sum(asset_grid .* capital_s_distr_s[occ][t,:,:,:,:,:]) for occ=2])
-    Capital_s[4,t]= sum([sum(asset_grid .* capital_s_distr_s[occ][t,:,:,:,:,:]) for occ=3])
+    Capital_s[2,t]= sum(asset_grid .* (capital_s_distr_s[1][t,:,:,:,:,:]./sum(capital_s_distr_s[1][t,:,:,:,:,:])))
+    Capital_s[3,t]= sum(asset_grid .* (capital_s_distr_s[2][t,:,:,:,:,:]./sum(capital_s_distr_s[2][t,:,:,:,:,:])))
+    Capital_s[4,t]= sum(asset_grid .* (capital_s_distr_s[3][t,:,:,:,:,:]./sum(capital_s_distr_s[3][t,:,:,:,:,:])))
 
     agg_credit = sum([sum(credit[occ] .* capital_s_distr_s[occ][t,:,:,:,:,:]) for occ=1:3])
 
@@ -910,13 +925,17 @@ Threads.@threads for t=1:T
         end
 
         if h==1
-            Credit_s[h,t] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
-            var_Credit_s[h,t] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit_s[h,t]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
-            Credit_s[h,t] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
+            # Credit_s[h,t] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
+            # var_Credit_s[h,t] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit_s[h,t]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            # Credit_s[h,t] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
+            Credit_s[h,t] = sum([sum( (density_distr[occ]./sum([sum(density_distr[occ]) for occ=list_of_occs])) .* credit[occ]) for occ=list_of_occs])
+            var_Credit_s[h,t] = sum([sum( (density_distr[occ]./sum([sum(density_distr[occ]) for occ=list_of_occs])) .* (credit[occ] .- Credit_s[h,t]).^2 ) for occ=list_of_occs])
         elseif h!=2
-            Credit_s[h-1,t] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
-            var_Credit_s[h-1,t] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit_s[h-1,t]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
-            Credit_s[h-1,t] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
+            # Credit_s[h-1,t] = sum([sum(density_distr[occ] .* credit[occ]) for occ=list_of_occs])
+            # var_Credit_s[h-1,t] = sum([sum(density_distr[occ] .* (credit[occ] .- Credit_s[h-1,t]).^2)  for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            # Credit_s[h-1,t] /= sum([sum(density_distr[occ]) for occ=list_of_occs])
+            Credit_s[h-1,t] = sum([sum( (density_distr[occ]./sum([sum(density_distr[occ]) for occ=list_of_occs])) .* credit[occ]) for occ=list_of_occs])
+            var_Credit_s[h-1,t] = sum([sum( (density_distr[occ]./sum([sum(density_distr[occ]) for occ=list_of_occs])) .* (credit[occ] .- Credit_s[h-1,t]).^2 ) for occ=list_of_occs])
         end
         next!(p)
 
@@ -935,7 +954,7 @@ Threads.@threads for t=1:T
             end
 
             # calculate mean
-            means_s[s,h,t] = sum([sum(stat_distr[occ] .* density_distr[occ]) for occ=list_of_occs])/sum([sum(density_distr[occ]) for occ=list_of_occs])
+            means_s[s,h,t] = sum([sum(stat_distr[occ] .* (density_distr[occ]./sum([sum(density_distr[occ]) for occ=list_of_occs]))) for occ=list_of_occs])
             next!(p)
 
             # calculate gini coefficent
@@ -984,17 +1003,21 @@ Threads.@threads for t=1:T
 
         if h>2
             denumerator = sum([sum(density_distr[occ]) for occ=list_of_occs])
-            Y = sum([sum(density_distr[occ].*output[occ]) for occ=list_of_occs])/denumerator
-            K = sum([sum(density_distr[occ].*capital_d[occ]) for occ=list_of_occs])/denumerator
-            L = sum([sum(density_distr[occ].*labour_d[occ]) for occ=list_of_occs])/denumerator
+            Y = sum([sum((density_distr[occ]./denumerator).*output[occ]) for occ=list_of_occs])
+            K = sum([sum((density_distr[occ]./denumerator).*capital_d[occ]) for occ=list_of_occs])
+            L = sum([sum((density_distr[occ]./denumerator).*labour_d[occ]) for occ=list_of_occs])
             TFPis_s[h-2,t] = Y/(K^eta*L^theta)
             TFPds_s[h-2,t] = Y/K^(eta/(theta+eta))
 
-            mean_MPK_s[h-2,t] = sum([sum(density_distr[occ].*( eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
-            var_MPK_s[h-2,t] = sum([sum(density_distr[occ].*(eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) .- mean_MPK_s[h-2,t]*denumerator).^2 ) for occ=list_of_occs])/denumerator
+            # mean_MPK_s[h-2,t] = sum([sum(density_distr[occ].*( eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
+            # var_MPK_s[h-2,t] = sum([sum(density_distr[occ].*(eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) .- mean_MPK_s[h-2,t]*denumerator).^2 ) for occ=list_of_occs])/denumerator
+            mean_MPK_s[h-2,t] = sum([sum((density_distr[occ]./denumerator).*( eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])
+            var_MPK_s[h-2,t] = sum([sum((density_distr[occ]./denumerator).*( eta.*output[occ].*replace(capital_d[occ].^(-1.0), Inf=>0.0) .- mean_MPK_s[h-2,t]).^2 ) for occ=list_of_occs])
 
-            mean_MPL_s[h-2,t] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
-            var_MPL_s[h-2,t] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) .- mean_MPL_s[h-2,t]*denumerator ).^2) for occ=list_of_occs])/denumerator
+            # mean_MPL_s[h-2,t] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])/denumerator
+            # var_MPL_s[h-2,t] = sum([sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) .- mean_MPL_s[h-2,t]*denumerator ).^2) for occ=list_of_occs])/denumerator
+            mean_MPL_s[h-2,t] = sum([sum((density_distr[occ]./denumerator).*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) )) for occ=list_of_occs])
+            var_MPL_s[h-2,t] = sum([sum((density_distr[occ]./denumerator).*(theta.*output[occ].*replace(labour_d[occ].^(-1.0), Inf=>0.0) .- mean_MPL_s[h-2,t]).^2 ) for occ=list_of_occs])
 
             next!(p)
         end
@@ -1002,11 +1025,15 @@ Threads.@threads for t=1:T
         if h>1
             denumerator = sum([sum(density_distr[occ]) for occ=list_of_occs])
 
-            avg_m_skill_s[h-1,t] = sum([ sum(m_skill_distr[occ].*z_m_nodes) for occ in list_of_occs])/denumerator
-            avg_w_skill_s[h-1,t] = sum([ sum(w_skill_distr[occ].*z_w_nodes) for occ in list_of_occs])/denumerator
+            # avg_m_skill_s[h-1,t] = sum([ sum(m_skill_distr[occ].*z_m_nodes) for occ in list_of_occs])/denumerator
+            # var_m_skill_s[h-1,t] = sum([ sum(m_skill_distr[occ].*(z_m_nodes .- avg_m_skill_s[h-1,t]*denumerator).^2) for occ in list_of_occs])/denumerator
+            avg_m_skill_s[h-1,t] = sum([ sum((m_skill_distr[occ]./denumerator).*z_m_nodes) for occ in list_of_occs])
+            var_m_skill_s[h-1,t] = sum([ sum((m_skill_distr[occ]./denumerator).*(z_m_nodes .- avg_m_skill_s[h-1,t]).^2 ) for occ in list_of_occs])
 
-            var_m_skill_s[h-1,t] = sum([ sum(m_skill_distr[occ].*(z_m_nodes .- avg_m_skill_s[h-1,t]*denumerator).^2) for occ in list_of_occs])/denumerator
-            var_w_skill_s[h-1,t] = sum([ sum(w_skill_distr[occ].*(z_w_nodes .- avg_w_skill_s[h-1,t]*denumerator).^2) for occ in list_of_occs])/denumerator
+            # avg_w_skill_s[h-1,t] = sum([ sum(w_skill_distr[occ].*z_w_nodes) for occ in list_of_occs])/denumerator
+            # var_w_skill_s[h-1,t] = sum([ sum(w_skill_distr[occ].*(z_w_nodes .- avg_w_skill_s[h-1,t]*denumerator).^2) for occ in list_of_occs])/denumerator
+            avg_w_skill_s[h-1,t] = sum([ sum((w_skill_distr[occ]./denumerator).*z_w_nodes) for occ in list_of_occs])
+            var_w_skill_s[h-1,t] = sum([ sum((w_skill_distr[occ]./denumerator).*(z_w_nodes .- avg_w_skill_s[h-1,t]).^2 ) for occ in list_of_occs])
 
             next!(p)
         end

@@ -10,6 +10,9 @@ using Statistics
 using JLD2
 using ProgressMeter
 
+include("Functions/profit.jl")
+
+
 # global parameters of the approximation objects
 #                               1               2               3               4                       5                   6
 #                       number_a_nodes, number_u_m_nodes, number_u_w_nodes, number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes
@@ -83,9 +86,9 @@ function quantile_mean(stat, distr)
         stat_grid = exp.(collect(range(log(1); stop=log(maximum(ud_stat_grid)+1-minimum(ud_stat_grid)), length=length(stat[:,1,1,1,1,1])))).+minimum(ud_stat_grid).-1
     catch e
         temp111 = findmin(ud_stat_grid)
-        display([ud_stat_grid[temp111[2]], ud_stat_distr[temp111[2]]])
+        #display([ud_stat_grid[temp111[2]], ud_stat_distr[temp111[2]]])
         id111 = findall(x->x<=0.0, stat_grid)
-        display(sum(stat_distr[id111]))
+        #display(sum(stat_distr[id111]))
         throw(e)
     end
     stat_distr = zeros(length(stat_grid))
@@ -130,7 +133,7 @@ function quantile_mean(stat, distr)
             max_a_i = length(cdf)-1
             cdf = cdf[1:max_a_i]./cdf[max_a_i]
         catch e
-            display(cdf)
+            #display(cdf)
             throw(e)
         end
     end
@@ -171,7 +174,7 @@ function quantile_mean(stat, distr)
     for q = 1:5
         if qwb[q] > qwb[q+1]
             display(plot(p0,p1,p2,layout=(1,3),legend=false))
-            display(qwb)
+            #display(qwb)
             throw(error)
         end
         _q = Int32(max(1,min(floor(qwb[q]),max_a_i)))
@@ -213,21 +216,25 @@ share_EMP_earnings_in_output = zeros(num_lambdas)
 share_W_capital_income_in_output = zeros(num_lambdas)
 share_SP_capital_income_in_output = zeros(num_lambdas)
 share_EMP_capital_income_in_output = zeros(num_lambdas)
-#throw(error)
+throw(error)
 
 @showprogress for i = 1:num_lambdas
+    # i=10
     #println("\n$(country) - $(i)/$(num_lambdas)")
     # ss_star = [res, r, w, approx_object, params]
     ss_star = copy(SSS[i])
 
-    number_u_nodes = SSS[i][4][7]
+    number_u_nodes = ss_star[4][7]
     number_asset_grid = ss_star[1][2]
     number_zeta_nodes = global_approx_params[4]
     number_alpha_m_nodes = global_approx_params[5]
     number_alpha_w_nodes = global_approx_params[6]
 
+    delta = ss_star[5][3]
+    gamma = ss_star[5][4]
     eta = ss_star[5][5]
     theta = ss_star[5][6]
+    c_e = ss_star[5][7]
 
     z_m_nodes = ss_star[4][1]
     z_w_nodes = ss_star[4][2]
@@ -240,23 +247,6 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
     labour_d = ss_star[1][29]
     output = ss_star[1][32]
 
-    wealth = Array{Any}(undef,3)
-    income = Array{Any}(undef,3)
-    consumption = Array{Any}(undef,3)
-    for occ in 1:3
-        wealth[occ] = ones(size(density_distr[occ])).*asset_grid
-        income[occ] = ss_star[1][23][occ] .- wealth[occ]
-        consumption[occ] = income[occ] .+ wealth[occ] .- policy[occ]
-
-        Capital[occ+1,i] = sum(wealth[occ] .* density_distr[occ])
-    end
-
-    C_Ys[i] = ss_star[1][13]
-    Outputs[i] = sum( [sum(output[occ] .* density_distr[occ]) for occ in 1:3] )
-    Incomes[i] = sum( [sum(income[occ] .* density_distr[occ]) for occ in 1:3] )
-    Consumptions[i] = sum( [sum(consumption[occ] .* density_distr[occ]) for occ in 1:3] )
-    Capital[1,i] = sum( Capital[2:4,i] )
-
     Rs[i] = ss_star[2]
     Ws[i] = ss_star[3]
 
@@ -265,6 +255,25 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
 
     giniWs[i] = ss_star[1][20]
     giniEnts[i] = ss_star[1][21]
+
+    occ_choice, income, earnings, capital_excess, capital_d, credit, labour_excess, labour_d, labour_s, deposit, output, cost_of_employing, managerial_input = compute_income_profile_fixed_occ(asset_grid,number_asset_grid,Rs[i], Ws[i], number_zeta_nodes, number_alpha_m_nodes, number_alpha_w_nodes, lambdas[i], delta, gamma, eta, theta, c_e, z_m_nodes, z_w_nodes, number_u_nodes)
+
+    wealth = Array{Any}(undef,3)
+    #income = Array{Any}(undef,3)
+    consumption = Array{Any}(undef,3)
+    for occ in 1:3
+        wealth[occ] = ones(size(density_distr[occ])).*asset_grid
+        income[occ] = income[occ] .- wealth[occ]#=ss_star[1][23]=#
+        consumption[occ] = income[occ] .+ wealth[occ] .- policy[occ]
+
+        Capital[occ+1,i] = sum(wealth[occ] .* density_distr[occ]./sum(density_distr[occ]))
+    end
+
+    C_Ys[i] = ss_star[1][13]
+    Outputs[i] = sum( [sum(output[occ] .* density_distr[occ]) for occ in 1:3] )
+    Incomes[i] = sum( [sum(income[occ] .* density_distr[occ]) for occ in 1:3] )
+    Consumptions[i] = sum( [sum(consumption[occ] .* density_distr[occ]) for occ in 1:3] )
+    Capital[1,i] = sum( [sum(wealth[occ] .* density_distr[occ]) for occ in 1:3] )
 
     # [1] = income, earnings, wealth, consumption
     # [2] = All, W, SP, EMP
@@ -285,11 +294,11 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
             temp_occ = 4
             if h == 1 #All
                 # calculate mean
-                means[s,h,i] = sum( [sum(stat_distr[occ] .* density_distr[occ]) for occ in 1:3])/sum( [sum(density_distr[occ]) for occ in 1:3])
+                means[s,h,i] = sum( [sum(stat_distr[occ] .* density_distr[occ]) for occ in 1:3])#/sum( [sum(density_distr[occ]) for occ in 1:3])
 
                 # calculate gini coefficent
-                density_distr_choice = [density_distr[2]; density_distr[3]]./sum([density_distr[2]; density_distr[3]])
-                stat_choice = [stat_distr[2]; stat_distr[3]]
+                density_distr_choice = [density_distr[1]; density_distr[2]; density_distr[3]]./sum([density_distr[1]; density_distr[2]; density_distr[3]])
+                stat_choice = [stat_distr[1]; stat_distr[2]; stat_distr[3]]
                 density_distr_choice_vec = vec(density_distr_choice)
                 stat_choice_vec = vec(stat_choice)
 
@@ -301,23 +310,23 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
 
                 # calculate variance of log-s
                 avglogs[s,h,i] = sum([ sum(density_distr[occ].*log.(max.(1e-12,stat_distr[occ]))   ) for occ in 1:3])
-                varlogs[s,h,i] = sum([ sum(density_distr[occ].*(log.(max.(1e-12,stat_distr[occ])).-avglogs[s,h,i]).^2) for occ in 1:3])/sum([ sum(density_distr[occ]) for occ in 1:3])
-                avglogs[s,h,i] /= sum([ sum(density_distr[occ]) for occ in 1:3])
+                varlogs[s,h,i] = sum([ sum(density_distr[occ].*(log.(max.(1e-12,stat_distr[occ])).-avglogs[s,h,i]).^2) for occ in 1:3])#/sum([ sum(density_distr[occ]) for occ in 1:3])
+                # avglogs[s,h,i] /= sum([ sum(density_distr[occ]) for occ in 1:3])
                 if s==3
                     avglogs[s,h,i] = sum([ sum(density_distr[occ].*max.(1e-12,stat_distr[occ])   ) for occ in 1:3])
-                    varlogs[s,h,i] = sum([ sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).-avglogs[s,h,i]).^2) for occ in 1:3])/sum([ sum(density_distr[occ]) for occ in 1:3])
-                    avglogs[s,h,i] /= sum([ sum(density_distr[occ]) for occ in 1:3])
+                    varlogs[s,h,i] = sum([ sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).-avglogs[s,h,i]).^2) for occ in 1:3])#/sum([ sum(density_distr[occ]) for occ in 1:3])
+                    # avglogs[s,h,i] /= sum([ sum(density_distr[occ]) for occ in 1:3])
                 end
 
                 avgs[s,h,i] = sum([ sum(density_distr[occ].*max.(1e-12,stat_distr[occ])   ) for occ in 1:3])
-                vars[s,h,i] = sum([ sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).-avgs[s,h,i]).^2) for occ in 1:3])/sum([ sum(density_distr[occ]) for occ in 1:3])
-                avgs[s,h,i] /= sum([ sum(density_distr[occ]) for occ in 1:3])
+                vars[s,h,i] = sum([ sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).-avgs[s,h,i]).^2) for occ in 1:3])#/sum([ sum(density_distr[occ]) for occ in 1:3])
+                # avgs[s,h,i] /= sum([ sum(density_distr[occ]) for occ in 1:3])
 
-                try
-                    quantile_means[:,h,s,i] .= quantile_mean([stat_distr[1];stat_distr[2];stat_distr[3]], [density_distr[1];density_distr[2];density_distr[3]])
-                catch e
-                    quantile_means[:,h,s,i] .= NaN
-                end
+                # try
+                #     quantile_means[:,h,s,i] .= quantile_mean([stat_distr[1];stat_distr[2];stat_distr[3]], [density_distr[1];density_distr[2];density_distr[3]])
+                # catch e
+                #     quantile_means[:,h,s,i] .= NaN
+                # end
             elseif h == 2 #W
                 temp_occ = 1
             elseif h == 3 #SP
@@ -329,7 +338,7 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
 
             if h!=1
                 # calculate mean
-                means[s,h,i] = sum(stat_distr[occ] .* density_distr[occ])/sum(density_distr[occ])
+                means[s,h,i] = sum(stat_distr[occ] .* density_distr[occ]./sum(density_distr[occ]) )
 
                 # calculate gini coefficent
                 density_distr_choice = (density_distr[occ])./sum(density_distr[occ])
@@ -344,24 +353,30 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
                 ginis[s,h,i] = sum([ density_distr_choice_vec_non_zero[y_i]*density_distr_choice_vec_non_zero[y_j]*abs(stat_choice_vec_non_zero[y_i]-stat_choice_vec_non_zero[y_j]) for y_i=1:length(density_distr_choice_vec_non_zero), y_j=1:length(density_distr_choice_vec_non_zero) ]) / (2*sum(stat_choice_vec_non_zero.*density_distr_choice_vec_non_zero))
 
                 # calculate variance of log-s
-                avglogs[s,h,i] = sum(density_distr[occ].*log.(max.(1e-12,stat_distr[occ]))   )
-                varlogs[s,h,i] = sum(density_distr[occ].*(log.(max.(1e-12,stat_distr[occ])).-avglogs[s,h,i]).^2)/sum(density_distr[occ])
-                avglogs[s,h,i] /= sum(density_distr[occ])
+                # avglogs[s,h,i] = sum(density_distr[occ].*log.(max.(1e-12,stat_distr[occ]))   )
+                # varlogs[s,h,i] = sum(density_distr[occ].*(log.(max.(1e-12,stat_distr[occ])).-avglogs[s,h,i]).^2)/sum(density_distr[occ])
+                # avglogs[s,h,i] /= sum(density_distr[occ])
+                avglogs[s,h,i] = sum( (density_distr[occ]./sum(density_distr[occ])) .* log.(max.(1e-12,stat_distr[occ])) )
+                varlogs[s,h,i] = sum( (density_distr[occ]./sum(density_distr[occ])) .* (log.(max.(1e-12,stat_distr[occ])) .- avglogs[s,h,i]).^2 )
                 if s==3
-                    avglogs[s,h,i] = sum(density_distr[occ].*max.(1e-12,stat_distr[occ])   )
-                    varlogs[s,h,i] = sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).- avglogs[s,h,i]).^2)/sum(density_distr[occ])
-                    avglogs[s,h,i] /= sum(density_distr[occ])
+                    # avglogs[s,h,i] = sum(density_distr[occ].*max.(1e-12,stat_distr[occ])   )
+                    # varlogs[s,h,i] = sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).- avglogs[s,h,i]).^2)/sum(density_distr[occ])
+                    # avglogs[s,h,i] /= sum(density_distr[occ])
+                    avglogs[s,h,i] = sum( (density_distr[occ]./sum(density_distr[occ])) .* max.(1e-12,stat_distr[occ]) )
+                    varlogs[s,h,i] = sum( (density_distr[occ]./sum(density_distr[occ])) .* (max.(1e-12,stat_distr[occ]) .- avglogs[s,h,i]).^2 )
                 end
 
-                avgs[s,h,i] = sum(density_distr[occ].*max.(1e-12,stat_distr[occ])   )
-                vars[s,h,i] = sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).- avgs[s,h,i]).^2)/sum(density_distr[occ])
-                avgs[s,h,i] /= sum(density_distr[occ])
+                # avgs[s,h,i] = sum(density_distr[occ].*max.(1e-12,stat_distr[occ])   )
+                # vars[s,h,i] = sum(density_distr[occ].*(max.(1e-12,stat_distr[occ]).- avgs[s,h,i]).^2)/sum(density_distr[occ])
+                # avgs[s,h,i] /= sum(density_distr[occ])
+                avgs[s,h,i] = sum( (density_distr[occ]./sum(density_distr[occ])) .* max.(1e-12,stat_distr[occ]) )
+                vars[s,h,i] = sum( (density_distr[occ]./sum(density_distr[occ])) .* (max.(1e-12,stat_distr[occ]) .- avgs[s,h,i]).^2 )
 
-                try
-                    quantile_means[:,h,s,i] .= quantile_mean(stat_distr[occ], density_distr[occ])
-                catch e
-                    quantile_means[:,h,s,i] .= NaN
-                end
+                # try
+                #     quantile_means[:,h,s,i] .= quantile_mean(stat_distr[occ], density_distr[occ])
+                # catch e
+                #     quantile_means[:,h,s,i] .= NaN
+                # end
             end
 
         end
@@ -377,24 +392,28 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
         if c==1
             temp_occ = 1
         elseif c==2
-            denumerator = sum([ sum(density_distr[occ]) for occ in 1:3])
+            denumerator = sum([ sum(density_distr[occ]) for occ in 2:3])
 
-            Y = sum([ sum(density_distr[occ].*output[occ]) for occ in 1:3])/denumerator
-            K = sum([ sum(density_distr[occ].*capital_d[occ]) for occ in 1:3])/denumerator
-            L = sum([ sum(density_distr[occ].*labour_d[occ]) for occ in 1:3])/denumerator
+            Y = sum([ sum( (density_distr[occ]./denumerator).*output[occ]) for occ in 2:3])
+            K = sum([ sum( (density_distr[occ]./denumerator).*capital_d[occ]) for occ in 2:3])
+            L = sum([ sum( (density_distr[occ]./denumerator).*labour_d[occ]) for occ in 2:3])
             TFPis[c-1,i] = Y/(K^eta*L^theta)
             TFPds[c-1,i] = Y/K^(eta/(theta+eta))
 
-            mean_MPK[c-1,i] = sum([ sum(density_distr[occ].*(eta.*output[occ].*replace(capital_d[occ].^(-1.0),Inf=>0.0))) for occ in 1:3])/denumerator
-            var_MPK[c-1,i] = sum([ sum(density_distr[occ].*(eta.*output[occ].*replace(capital_d[occ].^(-1.0),Inf=>0.0) .- mean_MPK[c-1,i]*denumerator).^2) for occ in 1:3])/denumerator
+            # mean_MPK[c-1,i] = sum([ sum(density_distr[occ].*(eta.*output[occ].*replace(capital_d[occ].^(-1.0),Inf=>0.0))) for occ in 2:3])/denumerator
+            # var_MPK[c-1,i] = sum([ sum(density_distr[occ].*(eta.*output[occ].*replace(capital_d[occ].^(-1.0),Inf=>0.0) .- mean_MPK[c-1,i]*denumerator).^2) for occ in 2:3])/denumerator
+            mean_MPK[c-1,i] = sum([ sum( (density_distr[occ]./denumerator) .* (eta.*output[occ].*replace(capital_d[occ].^(-1.0),Inf=>0.0)) ) for occ in 2:3])
+            var_MPK[c-1,i] = sum([ sum( (density_distr[occ]./denumerator) .* (eta.*output[occ].*replace(capital_d[occ].^(-1.0),Inf=>0.0) .- mean_MPK[c-1,i]).^2 ) for occ in 2:3])
 
-            mean_MPL[c-1,i] = sum([ sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0),Inf=>0.0))) for occ in 1:3])/denumerator
-            var_MPL[c-1,i] = sum([ sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0),Inf=>0.0) .- mean_MPL[c-1,i]*denumerator).^2) for occ in 1:3])/denumerator
+            # mean_MPL[c-1,i] = sum([ sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0),Inf=>0.0))) for occ in 2:3])/denumerator
+            # var_MPL[c-1,i] = sum([ sum(density_distr[occ].*(theta.*output[occ].*replace(labour_d[occ].^(-1.0),Inf=>0.0) .- mean_MPL[c-1,i]*denumerator).^2) for occ in 2:3])/denumerator
+            mean_MPL[c-1,i] = sum([ sum( (density_distr[occ]./denumerator) .* (theta.*output[occ].*replace(labour_d[occ].^(-1.0),Inf=>0.0)) ) for occ in 2:3])
+            var_MPL[c-1,i] = sum([ sum( (density_distr[occ]./denumerator) .* (theta.*output[occ].*replace(labour_d[occ].^(-1.0),Inf=>0.0) .- mean_MPL[c-1,i]).^2 ) for occ in 2:3])
 
             #if c==2
             #    choice = ent_choice
             #end
-            share_unbound[c-1,i] = sum([ sum(density_distr[occ].*unlimited_capital_choice[occ]) for occ in 1:3])/denumerator
+            share_unbound[c-1,i] = sum([ sum( (density_distr[occ]./denumerator) .* unlimited_capital_choice[occ]) for occ in 2:3])
 
 
         elseif c==3
@@ -415,39 +434,43 @@ share_EMP_capital_income_in_output = zeros(num_lambdas)
                 #if c==2
                 #    denumerator = sum(choice.*density_distr)
                 #end
-                Y = sum(density_distr[occ].*output[occ])/denumerator
-                K = sum(density_distr[occ].*capital_d[occ])/denumerator
-                L = sum(density_distr[occ].*labour_d[occ])/denumerator
+                Y = sum( (density_distr[occ]./denumerator) .* output[occ])
+                K = sum( (density_distr[occ]./denumerator) .* capital_d[occ])
+                L = sum( (density_distr[occ]./denumerator) .* labour_d[occ])
                 TFPis[c-1,i] = Y/(K^eta*L^theta)
                 TFPds[c-1,i] = Y/K^(eta/(theta+eta))
 
                 c_1 = capital_d[occ].^(-1.0)
                 replace!(c_1,Inf=>0.0)
-                mean_MPK[c-1,i] = sum(density_distr[occ].*(eta.*output[occ].*c_1))/denumerator
-                var_MPK[c-1,i] = sum(density_distr[occ].*(eta.*output[occ].*c_1 .- mean_MPK[c-1,i]*denumerator).^2)/denumerator
+                # mean_MPK[c-1,i] = sum(density_distr[occ].*(eta.*output[occ].*c_1))/denumerator
+                # var_MPK[c-1,i] = sum(density_distr[occ].*(eta.*output[occ].*c_1 .- mean_MPK[c-1,i]*denumerator).^2)/denumerator
+                mean_MPK[c-1,i] = sum( (density_distr[occ]./denumerator) .* (eta.*output[occ].*c_1) )
+                var_MPK[c-1,i] = sum( (density_distr[occ]./denumerator) .* (eta.*output[occ].*c_1 .- mean_MPK[c-1,i]).^2 )
 
                 l_1 = labour_d[occ].^(-1.0)
                 replace!(l_1,Inf=>0.0)
-                mean_MPL[c-1,i] = sum(density_distr[occ].*(theta.*output[occ].*l_1))/denumerator
-                var_MPL[c-1,i] = sum(density_distr[occ].*(theta.*output[occ].*l_1 .- mean_MPL[c-1,i]*denumerator).^2)/denumerator
+                # mean_MPL[c-1,i] = sum(density_distr[occ].*(theta.*output[occ].*l_1))/denumerator
+                # var_MPL[c-1,i] = sum(density_distr[occ].*(theta.*output[occ].*l_1 .- mean_MPL[c-1,i]*denumerator).^2)/denumerator
+                mean_MPL[c-1,i] = sum( (density_distr[occ]./denumerator) .* (theta.*output[occ].*l_1) )
+                var_MPL[c-1,i] = sum( (density_distr[occ]./denumerator) .* (theta.*output[occ].*l_1 .- mean_MPL[c-1,i]).^2 )
 
                 #if c==2
                 #    choice = ent_choice
                 #end
-                share_unbound[c-1,i] = sum(density_distr[occ].*unlimited_capital_choice[occ])/denumerator
+                share_unbound[c-1,i] = sum( (density_distr[occ]./denumerator) .* unlimited_capital_choice[occ])
             end
         end
 
     end
 
-    agg_c_e = ss_star[5][7]*sum(density_distr[3])
-    share_W_earnings_in_output[i] = sum(ss_star[1][24][1] .* density_distr[1])/(Outputs[i]-agg_c_e)
-    share_SP_earnings_in_output[i] = sum(ss_star[1][24][2] .* density_distr[2])/(Outputs[i]-agg_c_e)
-    share_EMP_earnings_in_output[i] = sum(ss_star[1][24][3] .* density_distr[3])/(Outputs[i]-agg_c_e)
-    share_W_capital_income_in_output[i] = (ss_star[5][3]+ss_star[1][44])*sum(ones(size(ss_star[1][5][1])).*ss_star[1][3] .* density_distr[1])/(Outputs[i]-agg_c_e)
-    share_SP_capital_income_in_output[i] = (ss_star[5][3]+ss_star[1][44])*sum(ones(size(ss_star[1][5][2])).*ss_star[1][3] .* density_distr[2])/(Outputs[i]-agg_c_e)
-    share_EMP_capital_income_in_output[i] = (ss_star[5][3]+ss_star[1][44])*sum(ones(size(ss_star[1][5][3])).*ss_star[1][3] .* density_distr[3])/(Outputs[i]-agg_c_e)
-    #throw(error)
+    agg_c_e = c_e*sum(density_distr[3])
+    share_W_earnings_in_output[i] = sum(earnings[1] .* density_distr[1])/(Outputs[i]-agg_c_e)
+    share_SP_earnings_in_output[i] = sum(earnings[2] .* density_distr[2])/(Outputs[i]-agg_c_e)
+    share_EMP_earnings_in_output[i] = sum(earnings[3] .* density_distr[3])/(Outputs[i]-agg_c_e)
+    share_W_capital_income_in_output[i] = (delta+Rs[i])*sum(ones(size(density_distr[1])).*asset_grid .* density_distr[1])/(Outputs[i]-agg_c_e)
+    share_SP_capital_income_in_output[i] = (delta+Rs[i])*sum(ones(size(density_distr[2])).*asset_grid .* density_distr[2])/(Outputs[i]-agg_c_e)
+    share_EMP_capital_income_in_output[i] = (delta+Rs[i])*sum(ones(size(density_distr[3])).*asset_grid .* density_distr[3])/(Outputs[i]-agg_c_e)
+    # throw(error)
 end
 
 #throw(error)
@@ -906,173 +929,173 @@ savefig(plts[4],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_outp
 savefig(plts[5],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_SP_capital_income.png")
 savefig(plts[6],"$(LOCAL_DIR_PRODUCTIVITY)$(country)_credit_to_gdp_share_of_output_EMP_capital_income.png")
 
-# Print statistics for calibrated economy
-
-# income, earnings, wealth, consumption
-# All, W, SP, EMP
-# lambdas
-#means = zeros(4,4,num_lambdas)
-#ginis = zeros(4,4,num_lambdas)
-#vars = zeros(4,4,num_lambdas)
-for i=1:4
-
-    if i==1
-        stat_name="income"
-    elseif i==2
-        stat_name="earnings"
-    elseif i==3
-        stat_name="wealth"
-    else  #i==4
-        stat_name="consumption"
-    end
-
-    for j=[4]#1:4
-        if j==1
-            stat_type_name="Mean"
-            stat_type = means
-        elseif j==2
-            stat_type_name="Variance"
-            stat_type = vars
-        elseif j==3
-            stat_type_name="Varlog"
-            stat_type = varlogs
-        else  #i==4
-            stat_type_name="Gini"
-            stat_type = ginis
-        end
-        println("$(stat_type_name) of $(stat_name) for H,W,SP,EMP: $(round.(stat_type[i,:,calibrated_lambda];digits=2))")
-    end
-end
-
-ss_star = SSS[10]
-asset_grid = ss_star[1][3]
-density_distr = ss_star[1][5]
-policy = ss_star[1][4]
-earnings = ss_star[1][24]
-
-wealth = Array{Any}(undef,3)
-income = Array{Any}(undef,3)
-consumption = Array{Any}(undef,3)
-for occ in 1:3
-    wealth[occ] = ones(size(density_distr[occ])).*asset_grid
-    income[occ] = ss_star[1][23][occ] .- wealth[occ]
-    consumption[occ] = income[occ] .+ wealth[occ] .- policy[occ]
-end
-
-num_of_occs = 4
-
-mean_consumption_to_income_wealth = Array{Any}(undef,num_of_occs)
-var_consumption_to_income_wealth = Array{Any}(undef,num_of_occs)
-std_consumption_to_income_wealth = Array{Any}(undef,num_of_occs)
-
-mean_income_to_income_wealth = Array{Any}(undef,num_of_occs)
-var_income_to_income_wealth = Array{Any}(undef,num_of_occs)
-std_income_to_income_wealth = Array{Any}(undef,num_of_occs)
-
-mean_consumption_to_income = Array{Any}(undef,num_of_occs)
-var_consumption_to_income = Array{Any}(undef,num_of_occs)
-std_consumption_to_income = Array{Any}(undef,num_of_occs)
-
-mean_savings_to_income = Array{Any}(undef,num_of_occs)
-var_savings_to_income = Array{Any}(undef,num_of_occs)
-std_savings_to_income = Array{Any}(undef,num_of_occs)
-
-mean_consumption_to_earnings = Array{Any}(undef,num_of_occs)
-var_consumption_to_earnings = Array{Any}(undef,num_of_occs)
-std_consumption_to_earnings = Array{Any}(undef,num_of_occs)
-
-mean_savings_to_earnings = Array{Any}(undef,num_of_occs)
-var_savings_to_earnings = Array{Any}(undef,num_of_occs)
-std_savings_to_earnings = Array{Any}(undef,num_of_occs)
-
-for i = 1:num_of_occs # H. W, SP, EMP
-    if i == 1
-        mean_consumption_to_income_wealth[i] = sum( [sum((consumption[occ]./ss_star[1][23][occ]).*density_distr[occ]) for occ=1:3])
-        var_consumption_to_income_wealth[i] = sum( [sum((consumption[occ]./ss_star[1][23][occ] .- mean_consumption_to_income_wealth[i]).^2 .*density_distr[occ]) for occ=1:3])
-        std_consumption_to_income_wealth[i] = sqrt(var_consumption_to_income_wealth[i])
-
-
-        mean_income_to_income_wealth[i] = sum( [sum((income[occ]./ss_star[1][23][occ]).*density_distr[occ]) for occ=1:3])
-        var_income_to_income_wealth[i] = sum( [sum((income[occ]./ss_star[1][23][occ] .- mean_income_to_income_wealth[i]).^2 .*density_distr[occ]) for occ=1:3])
-        std_income_to_income_wealth[i] = sqrt(var_income_to_income_wealth[i])
-
-
-        mean_consumption_to_income[i] = sum( [sum((consumption[occ]./income[occ]).*density_distr[occ]) for occ=1:3])
-        var_consumption_to_income[i] = sum( [sum((consumption[occ]./income[occ] .- mean_consumption_to_income[i]).^2 .*density_distr[occ]) for occ=1:3])
-        std_consumption_to_income[i] = sqrt(var_consumption_to_income[i])
-
-        mean_savings_to_income[i] = sum( [sum(((policy[occ].-wealth[occ])./income[occ]).*density_distr[occ]) for occ=1:3])
-        var_savings_to_income[i] = sum( [sum(((policy[occ].-wealth[occ])./income[occ] .- mean_savings_to_income[i]).^2 .*density_distr[occ]) for occ=1:3])
-        std_savings_to_income[i] = sqrt(var_savings_to_income[i])
-
-        mean_consumption_to_earnings[i] = sum( [sum((consumption[occ]./earnings[occ]).*density_distr[occ]) for occ=1:3])
-        var_consumption_to_earnings[i] = sum( [sum((consumption[occ]./earnings[occ] .- mean_consumption_to_earnings[i]).^2 .*density_distr[occ]) for occ=1:3])
-        std_consumption_to_earnings[i] = sqrt(var_consumption_to_earnings[i])
-
-        mean_savings_to_earnings[i] = sum( [sum(((policy[occ].-wealth[occ])./earnings[occ]).*density_distr[occ]) for occ=1:3])
-        var_savings_to_earnings[i] = sum( [sum(((policy[occ].-wealth[occ])./earnings[occ] .- mean_savings_to_earnings[i]).^2 .*density_distr[occ]) for occ=1:3])
-        std_savings_to_earnings[i] = sqrt(var_savings_to_earnings[i])
-    else
-
-        if i==2
-            choice = 1
-        elseif i==3
-            choice = 2
-        elseif i==4
-            choice = 3
-        end
-
-        mean_consumption_to_income_wealth[i] = sum((consumption[choice]./ss_star[1][23][choice]).*density_distr[choice])
-        var_consumption_to_income_wealth[i] = sum((consumption[choice]./ss_star[1][23][choice] .- mean_consumption_to_income_wealth[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
-        mean_consumption_to_income_wealth[i] /= sum(density_distr[choice])
-        std_consumption_to_income_wealth[i] = sqrt(var_consumption_to_income_wealth[i])
-
-
-        mean_income_to_income_wealth[i] = sum((income[choice]./ss_star[1][23][choice]).*density_distr[choice])
-        var_income_to_income_wealth[i] = sum((income[choice]./ss_star[1][23][choice] .- mean_income_to_income_wealth[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
-        mean_income_to_income_wealth[i] /= sum(density_distr[choice])
-        std_income_to_income_wealth[i] = sqrt(var_income_to_income_wealth[i])
-
-
-        mean_consumption_to_income[i] = sum((consumption[choice]./income[choice]).*density_distr[choice])
-        var_consumption_to_income[i] = sum((consumption[choice]./income[choice] .- mean_consumption_to_income[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
-        mean_consumption_to_income[i] /= sum(density_distr[choice])
-        std_consumption_to_income[i] = sqrt(var_consumption_to_income[i])
-
-        mean_savings_to_income[i] = sum(((policy[choice].-wealth[choice])./income[choice]).*density_distr[choice])
-        var_savings_to_income[i] = sum(((policy[choice].-wealth[choice])./income[choice] .- mean_savings_to_income[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
-        mean_savings_to_income[i] /= sum(density_distr[choice])
-        std_savings_to_income[i] = sqrt(var_savings_to_income[i])
-
-        mean_consumption_to_earnings[i] = sum((consumption[choice]./earnings[choice]).*density_distr[choice])
-        var_consumption_to_earnings[i] = sum((consumption[choice]./earnings[choice] .- mean_consumption_to_earnings[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
-        mean_consumption_to_earnings[i] /= sum(density_distr[choice])
-        std_consumption_to_earnings[i] = sqrt(var_consumption_to_earnings[i])
-
-        mean_savings_to_earnings[i] = sum(((policy[choice].-wealth[choice])./earnings[choice]).*density_distr[choice])
-        var_savings_to_earnings[i] = sum(((policy[choice].-wealth[choice])./earnings[choice] .- mean_savings_to_earnings[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
-        mean_savings_to_earnings[i] /= sum(density_distr[choice])
-        std_savings_to_earnings[i] = sqrt(var_savings_to_earnings[i])
-    end
-end
-
-println("Mean of the ratio of C/(Income+Wealth) for H,W,SP,EMP: $(round.(mean_consumption_to_income_wealth;digits=2))")
-println("Std of the ratio of C/(Income+Wealth) for H,W,SP,EMP: $(round.(std_consumption_to_income_wealth;digits=2))")
-
-println("Mean of the ratio of Income/(Income+Wealth) for H,W,SP,EMP: $(round.(mean_income_to_income_wealth;digits=2))")
-println("Std of the ratio of Income/(Income+Wealth) for H,W,SP,EMP: $(round.(std_income_to_income_wealth;digits=2))")
-
-println("Mean of the ratio of C/Income for H,W,SP,EMP: $(round.(mean_consumption_to_income;digits=2))")
-println("Std of the ratio of C/Income for H,W,SP,EMP: $(round.(std_consumption_to_income;digits=2))")
-
-println("Mean of the ratio of Savings/Income for H,W,SP,EMP: $(round.(mean_savings_to_income;digits=2))")
-println("Std of the ratio of Savings/Income for H,W,SP,EMP: $(round.(std_savings_to_income;digits=2))")
-
-println("Mean of the ratio of C/Earnings for H,W,SP,EMP: $(round.(mean_consumption_to_earnings;digits=2))")
-println("Std of the ratio of C/Earnings for H,W,SP,EMP: $(round.(std_consumption_to_earnings;digits=2))")
-
-println("Mean of the ratio of Savings/Earnings for H,W,SP,EMP: $(round.(mean_savings_to_earnings;digits=2))")
-println("Std of the ratio of Savings/Earnings for H,W,SP,EMP: $(round.(std_savings_to_earnings;digits=2))")
+# # Print statistics for calibrated economy
+#
+# # income, earnings, wealth, consumption
+# # All, W, SP, EMP
+# # lambdas
+# #means = zeros(4,4,num_lambdas)
+# #ginis = zeros(4,4,num_lambdas)
+# #vars = zeros(4,4,num_lambdas)
+# for i=1:4
+#
+#     if i==1
+#         stat_name="income"
+#     elseif i==2
+#         stat_name="earnings"
+#     elseif i==3
+#         stat_name="wealth"
+#     else  #i==4
+#         stat_name="consumption"
+#     end
+#
+#     for j=[4]#1:4
+#         if j==1
+#             stat_type_name="Mean"
+#             stat_type = means
+#         elseif j==2
+#             stat_type_name="Variance"
+#             stat_type = vars
+#         elseif j==3
+#             stat_type_name="Varlog"
+#             stat_type = varlogs
+#         else  #i==4
+#             stat_type_name="Gini"
+#             stat_type = ginis
+#         end
+#         println("$(stat_type_name) of $(stat_name) for H,W,SP,EMP: $(round.(stat_type[i,:,calibrated_lambda];digits=2))")
+#     end
+# end
+#
+# ss_star = SSS[10]
+# asset_grid = ss_star[1][3]
+# density_distr = ss_star[1][5]
+# policy = ss_star[1][4]
+# earnings = ss_star[1][24]
+#
+# wealth = Array{Any}(undef,3)
+# income = Array{Any}(undef,3)
+# consumption = Array{Any}(undef,3)
+# for occ in 1:3
+#     wealth[occ] = ones(size(density_distr[occ])).*asset_grid
+#     income[occ] = ss_star[1][23][occ] .- wealth[occ]
+#     consumption[occ] = income[occ] .+ wealth[occ] .- policy[occ]
+# end
+#
+# num_of_occs = 4
+#
+# mean_consumption_to_income_wealth = Array{Any}(undef,num_of_occs)
+# var_consumption_to_income_wealth = Array{Any}(undef,num_of_occs)
+# std_consumption_to_income_wealth = Array{Any}(undef,num_of_occs)
+#
+# mean_income_to_income_wealth = Array{Any}(undef,num_of_occs)
+# var_income_to_income_wealth = Array{Any}(undef,num_of_occs)
+# std_income_to_income_wealth = Array{Any}(undef,num_of_occs)
+#
+# mean_consumption_to_income = Array{Any}(undef,num_of_occs)
+# var_consumption_to_income = Array{Any}(undef,num_of_occs)
+# std_consumption_to_income = Array{Any}(undef,num_of_occs)
+#
+# mean_savings_to_income = Array{Any}(undef,num_of_occs)
+# var_savings_to_income = Array{Any}(undef,num_of_occs)
+# std_savings_to_income = Array{Any}(undef,num_of_occs)
+#
+# mean_consumption_to_earnings = Array{Any}(undef,num_of_occs)
+# var_consumption_to_earnings = Array{Any}(undef,num_of_occs)
+# std_consumption_to_earnings = Array{Any}(undef,num_of_occs)
+#
+# mean_savings_to_earnings = Array{Any}(undef,num_of_occs)
+# var_savings_to_earnings = Array{Any}(undef,num_of_occs)
+# std_savings_to_earnings = Array{Any}(undef,num_of_occs)
+#
+# for i = 1:num_of_occs # H. W, SP, EMP
+#     if i == 1
+#         mean_consumption_to_income_wealth[i] = sum( [sum((consumption[occ]./ss_star[1][23][occ]).*density_distr[occ]) for occ=1:3])
+#         var_consumption_to_income_wealth[i] = sum( [sum((consumption[occ]./ss_star[1][23][occ] .- mean_consumption_to_income_wealth[i]).^2 .*density_distr[occ]) for occ=1:3])
+#         std_consumption_to_income_wealth[i] = sqrt(var_consumption_to_income_wealth[i])
+#
+#
+#         mean_income_to_income_wealth[i] = sum( [sum((income[occ]./ss_star[1][23][occ]).*density_distr[occ]) for occ=1:3])
+#         var_income_to_income_wealth[i] = sum( [sum((income[occ]./ss_star[1][23][occ] .- mean_income_to_income_wealth[i]).^2 .*density_distr[occ]) for occ=1:3])
+#         std_income_to_income_wealth[i] = sqrt(var_income_to_income_wealth[i])
+#
+#
+#         mean_consumption_to_income[i] = sum( [sum((consumption[occ]./income[occ]).*density_distr[occ]) for occ=1:3])
+#         var_consumption_to_income[i] = sum( [sum((consumption[occ]./income[occ] .- mean_consumption_to_income[i]).^2 .*density_distr[occ]) for occ=1:3])
+#         std_consumption_to_income[i] = sqrt(var_consumption_to_income[i])
+#
+#         mean_savings_to_income[i] = sum( [sum(((policy[occ].-wealth[occ])./income[occ]).*density_distr[occ]) for occ=1:3])
+#         var_savings_to_income[i] = sum( [sum(((policy[occ].-wealth[occ])./income[occ] .- mean_savings_to_income[i]).^2 .*density_distr[occ]) for occ=1:3])
+#         std_savings_to_income[i] = sqrt(var_savings_to_income[i])
+#
+#         mean_consumption_to_earnings[i] = sum( [sum((consumption[occ]./earnings[occ]).*density_distr[occ]) for occ=1:3])
+#         var_consumption_to_earnings[i] = sum( [sum((consumption[occ]./earnings[occ] .- mean_consumption_to_earnings[i]).^2 .*density_distr[occ]) for occ=1:3])
+#         std_consumption_to_earnings[i] = sqrt(var_consumption_to_earnings[i])
+#
+#         mean_savings_to_earnings[i] = sum( [sum(((policy[occ].-wealth[occ])./earnings[occ]).*density_distr[occ]) for occ=1:3])
+#         var_savings_to_earnings[i] = sum( [sum(((policy[occ].-wealth[occ])./earnings[occ] .- mean_savings_to_earnings[i]).^2 .*density_distr[occ]) for occ=1:3])
+#         std_savings_to_earnings[i] = sqrt(var_savings_to_earnings[i])
+#     else
+#
+#         if i==2
+#             choice = 1
+#         elseif i==3
+#             choice = 2
+#         elseif i==4
+#             choice = 3
+#         end
+#
+#         mean_consumption_to_income_wealth[i] = sum((consumption[choice]./ss_star[1][23][choice]).*density_distr[choice])
+#         var_consumption_to_income_wealth[i] = sum((consumption[choice]./ss_star[1][23][choice] .- mean_consumption_to_income_wealth[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
+#         mean_consumption_to_income_wealth[i] /= sum(density_distr[choice])
+#         std_consumption_to_income_wealth[i] = sqrt(var_consumption_to_income_wealth[i])
+#
+#
+#         mean_income_to_income_wealth[i] = sum((income[choice]./ss_star[1][23][choice]).*density_distr[choice])
+#         var_income_to_income_wealth[i] = sum((income[choice]./ss_star[1][23][choice] .- mean_income_to_income_wealth[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
+#         mean_income_to_income_wealth[i] /= sum(density_distr[choice])
+#         std_income_to_income_wealth[i] = sqrt(var_income_to_income_wealth[i])
+#
+#
+#         mean_consumption_to_income[i] = sum((consumption[choice]./income[choice]).*density_distr[choice])
+#         var_consumption_to_income[i] = sum((consumption[choice]./income[choice] .- mean_consumption_to_income[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
+#         mean_consumption_to_income[i] /= sum(density_distr[choice])
+#         std_consumption_to_income[i] = sqrt(var_consumption_to_income[i])
+#
+#         mean_savings_to_income[i] = sum(((policy[choice].-wealth[choice])./income[choice]).*density_distr[choice])
+#         var_savings_to_income[i] = sum(((policy[choice].-wealth[choice])./income[choice] .- mean_savings_to_income[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
+#         mean_savings_to_income[i] /= sum(density_distr[choice])
+#         std_savings_to_income[i] = sqrt(var_savings_to_income[i])
+#
+#         mean_consumption_to_earnings[i] = sum((consumption[choice]./earnings[choice]).*density_distr[choice])
+#         var_consumption_to_earnings[i] = sum((consumption[choice]./earnings[choice] .- mean_consumption_to_earnings[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
+#         mean_consumption_to_earnings[i] /= sum(density_distr[choice])
+#         std_consumption_to_earnings[i] = sqrt(var_consumption_to_earnings[i])
+#
+#         mean_savings_to_earnings[i] = sum(((policy[choice].-wealth[choice])./earnings[choice]).*density_distr[choice])
+#         var_savings_to_earnings[i] = sum(((policy[choice].-wealth[choice])./earnings[choice] .- mean_savings_to_earnings[i]).^2 .*density_distr[choice]./sum(density_distr[choice]))
+#         mean_savings_to_earnings[i] /= sum(density_distr[choice])
+#         std_savings_to_earnings[i] = sqrt(var_savings_to_earnings[i])
+#     end
+# end
+#
+# println("Mean of the ratio of C/(Income+Wealth) for H,W,SP,EMP: $(round.(mean_consumption_to_income_wealth;digits=2))")
+# println("Std of the ratio of C/(Income+Wealth) for H,W,SP,EMP: $(round.(std_consumption_to_income_wealth;digits=2))")
+#
+# println("Mean of the ratio of Income/(Income+Wealth) for H,W,SP,EMP: $(round.(mean_income_to_income_wealth;digits=2))")
+# println("Std of the ratio of Income/(Income+Wealth) for H,W,SP,EMP: $(round.(std_income_to_income_wealth;digits=2))")
+#
+# println("Mean of the ratio of C/Income for H,W,SP,EMP: $(round.(mean_consumption_to_income;digits=2))")
+# println("Std of the ratio of C/Income for H,W,SP,EMP: $(round.(std_consumption_to_income;digits=2))")
+#
+# println("Mean of the ratio of Savings/Income for H,W,SP,EMP: $(round.(mean_savings_to_income;digits=2))")
+# println("Std of the ratio of Savings/Income for H,W,SP,EMP: $(round.(std_savings_to_income;digits=2))")
+#
+# println("Mean of the ratio of C/Earnings for H,W,SP,EMP: $(round.(mean_consumption_to_earnings;digits=2))")
+# println("Std of the ratio of C/Earnings for H,W,SP,EMP: $(round.(std_consumption_to_earnings;digits=2))")
+#
+# println("Mean of the ratio of Savings/Earnings for H,W,SP,EMP: $(round.(mean_savings_to_earnings;digits=2))")
+# println("Std of the ratio of Savings/Earnings for H,W,SP,EMP: $(round.(std_savings_to_earnings;digits=2))")
 
 
 SSS_fixed_occ = copy(SSS)

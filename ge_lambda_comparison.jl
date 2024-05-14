@@ -12,7 +12,7 @@ using ProgressMeter
 
 #num_lambdas = 23
 
-function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL::String, IS_Y_PERCENTAGE::Bool=true, OCCUPATION::String="H", LOW_LIMIT=-Inf)
+function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL::String, IS_Y_PERCENTAGE::Bool=true, TICKSFONTSIZE::Int64=9, NUM_YTICKS::Int64=10, OCCUPATION::String="H", LOW_LIMIT=-Inf)
     num_lambdas = length(X)
 
     COLOR="blue"
@@ -29,7 +29,8 @@ function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL
     #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
     YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
     YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
-    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
+    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUM_YTICKS))
+    # YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
     DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]));digits=0) ))
     YPOS = mean(YTICKS[end-1:end])
     if maximum(Y[calibrated_lambda:calibrated_lambda+4]) > YTICKS[end-1]
@@ -47,6 +48,10 @@ function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL
                     xlabel=XLABEL,
                     ylabel=YLABEL,
                     yticks = YTICKS,
+                    xtickfontsize=TICKSFONTSIZE,
+                    ytickfontsize=TICKSFONTSIZE,
+                    xguidefontsize=TICKSFONTSIZE,
+                    yguidefontsize=TICKSFONTSIZE,
                     ylims = YLIMS )
     vline!([X[calibrated_lambda]], color="grey")
     if IS_Y_PERCENTAGE
@@ -58,65 +63,65 @@ function create_plot(X::Vector{Float64},XLABEL::String,Y::Vector{Float64},YLABEL
     annotate!([X[calibrated_lambda]], YPOS, text(TEXT, :grey, :left, 7))
     return plt
 end
-function create_plots(X::Vector{Float64},XLABEL::String,Ys,YLABELs, IS_Y_PERCENTAGE::Bool=true, OCCUPATION=["H", "W", "SP", "EMP"], LOW_LIMIT=-Inf)
-    num_lambdas = length(X)
-
-    plts = []
-    half_range = maximum([ maximum(filter(!isnan,copy(Ys[i])))-minimum(filter(!isnan,copy(Ys[i]))) for i in 1:length(Ys)])/2.0
-    for y_i = 1:length(Ys)
-        Y = Ys[y_i]
-        Ynanless = copy(Y)
-        Ynanless = filter(!isnan,Ynanless)
-        ns = num_lambdas - (length(Y) - length(Ynanless))
-        YLABEL = YLABELs[y_i]
-
-        YLIMS1 = max(middle(Ynanless[1:ns])-half_range, LOW_LIMIT)
-        if IS_Y_PERCENTAGE
-            YLIMS1 = max(YLIMS1, min(0.0, minimum(filter(!isnan,copy(Y)))))
-        end
-        YLIMS2 = YLIMS1+2*half_range
-        YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
-        YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
-        YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
-        DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]));digits=0) ))+1
-        YPOS = mean(YTICKS[end-1:end])
-        if maximum(filter(!isnan,copy(Y[calibrated_lambda:calibrated_lambda+4]))) > YTICKS[end-1]
-            YPOS = mean(YTICKS[1:2])
-        end
-        if IS_Y_PERCENTAGE
-            YTICKS = (YTICKS, ["$(round(100*y;digits=DIGITS))%" for y in YTICKS])
-        else
-            YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
-        end
-
-        COLOR="blue"
-        if OCCUPATION[y_i]=="W"
-            COLOR="purple"
-        elseif OCCUPATION[y_i]=="SP"
-            COLOR="red"
-        elseif OCCUPATION[y_i]=="EMP"
-            COLOR="green"
-        end
-        plt = scatter(X,Y,
-                        #=regression=true,=#
-                        color = COLOR,
-                        legend = false,
-                        xlabel = XLABEL,
-                        ylabel = YLABEL,
-                        yticks = YTICKS,
-                        ylims = YLIMS )
-        vline!([X[calibrated_lambda]], color="grey")
-        if IS_Y_PERCENTAGE
-            TEXT = " Calibrated economy ($(round(X[calibrated_lambda]; digits=DIGITS+1)),$(round(Y[calibrated_lambda]*100; digits=DIGITS+1))%) "
-        else
-            TEXT = " Calibrated economy ($(round(X[calibrated_lambda]; digits=DIGITS+1)),$(round(Y[calibrated_lambda]; digits=DIGITS+1))) "
-        end
-        annotate!([X[calibrated_lambda]], YPOS, text(TEXT, :grey, :left, 7))
-        push!(plts, plt)
-    end
-    return plts
-end
-function create_combined_plot(X::Vector{Float64},XLABEL::String,Ys,YLABELs,YLABEL, IS_Y_PERCENTAGE::Bool=true, LEGENDPOS=:bottomright, OCCUPATION=["H", "W", "SP", "EMP"], LOW_LIMIT=-Inf)
+# function create_plots(X::Vector{Float64},XLABEL::String,Ys,YLABELs, IS_Y_PERCENTAGE::Bool=true, OCCUPATION=["H", "W", "SP", "EMP"], LOW_LIMIT=-Inf)
+#     num_lambdas = length(X)
+#
+#     plts = []
+#     half_range = maximum([ maximum(filter(!isnan,copy(Ys[i])))-minimum(filter(!isnan,copy(Ys[i]))) for i in 1:length(Ys)])/2.0
+#     for y_i = 1:length(Ys)
+#         Y = Ys[y_i]
+#         Ynanless = copy(Y)
+#         Ynanless = filter(!isnan,Ynanless)
+#         ns = num_lambdas - (length(Y) - length(Ynanless))
+#         YLABEL = YLABELs[y_i]
+#
+#         YLIMS1 = max(middle(Ynanless[1:ns])-half_range, LOW_LIMIT)
+#         if IS_Y_PERCENTAGE
+#             YLIMS1 = max(YLIMS1, min(0.0, minimum(filter(!isnan,copy(Y)))))
+#         end
+#         YLIMS2 = YLIMS1+2*half_range
+#         YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
+#         YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
+#         YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
+#         DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]));digits=0) ))+1
+#         YPOS = mean(YTICKS[end-1:end])
+#         if maximum(filter(!isnan,copy(Y[calibrated_lambda:calibrated_lambda+4]))) > YTICKS[end-1]
+#             YPOS = mean(YTICKS[1:2])
+#         end
+#         if IS_Y_PERCENTAGE
+#             YTICKS = (YTICKS, ["$(round(100*y;digits=DIGITS))%" for y in YTICKS])
+#         else
+#             YTICKS = (YTICKS, [round(y;digits=DIGITS) for y in YTICKS])
+#         end
+#
+#         COLOR="blue"
+#         if OCCUPATION[y_i]=="W"
+#             COLOR="purple"
+#         elseif OCCUPATION[y_i]=="SP"
+#             COLOR="red"
+#         elseif OCCUPATION[y_i]=="EMP"
+#             COLOR="green"
+#         end
+#         plt = scatter(X,Y,
+#                         #=regression=true,=#
+#                         color = COLOR,
+#                         legend = false,
+#                         xlabel = XLABEL,
+#                         ylabel = YLABEL,
+#                         yticks = YTICKS,
+#                         ylims = YLIMS )
+#         vline!([X[calibrated_lambda]], color="grey")
+#         if IS_Y_PERCENTAGE
+#             TEXT = " Calibrated economy ($(round(X[calibrated_lambda]; digits=DIGITS+1)),$(round(Y[calibrated_lambda]*100; digits=DIGITS+1))%) "
+#         else
+#             TEXT = " Calibrated economy ($(round(X[calibrated_lambda]; digits=DIGITS+1)),$(round(Y[calibrated_lambda]; digits=DIGITS+1))) "
+#         end
+#         annotate!([X[calibrated_lambda]], YPOS, text(TEXT, :grey, :left, 7))
+#         push!(plts, plt)
+#     end
+#     return plts
+# end
+function create_combined_plot(X::Vector{Float64},XLABEL::String,Ys,YLABELs,YLABEL, IS_Y_PERCENTAGE::Bool=true, TICKSFONTSIZE::Int64=9, NUM_YTICKS::Int64=10, LEGENDPOS=:bottomright, OCCUPATION=["H", "W", "SP", "EMP"], LOW_LIMIT=-Inf)
     num_lambdas = length(X)
 
     YLIMS1 = max(minimum(minimum.(Ys)), LOW_LIMIT)
@@ -124,7 +129,8 @@ function create_combined_plot(X::Vector{Float64},XLABEL::String,Ys,YLABELs,YLABE
     #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
     YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
     YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
-    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
+    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUM_YTICKS))
+    # YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
     DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]));digits=0) ))
     YPOS = mean(YTICKS[end-1:end])
 
@@ -136,10 +142,12 @@ function create_combined_plot(X::Vector{Float64},XLABEL::String,Ys,YLABELs,YLABE
             push!(COLORS,"red")
         elseif OCCUPATION[y_i]=="EMP"
             push!(COLORS,"green")
-        elseif OCCUPATION[y_i]=="EMP"
-            push!(COLORS,"yellow")
+        elseif OCCUPATION[y_i]=="EMP" || OCCUPATION[y_i]=="wo occ mob"
+            # push!(COLORS,"yellow")
+            push!(COLORS,RGB(255/255, 221/255, 0/255))
         else
-            push!(COLORS,"blue")
+            # push!(COLORS,"blue")
+            push!(COLORS,RGB(0/255, 87/255, 183/255))
         end
 
         if maximum(Ys[y_i][calibrated_lambda:calibrated_lambda+4]) > YTICKS[end-1]
@@ -164,16 +172,21 @@ function create_combined_plot(X::Vector{Float64},XLABEL::String,Ys,YLABELs,YLABE
                         #=regression=true,=#
                         color=COLORS[y_i],
                         legend=LEGENDPOS,
+                        legendfontsize=ceil(Int64,TICKSFONTSIZE*0.72),
                         xlabel=XLABEL,
                         ylabel=YLABEL,
                         label=YLABELs[y_i],
                         yticks = YTICKS,
+                        xtickfontsize=TICKSFONTSIZE,
+                        ytickfontsize=TICKSFONTSIZE,
+                        xguidefontsize=TICKSFONTSIZE,
+                        yguidefontsize=TICKSFONTSIZE,
                         ylims = YLIMS )
     end
 
     return plt
 end
-function create_combined_plot(Xs,XLABEL::String,Ys,YLABELs,YLABEL, IS_Y_PERCENTAGE::Bool=true, LEGENDPOS=:bottomright, OCCUPATION=["H", "W", "SP", "EMP"], LOW_LIMIT=-Inf)
+function create_combined_plot(Xs,XLABEL::String,Ys,YLABELs,YLABEL, IS_Y_PERCENTAGE::Bool=true, TICKSFONTSIZE::Int64=9, NUM_YTICKS::Int64=10, LEGENDPOS=:bottomright, OCCUPATION=["H", "W", "SP", "EMP"], LOW_LIMIT=-Inf)
     num_lambdas = length(Xs[1])
 
     YLIMS1 = max(minimum(minimum.(Ys)), LOW_LIMIT)
@@ -181,7 +194,8 @@ function create_combined_plot(Xs,XLABEL::String,Ys,YLABELs,YLABEL, IS_Y_PERCENTA
     #YLIMS=(YLIMS1-0.01, YLIMS2+0.01)
     YLIMMARGIN = abs(YLIMS2-YLIMS1)*0.015
     YLIMS=(YLIMS1-YLIMMARGIN, YLIMS2+YLIMMARGIN)
-    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
+    YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=NUM_YTICKS))
+    # YTICKS = collect(range(YLIMS1; stop=YLIMS2, length=Int(round(num_lambdas/2;digits=0))))
     DIGITS = Int(max(2, round(log10(1/(YTICKS[2]-YTICKS[1]));digits=0) ))
     YPOS = mean(YTICKS[end-1:end])
 
@@ -221,10 +235,15 @@ function create_combined_plot(Xs,XLABEL::String,Ys,YLABELs,YLABEL, IS_Y_PERCENTA
                         #=regression=true,=#
                         color=COLORS[y_i],
                         legend=LEGENDPOS,
+                        legendfontsize=ceil(Int64,TICKSFONTSIZE*0.72),
                         xlabel=XLABEL,
                         ylabel=YLABEL,
                         label=YLABELs[y_i],
                         yticks = YTICKS,
+                        xtickfontsize=TICKSFONTSIZE,
+                        ytickfontsize=TICKSFONTSIZE,
+                        xguidefontsize=TICKSFONTSIZE,
+                        yguidefontsize=TICKSFONTSIZE,
                         ylims = YLIMS )
     end
 
@@ -245,6 +264,7 @@ lambdas = zeros(length(SSS))
 end
 LAMBDA = 1.665907
 calibrated_lambda = findfirst(x -> x==LAMBDA, lambdas)
+c_l = calibrated_lambda
 
 LOCAL_DIR_SOURCE_fixed = "$(@__DIR__)/Results/Stationary/GE_lambda_fixed_occ/General/"
 if Sys.iswindows()
@@ -264,50 +284,84 @@ if Sys.iswindows()
 end
 mkpath(LOCAL_DIR_GENERAL)
 
+# display([Capital[1,c_l]/Outputs[c_l] Capital_fixed_occ[1,c_l]/Outputs_fixed_occ[c_l]])
+#
+# #credit-to-gdp
+# display([0.736 0.683])
+#
+# display([varlogs[4,1,c_l] varlogs_fixed_occ[4,1,c_l]])
+#
+# display([varlogs[2,1,c_l] varlogs_fixed_occ[2,1,c_l]])
+#
+# display([ginis[1,2,c_l] ginis_fixed_occ[1,2,c_l]])
+# display([ginis[1,4,c_l] ginis_fixed_occ[1,4,c_l]])
+#
+# throw(error)
+function generate_plots(X,XLABEL,Y,Y_fixed_occ,YLABEL,PATHDIR,FILENAME,IS_PERCENTAGE::Bool=false, TICKSFONTSIZE::Int64=9, NUM_YTICKS::Int64=10,LEGEND_POSITION=false)
 
-function generate_plots(X,XLABEL,Y,Y_fixed_occ,YLABEL,PATHDIR,FILENAME,IS_PERCENTAGE::Bool=false)
-
-    plt = create_combined_plot(X,XLABEL, [Y, Y_fixed_occ],["w occ mob", "wo occ mob"],YLABEL, IS_PERCENTAGE, :bottomright)
+    plt = create_combined_plot(X,XLABEL, [Y, Y_fixed_occ],["with mobility", "without mobility"],#=YLABEL=#"", IS_PERCENTAGE, TICKSFONTSIZE, NUM_YTICKS, LEGEND_POSITION, ["w occ mob", "wo occ mob"])
     display(plt)
     savefig(plt,"$(PATHDIR)$(country)_$(FILENAME).png")
 
     if !IS_PERCENTAGE
-        plt = create_plot(X,XLABEL, (Y.-Y_fixed_occ)./Y,YLABEL, true)
+        plt = create_plot(X,XLABEL, (Y.-Y_fixed_occ)./Y,YLABEL, true, TICKSFONTSIZE, NUM_YTICKS)
         display(plt)
         savefig(plt,"$(PATHDIR)$(country)_$(FILENAME)_diff.png")
 
-        plt = create_plot(X,XLABEL, (Y.-(Y[calibrated_lambda]-Y_fixed_occ[calibrated_lambda]).-Y_fixed_occ)./Y,YLABEL, true)
+        plt = create_plot(X,XLABEL, (Y.-(Y[calibrated_lambda]-Y_fixed_occ[calibrated_lambda]).-Y_fixed_occ)./Y,YLABEL, true, TICKSFONTSIZE, NUM_YTICKS)
         display(plt)
         savefig(plt,"$(PATHDIR)$(country)_$(FILENAME)_did.png")
     else
-        plt = create_plot(X,XLABEL, (Y.-Y_fixed_occ),YLABEL, true)
+        plt = create_plot(X,XLABEL, (Y.-Y_fixed_occ),YLABEL, true, TICKSFONTSIZE, NUM_YTICKS)
         display(plt)
         savefig(plt,"$(PATHDIR)$(country)_$(FILENAME)_diff.png")
 
-        plt = create_plot(X,XLABEL, (Y.-(Y[calibrated_lambda]-Y_fixed_occ[calibrated_lambda]).-Y_fixed_occ),YLABEL, true)
+        plt = create_plot(X,XLABEL, (Y.-(Y[calibrated_lambda]-Y_fixed_occ[calibrated_lambda]).-Y_fixed_occ),YLABEL, true, TICKSFONTSIZE, NUM_YTICKS)
         display(plt)
         savefig(plt,"$(PATHDIR)$(country)_$(FILENAME)_did.png")
     end
 end
+# throw(err)
+occWs = zeros(length(SSS))
+occSPs = zeros(length(SSS))
+occEMPs = zeros(length(SSS))
+occWs_fixed_occ = zeros(length(SSS))
+occSPs_fixed_occ = zeros(length(SSS))
+occEMPs_fixed_occ = zeros(length(SSS))
 
-generate_plots(lambdas,"λ",C_Ys,C_Ys_fixed_occ,"Credit/Output",LOCAL_DIR_GENERAL,"lambda_credit_to_gdp",false)
+@showprogress for i = 1:length(SSS)
+    occWs[i] = sum(SSS[i][1][5].*Float64.(SSS[i][1][22].==1.0))
+    occSPs[i] = sum(SSS[i][1][5].*Float64.(SSS[i][1][22].==2.0))
+    occEMPs[i] = sum(SSS[i][1][5].*Float64.(SSS[i][1][22].==3.0))
 
-generate_plots(lambdas,"λ",Outputs,Outputs_fixed_occ,"Output",LOCAL_DIR_GENERAL,"lambda_outputs",false)
+    occWs_fixed_occ[i] = sum(SSS_fixed_occ[i][1][5][1])
+    occSPs_fixed_occ[i] = sum(SSS_fixed_occ[i][1][5][2])
+    occEMPs_fixed_occ[i] = sum(SSS_fixed_occ[i][1][5][3])
+end
 
-generate_plots(lambdas,"λ",Incomes,Incomes_fixed_occ,"Income",LOCAL_DIR_GENERAL,"lambda_Incomes",false)
+generate_plots(lambdas,"λ",occWs,occWs_fixed_occ,"Share of workers",LOCAL_DIR_GENERAL,"lambda_occ_w",true, 18,5)
+generate_plots(lambdas,"λ",occSPs,occSPs_fixed_occ,"Share of sole proprietors",LOCAL_DIR_GENERAL,"lambda_occ_sp",true, 18,5)
+generate_plots(lambdas,"λ",occEMPs,occEMPs_fixed_occ,"Share of employers",LOCAL_DIR_GENERAL,"lambda_occ_emp",true, 18,5)
+throw(error)
 
-generate_plots(lambdas,"λ",Consumptions,Consumptions_fixed_occ,"Consumptions",LOCAL_DIR_GENERAL,"lambda_Consumptions",false)
+generate_plots(lambdas,"λ",C_Ys,C_Ys_fixed_occ,"Credit/Output",LOCAL_DIR_GENERAL,"lambda_credit_to_gdp",false, 18,5)
 
-generate_plots(lambdas,"λ",Capital[1,:],Capital_fixed_occ[1,:],"Capital",LOCAL_DIR_GENERAL,"lambda_Capital",false)
+generate_plots(lambdas,"λ",Outputs,Outputs_fixed_occ,"Output",LOCAL_DIR_GENERAL,"lambda_outputs",false, 18,5)
+
+generate_plots(lambdas,"λ",Incomes,Incomes_fixed_occ,"Income",LOCAL_DIR_GENERAL,"lambda_Incomes",false, 18,5,:bottomright)
+
+generate_plots(lambdas,"λ",Consumptions,Consumptions_fixed_occ,"Consumptions",LOCAL_DIR_GENERAL,"lambda_Consumptions",false, 18,5)
+
+generate_plots(lambdas,"λ",Capital[1,:],Capital_fixed_occ[1,:],"Capital",LOCAL_DIR_GENERAL,"lambda_Capital",false, 18,5)
 generate_plots(lambdas,"λ",Capital[2,:],Capital_fixed_occ[2,:],"Workers' Capital",LOCAL_DIR_GENERAL,"lambda_Capital_W",false)
 generate_plots(lambdas,"λ",Capital[3,:],Capital_fixed_occ[3,:],"Sole Proprietors' Capital",LOCAL_DIR_GENERAL,"lambda_Capital_SP",false)
 generate_plots(lambdas,"λ",Capital[4,:],Capital_fixed_occ[4,:],"Employers' Capital",LOCAL_DIR_GENERAL,"lambda_Capital_EMP",false)
 
 
 #Interest rate and wage
-generate_plots(lambdas,"λ",Rs,Rs_fixed_occ,"Interest Rate",LOCAL_DIR_GENERAL,"lambda_interest_rate",true)
+generate_plots(lambdas,"λ",Rs,Rs_fixed_occ,"Interest Rate",LOCAL_DIR_GENERAL,"lambda_interest_rate",true, 12,7)
 
-generate_plots(lambdas,"λ",Ws,Ws_fixed_occ,"Wage",LOCAL_DIR_GENERAL,"lambda_wage",false)
+generate_plots(lambdas,"λ",Ws,Ws_fixed_occ,"Wage",LOCAL_DIR_GENERAL,"lambda_wage",false, 12,7,:bottomright)
 
 
 LOCAL_DIR_INEQUALITY = "$(LOCAL_DIR)/Inequality/"
@@ -381,8 +435,12 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         if h==3
             choice_name = "SoleProprietors"
         end
+        LEGENDPOS = false
+        if h==4 && s==4
+            LEGENDPOS = :topright
+        end
 
-        generate_plots(lambdas,"λ",means[s,h,:],means_fixed_occ[s,h,:],LABELS[h],LOCAL_DIR_INEQUALITY,"lambda_mean_$(choice_name)_$(stat_name)",false)
+        generate_plots(lambdas,"λ",means[s,h,:],means_fixed_occ[s,h,:],LABELS[h],LOCAL_DIR_INEQUALITY,"lambda_mean_$(choice_name)_$(stat_name)",false,9,10,LEGENDPOS)
     end
 
     # calculate gini coefficent
@@ -404,8 +462,12 @@ for s = 1:4 # [1] = income, earnings, wealth, consumption
         if h==3
             choice_name = "SoleProprietors"
         end
+        LEGENDPOS = false
+        if h==4 && s==4
+            LEGENDPOS = :topright
+        end
 
-        generate_plots(lambdas,"λ",avgs[s,h,:],avgs_fixed_occ[s,h,:],LABELS[h],LOCAL_DIR_INEQUALITY,"lambda_avg_$(choice_name)_$(stat_name)",false)
+        generate_plots(lambdas,"λ",avgs[s,h,:],avgs_fixed_occ[s,h,:],LABELS[h],LOCAL_DIR_INEQUALITY,"lambda_avg_$(choice_name)_$(stat_name)",false, 18,5,LEGENDPOS)
     end
 
     #vars[s,h,i]
@@ -494,7 +556,7 @@ generate_plots(lambdas,"λ",var_MPK[2,:],var_MPK_fixed_occ[2,:],"Variance of MPK
 generate_plots(lambdas,"λ",var_MPK[3,:],var_MPK_fixed_occ[3,:],"Variance of MPK for Employers",LOCAL_DIR_PRODUCTIVITY,"lambda_var_mpk_emp",false)
 
 # share of unbound ENT, SP,EMP
-generate_plots(lambdas,"λ",share_unbound[1,:],share_unbound_fixed_occ[1,:],"Share of Unconstrained Entrepreneurs",LOCAL_DIR_PRODUCTIVITY,"lambda_share_ent_unbound",true)
+generate_plots(lambdas,"λ",share_unbound[1,:],share_unbound_fixed_occ[1,:],"Share of Unconstrained Entrepreneurs",LOCAL_DIR_PRODUCTIVITY,"lambda_share_ent_unbound",true, 18,5,:bottomright)
 
 generate_plots(lambdas,"λ",share_unbound[2,:],share_unbound_fixed_occ[2,:],"Share of Unconstrained Sole Proprietors",LOCAL_DIR_PRODUCTIVITY,"lambda_share_se_unbound",true)
 
